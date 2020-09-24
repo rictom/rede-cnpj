@@ -1,4 +1,6 @@
 # rede-cnpj
+https://github.com/rictom/rede-cnpj/blob/master/rede-cnpj-image.jpg
+
 
 Vídeo de funcionamento:
 https://youtu.be/nxz9Drhqn_I
