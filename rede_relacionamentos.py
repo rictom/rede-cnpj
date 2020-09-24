@@ -28,15 +28,15 @@ try:
 except:
     ligacaoSocioFilial = True
       
-dfaux = pd.read_csv(r"tabelas\tabela-de-qualificacao-do-socio-representante.csv", sep=';')
+dfaux = pd.read_csv(r"tabelas/tabela-de-qualificacao-do-socio-representante.csv", sep=';')
 dicQualificacao_socio = pd.Series(dfaux.descricao.values,index=dfaux.codigo).to_dict()
-dfaux = pd.read_csv(r"tabelas\DominiosMotivoSituaoCadastral.csv", sep=';', encoding='latin1')
+dfaux = pd.read_csv(r"tabelas/DominiosMotivoSituaoCadastral.csv", sep=';', encoding='latin1')
 dicMotivoSituacao = pd.Series(dfaux['Descrição'].values, index=dfaux['Código']).to_dict()
-dfaux = pd.read_excel(r"tabelas\cnae.xlsx", sheet_name='codigo-grupo-classe-descr')
+dfaux = pd.read_excel(r"tabelas/cnae.xlsx", sheet_name='codigo-grupo-classe-descr')
 dicCnae = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
 dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
 dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
-dfaux = pd.read_csv(r"tabelas\natureza_juridica.csv", sep=';', encoding='utf8', dtype=str)
+dfaux = pd.read_csv(r"tabelas/natureza_juridica.csv", sep=';', encoding='utf8', dtype=str)
 dicNaturezaJuridica = pd.Series(dfaux['natureza_juridica'].values, index=dfaux['codigo']).to_dict()
 
 dfaux=None
@@ -323,7 +323,6 @@ def apagaLog():
     con.execute('DROP TABLE IF EXISTS log_cpfnomes;')
     con = None
                 
-
 def jsonDados(cpfcnpjIn):    
     #print('INICIANDO-------------------------')
     #dados de cnpj para popup de Dados

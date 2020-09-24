@@ -13,7 +13,7 @@ import json
 import os
 #import busca_google, 
 import rede_relacionamentos
-app = Flask("rede-flask")
+app = Flask("rede")
 gp = None
 '''
 import pysos #data persistence
