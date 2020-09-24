@@ -1,5 +1,8 @@
 # rede-cnpj
 
+Vídeo de funcionamento:
+https://youtu.be/nxz9Drhqn_I
+
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios. A rede foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. 
 
 A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, esse arquivo tem cerca de mil registros com dados reais de empresas e de sócios. 
