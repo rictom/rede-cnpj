@@ -10,7 +10,7 @@ A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Par
 Há duas versões da rotina, uma executável e outra em script python.
 
 Versão executável:
-Para iniciar a versão executável, primeiro descompacte o arquivo “rede-versao-exe.7z”. Para executar a rotina, clique duas vezes no arquivo rede.exe.
+Para iniciar a versão executável, primeiro descompacte o arquivo “rede-versao-exe.7z” https://www.dropbox.com/s/x9zg2mh4vr8ftjs/rede-versai-exe-2020-09-23.7z?dl=0 Para executar a rotina, clique duas vezes no arquivo rede.exe.
  
 
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.
@@ -23,10 +23,11 @@ pip install <nome do módulo>.
 Para facilitar a execução, edite o arquivo rede.bat, ajustando o caminho para ativar as variáveis de ambiente para o python.
 
 Configurar nós iniciais:
-Se desejar alterar ou remover os itens iniciais pré-definidos da rede de relacionamentos, edite o arquivo rede.ini em um editor de texto e altere a linha que começa com “cpfcnpjinicial=”. Se não quiser que apareça nós iniciais, deixe vazio a posição após o igual.
+Se não houver cpfcnpj inicial configurado em rede.ini, o navegador abrirá um popup pedindo para inserir um cnpj ou nome. Colocando TESTE (ou teste), será inserido um ícone com um cnpj aleatório do banco de dados.
+Se desejar definir itens iniciais da rede de relacionamentos, edite o arquivo rede.ini em um editor de texto e altere a linha que começa com “cpfcnpjinicial=”. Isso só vai ser útil se vc estiver utilizando a base CNPJ_full.db completa.
 
 Banco de dados de teste:
-A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite. Ele é um pedaço do arquivo completo CNPJ_full.db obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. Esse arquivo completo foi colocado no Google Drive, para facilitar o manuseio. Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
+A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite. Ele é um pedaço do arquivo completo CNPJ_full.db obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. Esse arquivo completo foi colocado no Google Drive https://drive.google.com/drive/folders/1FWogWd6raiKsuWUa2_M1cmV-OiTJcNqN?usp=sharing para facilitar o manuseio. Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
 
 Você poderá substituir o banco de dados CNPJ_full.db pela base de dados públicos completa da Receita Federal.
 
@@ -39,7 +40,7 @@ Apertando SHIFT, é possível selecionar mais de um ícone.
 
 Outras opções da rede estão no menu contextual do mouse (botão direito), sendo configuradas teclas de atalho correspondentes aos comandos:
  
-Imagem: menu contextual
+
 Tecla – Descrição do comando.
 - TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
 - I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
