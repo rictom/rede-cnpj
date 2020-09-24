@@ -14,7 +14,7 @@ Para iniciar a versão executável, primeiro descompacte o arquivo “rede-versa
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.
 
 Versão em python:
-É preciso ter instalado no computador, um interpretador de linguagem python como a distribuída pelo Anaconda ou WinPython. Para iniciar esse script, em um console DOS digite 
+É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython. Para iniciar esse script, em um console DOS digite 
 python rede.py
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando 
 pip install <nome do módulo>.
