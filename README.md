@@ -1,9 +1,6 @@
 # rede-cnpj
-https://github.com/rictom/rede-cnpj/blob/master/rede-cnpj-image.jpg
 
-
-Vídeo de funcionamento:
-https://youtu.be/nxz9Drhqn_I
+[![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](http://www.youtube.com/watch?v=nxz9Drhqn_I)
 
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios. A rede foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. 
 
