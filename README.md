@@ -38,26 +38,26 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
  
 Imagem: menu contextual
 Tecla – Descrição do comando.
-•	TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
-•	I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
-•	CRTL+Z – Desfaz Inserção;
-•	D – Abre um popup com dados de CNPJ;
-•	SHIFT+D – Abre numa nova janela com Dados, que pode ser selecionada e copiada;
-•	- Exportar dados em Excel (somente itens selecionados ou toda a rede);
-•	L – Localizar na Tela Nome, CNPJ ou CPF;
-•	G – Abre o nó numa aba do site Google;
-•	SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
-•	J – Abre o nó numa aba do site Jusbrasil;
-•	A - Gráfico em Nova Aba;
-•	P - Fixar o nó na posição;
-•	Q - Parar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
-•	SHIFT-Q- reiniciar leiaute;
-•	DEL – Excluir itens selecionados.
+- TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
+- I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
+- CRTL+Z – Desfaz Inserção;
+- D – Abre um popup com dados de CNPJ;
+- SHIFT+D – Abre numa nova janela com Dados, que pode ser selecionada e copiada;
+- Exportar dados em Excel (somente itens selecionados ou toda a rede);
+- L – Localizar na Tela Nome, CNPJ ou CPF;
+- G – Abre o nó numa aba do site Google;
+- SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
+- J – Abre o nó numa aba do site Jusbrasil;
+- A - Gráfico em Nova Aba;
+- P - Fixar o nó na posição;
+- Q - Parar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
+- SHIFT-Q- reiniciar leiaute;
+- DEL – Excluir itens selecionados.
 
 Os comandos valem para o último nó Selecionado, que fica com um retângulo preto em volta do ícone. 
 Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão.
 
-O menu contextual é uma contribuição do Fábio Orsi.
+O menu contextual é uma contribuição do Fábio.
 
 Fonte dos dados:
 
