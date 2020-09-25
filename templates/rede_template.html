@@ -142,6 +142,7 @@ var gparam = {};
 	gparam.listaIdNosInseridos = [];
 	gparam.cpfcnpjInicial = "{{cpfcnpjInicial}}";
 	gparam.camadaInicial= {{ camadaInicial }};
+	gparam.confirmaAntesDeInserirNNos = 100;
 	gparam.renderer = null,
 	gdebug = null;
 	
@@ -149,13 +150,15 @@ var gparam = {};
 var createMarker = function(id) {
 	return Viva.Graph.svg('marker')
 	.attr('id', id)
-	.attr('viewBox', "0 0 10 10")
-	.attr('refX', "10")
-	.attr('refY', "5")
-	.attr('markerUnits', "strokeWidth")
-	.attr('markerWidth', "10")
-	.attr('markerHeight', "5")
-	.attr('orient', "auto");
+	.attr('viewBox', '0 0 10 10')
+	.attr('refX', '10')
+	.attr('refY', '5')
+	.attr('markerUnits', 'strokeWidth')
+	.attr('markerWidth', '10')
+	.attr('markerHeight', '5')
+	.attr('orient', 'auto')
+	.attr('stroke', 'gray')
+	.attr('fill', 'gray');
 },
 
 marker = createMarker('Triangle');
@@ -236,12 +239,14 @@ graphics.node(function(node) {
 	};
 	ui.onmouseup = function(event) {
 		selecionaNoid(node.id, event.shiftKey);
+		event.preventDefault();
 		return;
 	};
 	ui.ondblclick = function(event) {
 		selecionaNoid(node.id, false);
 		if (event.which == 1) {
 			jsonRede(node.id, 1);
+			event.preventDefault();
 		};
 		return;
 	}; 
@@ -570,7 +575,22 @@ function insereJson(jsonIn) {
 	var kn=0, kl=0;
 	var idNosInseridos = new Set();
 	var idNosCamadaZero = new Set();
-	for (var noaux of Object.values(no)) {
+	var kNosAInserir = 0;
+	for (let noaux of Object.values(no)) { //verifica quantos nós serão inseridos
+		if (!graph.hasNode(noaux.id)) { 
+			kNosAInserir += 1;
+		}
+	}
+	if (kNosAInserir > gparam.confirmaAntesDeInserirNNos) {
+		let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?';
+		if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.';
+		var resp = confirm(mensagem);
+		if (!resp) {
+			return;
+		}
+		gparam.confirmaAntesDeInserirNNos = kNosAInserir;
+	}
+	for (let noaux of Object.values(no)) {
 		if (!graph.hasNode(noaux.id)) { 
 			graph.addNode(noaux.id, JSON.parse(JSON.stringify(noaux)));
 			kn += 1;
@@ -583,19 +603,36 @@ function insereJson(jsonIn) {
 	if (idNosInseridos.size) {
 		gparam.listaIdNosInseridos.push(idNosInseridos);
 	}
-	for (var ligaux of Object.values(ligacao)) {
+	for (let ligaux of Object.values(ligacao)) {
 		//console.log(ligaux.origem);
 		if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
 			ligaux.id = gparam.kligacoes;
-			gparam.kligacoes = gparam.kligacoes + 1;
-			graph.addLink(ligaux.origem, ligaux.destino, JSON.parse(JSON.stringify(ligaux)));
-			kl += 1;
+			
+			if ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.origem))) {
+				try { //dá erro com a rede de teste
+					graph.addLink(ligaux.origem, ligaux.destino, JSON.parse(JSON.stringify(ligaux)));
+					kl += 1;
+					gparam.kligacoes = gparam.kligacoes + 1;
+				} catch (e) {
+					console.log('erro na ligacao');
+					console.log(e);
+					console.log(JSON.parse(JSON.stringify(ligaux)));
+				}
+			} else {
+				console.log('faltando um dos nós da ligação.');
+				console.log(JSON.parse(JSON.stringify(ligaux)));
+			}
 		}
 	}
-	var textoMensagem = ''
-	if (kn) {
-		textoMensagem = 'Foram inseridos ' + kn + ' cpfs/cnpjs';
-	}
+	if (idNosCamadaZero.size) {
+		selecionaNoid(null, false); //desseleciona tudo
+		for (let n of idNosCamadaZero) {
+			selecionaNoid(n, true);
+		}
+	} 
+	
+	var textoMensagem = '';
+	if (kn)	textoMensagem = 'Foram inseridos ' + kn + ' cpfs/cnpjs';
 	if (kl) {
 		if (textoMensagem) {
 			textoMensagem += ' e ' + kn + 'ligações.';
@@ -603,23 +640,23 @@ function insereJson(jsonIn) {
 			textoMensagem += 'Foram inseridos ' + kl + ' ligações.'
 		}
 	}
-	if (!textoMensagem) {
-		textoMensagem = 'Não encontrou novos itens';
-	} 
-	if (idNosCamadaZero.size) {
-		selecionaNoid(null, false); //desseleciona tudo
-		for (let n of idNosCamadaZero) {
-			selecionaNoid(n, true);
-		}
-	} 
-	alertify.success(textoMensagem);
+	if (!textoMensagem) textoMensagem = 'Não encontrou novos itens';
+	
+	if (jsonIn.mensagem_popup) {
+		alertify.alert('Alerta!', jsonIn.mensagem_popup, function(){ alertify.success(textoMensagem); });
+	} else {
+		alertify.success(textoMensagem);
+	}
+	if (jsonIn.mensagem_lateral) {
+		alertify.success(jsonIn.mensagem_lateral);
+	}
 }
 
 function menu_inserir() {
 	//var cn = prompt('Digite CNPJ ou CPF-Nome, ou vários CNPJs separados por ;');
 	var camada = 0;
 	ativaAtalhos(false);
-	alertify.prompt( 'Inserir do Banco de Dados SQLITE', 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;)', ''
+	alertify.prompt( 'Inserir do Banco de Dados SQLITE', 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). Para visualizar um cnpj aleatório, digite TESTE', ''
                , function(evt, cnpjs) { 
 					if (cnpjs) { 
 						var camada = prompt('Camada',1);
@@ -648,9 +685,14 @@ function menu_GoogleMaps() {
 	}
 }
 
-function menu_abrirNovaAba() {
+function menu_abrirNovaAba(bAbreVazio) {
 	var novaJanela=null;
-	var strUrl=strUrl = "/rede/grafico/" + gparam.idnoSelecionado+ "/";
+	if (bAbreVazio) {
+		novaJanela=window.open("/rede/");
+		novaJanela.focus(); 
+		return;
+	}
+	var strUrl = "/rede/grafico/" + gparam.idnoSelecionado+ "/";
 	ativaAtalhos(false);
 	alertify.prompt( 'Abrir ' + gparam.idnoSelecionado+  ' em nova aba', 'Selecione camadas', '1', 
 		function(evt, cam) { 	
@@ -667,17 +709,18 @@ function menu_pinarNo(){
 };
 
 function evento_teclasUp(e) {
-	//console.log(e);
-	if (1) { //(e.altKey) {
-		if (e.code.startsWith('Digit') && (e.code.length==6)) {
-			var ns = e.code.substr(-1);
-			if ('1'<ns<'9') {
+	if (e.code.startsWith('Digit') && (e.code.length==6)) {
+		var ns = e.code.substr(-1);
+		if (('0' <= ns) && (ns <='9')) {
+			if (ns=='0') {
+				jsonRede(gparam.idnoSelecionado, 10);
+			} else {
 				jsonRede(gparam.idnoSelecionado, parseInt(ns));
-				return;
 			}
+			e.preventDefault();
+			return;
 		}
-	}
-	if (e.ctrlKey && (e.code=='KeyZ')) {
+	} else if (e.ctrlKey && (e.code=='KeyZ')) {
 		menu_inserirDesfazer();
 	} else if (e.code=='KeyF') {
 		menu_localiza();
@@ -687,14 +730,16 @@ function evento_teclasUp(e) {
 		menu_dados();
 	} else if ((e.shiftKey) && (e.code=='KeyD')) {
 		menu_dadosNovaJanela();
-	} else if (e.code=='KeyA') {
-		menu_abrirNovaAba();
+	} else if ((!e.shiftKey) && (e.code=='KeyA')) {
+		menu_abrirNovaAba(false);
+	} else if ((e.shiftKey) && (e.code=='KeyA')) {
+		menu_abrirNovaAba(true);
 	} else if ((!e.shiftKey) && (e.code=='KeyG')) {
 		menu_buscaEmSite('https://www.google.com/?#q=');;
 	} else if ((e.shiftKey) &&(e.code=='KeyG')) {
 		menu_GoogleMaps('https://www.google.com/?#q=');;
 	} else if (e.code=='KeyJ') {
-		buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
+		menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
 	} else if (e.code=='KeyL') {
 		menu_localiza();
 	} else 	if (e.code=='Delete') {
@@ -705,7 +750,10 @@ function evento_teclasUp(e) {
 		menu_rendererAtivarParar(false);
 	} else 	if ((e.shiftKey) && (e.code=='KeyQ')) {
 		menu_rendererAtivarParar(true);
-	}
+	} else {
+		return;
+	} 
+	e.preventDefault();
 }
 
 function ativaAtalhos(bcaptura) {
@@ -757,7 +805,7 @@ function exportaJsonParaDownload() {
 	var iframeDocumento = iframeAuxiliar.contentDocument || iframeAuxiliar.contentWindow.document;
 	var form = iframeDocumento.getElementById('formDownload');
 	form.dadosJSON.value = dadosJSON;
-	form.action = "/rede/dadosemarquivo/pdf" ;
+	form.action = "/rede/dadosemarquivo/xlsx" ;
 	form.submit();
 }
 
@@ -816,7 +864,8 @@ function main() {
 	html, body, svg { width: 100%; height: 100%;}
 </style>
 </head>
-<body id='corpo' onload='main()'>
+<body id='corpo' onload='main()' style='overflow:hidden;'>
+<!-- overflow:hidden para não aparecer barra de rolagem -->
 
 <menu class="menu">
   <li class="menu-item submenu">
@@ -915,7 +964,7 @@ function main() {
   </li>
 
   <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_abrirNovaAba()"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+    <button type="button" class="menu-btn" onclick="javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
   </li>
   <li class="menu-item">
     <button type="button" class="menu-btn" onclick="javascript:menu_pinarNo();"> 
