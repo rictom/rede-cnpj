@@ -70,9 +70,6 @@ def serve_dados_detalhes(cpfcnpj):
     print('pedido json:', cpfcnpj)
     return jsonify(rede_relacionamentos.jsonDados(cpfcnpj))
 
-# @app.route('/favicon.ico/')
-# def serve_favicon():
-#     return send_from_directory(static_file_dir, 'img/favicon.png')
 
 #https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 

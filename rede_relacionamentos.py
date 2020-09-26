@@ -141,26 +141,43 @@ dtype_tmp_cpfnomes={'cpf':sqlalchemy.types.VARCHAR,
                        'grupo':sqlalchemy.types.VARCHAR,
                        'camada':sqlalchemy.types.INTEGER }
 
-def criaTabelasTmpParaCamadas(cpfcnpjIn, grupo):
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
+def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', grupo='', listaCpfCnpjs=None):
+    #con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
     con.execute('DROP TABLE IF EXISTS tmp_cnpjs;')
     con.execute('DROP TABLE IF EXISTS tmp_cpfnomes;')
-    cnpjs, cpfnomes = separaEntrada(cpfcnpjIn)
+    con.execute('''
+        CREATE TEMP TABLE tmp_cnpjs (
+    	cnpj VARCHAR, 
+    	grupo VARCHAR, 
+    	camada INTEGER
+        )''')
+    con.execute('''
+        CREATE TEMP TABLE tmp_cpfnomes (
+    	cpf VARCHAR, 
+    	nome VARCHAR, 
+    	grupo VARCHAR, 
+    	camada INTEGER
+        )''')
+    if cpfcnpjIn:
+        cnpjs, cpfnomes = separaEntrada(cpfcnpjIn=cpfcnpjIn)
+    else:
+        cnpjs, cpfnomes = separaEntrada(listaCpfCnpjs=listaCpfCnpjs)
+
     camadasIds = {cnpj:0 for cnpj in cnpjs}
     for cpf,nome in cpfnomes:
         camadasIds[(cpf, nome)] = 0;
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable['grupo'] = grupo
     dftmptable['camada'] = 0
-    dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cnpjs)
+    dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='append', index=False, dtype=dtype_tmp_cnpjs)
 
     dftmptable = pd.DataFrame(list(cpfnomes), columns=['cpf', 'nome'])
     dftmptable['grupo'] = grupo
     dftmptable['camada'] = 0
-    dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cpfnomes)    
+    dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='append', index=False, dtype=dtype_tmp_cpfnomes)    
     return camadasIds
 
-def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True,  ):    
+def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None  ):    
     #se cpfcnpjIn=='', usa dados das tabelas tmp_cnpjs e tmp_cpfnomes, não haverá camada=0
     #se fromTmpTable=False, espera que cpfcnpjIn='cpf-nome;cnpj;nome...'
     #se fromTmpTable=True, ignora cpfcnpjIn e pega dados a partir de tmp_cnpjs e tmp_cpfnomes
@@ -174,10 +191,12 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True,  ):
     nosids = set()
     ligacoes = []
     setOrigDest = set()
-    if cpfcnpjIn:
-        camadasIds = criaTabelasTmpParaCamadas(cpfcnpjIn, grupo)
-    else:
-        camadasIds = {}
+    camadasIds = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, grupo=grupo, listaCpfCnpjs=listaCpfCnpjs)
+    # if cpfcnpjIn:
+    #     camadasIds = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, grupo=grupo, listaCpfCnpjs=listaCpfCnpjs)
+    # else:
+    #     camadasIds = {}
+ 
     cnpjs=set()
     cpfnomes = set()
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
@@ -255,29 +274,32 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True,  ):
         dftmptable['grupo'] = grupo
         dftmptable['camada'] = dftmptable['cnpj'].apply(lambda x: camadasIds[x])
         #dftmptable['camada'] = dftmptable['cnpj'].map(camadasIds)
-        dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cnpjs)
+        con.execute('DELETE from tmp_cnpjs;')
+        dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='append', index=False, dtype=dtype_tmp_cnpjs)
         dftmptable = pd.DataFrame(list(cpfnomes), columns=['cpf', 'nome'])
         dftmptable['grupo'] = grupo
         dftmptable['camada'] = -1
         for r in dftmptable.itertuples():
             dftmptable.at[r.Index, 'camada'] = camadasIds[(r.cpf,r.nome)]
         #dftmptable['camada'] = dftmptable.apply(lambda r: camadasIds[(r['cpf'], r['nome'])])
-        dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cpfnomes)    
+        con.execute('DELETE from tmp_cpfnomes;')
+        dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='append', index=False, dtype=dtype_tmp_cpfnomes)    
     
 
     if logAtivo or not bjson:
-        con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
-        con.execute('create table if not exists log_cnpjs (cnpj text, grupo text, camada text)')
-        con.execute('''insert into log_cnpjs 
+        conlog = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
+        conlog.execute('create table if not exists log_cnpjs (cnpj text, grupo text, camada text)')
+        conlog.execute('''insert into log_cnpjs 
             select * from tmp_cnpjs; ''')
-        con.execute('create table if not exists log_cpfnomes (cpf text, nome text, grupo text, camada text);')
-        con.execute('''insert into log_cpfnomes 
+        conlog.execute('create table if not exists log_cpfnomes (cpf text, nome text, grupo text, camada text);')
+        conlog.execute('''insert into log_cpfnomes 
             select cpf, nome, grupo, cast(camada as int) from tmp_cpfnomes; ''')
+        conlog = None
     if not bjson:
         print('camadasRede-fim: ' + time.ctime())
         return len(camadasIds)
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
-    dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cnpjs)
+    dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='append', index=False, dtype=dtype_tmp_cnpjs)
     query = '''
                 SELECT t.cnpj, razao_social, situacao, matriz_filial,
                 tipo_logradouro, logradouro, numero, complemento, bairro,
@@ -374,14 +396,16 @@ def dadosParaExportar(listaCpfCnpjs):
     #con=sqlite3.connect(camDbSqlite)
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
 
-    cnpjs, cpfnomes = separaEntrada(cpfcnpjIn='', listaCpfCnpjs=listaCpfCnpjs)
-    print('cnpjs', cnpjs)
-    print('cpfnomes', cpfnomes)
-    #con1 = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
-    dftmptable = pd.DataFrame(list(cpfnomes), columns=['cpf', 'nome'])
-    dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
-    dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
-    dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+    # cnpjs, cpfnomes = separaEntrada(cpfcnpjIn='', listaCpfCnpjs=listaCpfCnpjs)
+    # print('cnpjs', cnpjs)
+    # print('cpfnomes', cpfnomes)
+    # #con1 = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
+    # dftmptable = pd.DataFrame(list(cpfnomes), columns=['cpf', 'nome'])
+    # dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+    # dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
+    # dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+
+    criaTabelasTmpParaCamadas(con, listaCpfCnpjs=listaCpfCnpjs, grupo='')
     querysocios = '''
                 SELECT * from
 				(SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, t.tipo_socio, t.cod_qualificacao
