@@ -9,7 +9,7 @@ A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Par
 Há duas versões da rotina, uma executável e outra em script python.
 
 Versão executável:
-Para iniciar a versão executável, primeiro descompacte o arquivo “rede-versao-exe.7z” https://www.dropbox.com/s/x9zg2mh4vr8ftjs/rede-versai-exe-2020-09-23.7z?dl=0 Para executar a rotina, clique duas vezes no arquivo rede.exe.
+Para iniciar a versão executável (pyinstaller), primeiro descompacte o arquivo “rede-versao-exe.7z” https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0 . Para executar a rotina, clique duas vezes no arquivo rede.exe.
 
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.
 
