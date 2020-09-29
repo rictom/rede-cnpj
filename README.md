@@ -2,43 +2,42 @@
 
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](http://www.youtube.com/watch?v=nxz9Drhqn_I)
 
-A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios. A rede foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. 
+A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
+Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
+A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, esse arquivo tem cerca de mil registros com dados fictícios de empresas e de sócios. <br>
+Há duas versões, em python e outra executável em Windows.<br>
 
-A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, esse arquivo tem cerca de mil registros com dados fictícios de empresas e de sócios. 
+## Versão em python:
+É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython.<br> 
+Para iniciar esse script, em um console DOS digite<br>
+python rede.py<br>
+Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
+Para facilitar a execução, edite o arquivo rede.bat, ajustando o caminho para ativar as variáveis de ambiente para o python.<br>
 
-Há duas versões da rotina, uma executável e outra em script python.
+## Versão executável:
+Para iniciar a versão executável, primeiro descompacte o arquivo [rede-versao-exe.7z](https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
+A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 
-Versão executável:
-Para iniciar a versão executável (pyinstaller), primeiro descompacte o arquivo “rede-versao-exe.7z” https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0 . Para executar a rotina, clique duas vezes no arquivo rede.exe.
 
-A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.
+## Configurar nós iniciais:
+Se não houver cpfcnpj inicial configurado em rede.ini, o navegador abrirá um popup pedindo para inserir um cnpj ou nome. Colocando TESTE (ou teste), será inserido um ícone com um cnpj aleatório do banco de dados.<br>
+Se desejar definir itens iniciais da rede de relacionamentos, edite o arquivo rede.ini em um editor de texto e altere a linha que começa com “cpfcnpjinicial=”. Isso só vai ser útil se vc estiver utilizando a base CNPJ_full.db completa.<br>
 
-Versão em python:
-É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython. Para iniciar esse script, em um console DOS digite 
-python rede.py
-Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando 
-pip install <nome do módulo>.
-Para facilitar a execução, edite o arquivo rede.bat, ajustando o caminho para ativar as variáveis de ambiente para o python.
+## Banco de dados de teste:
+A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite com dados para teste. O arquivo completo com a base de CNPJ pode ser obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. <br>
+Para facilitar, o arquivo gerado pelo script do fabioserpa foi colocado no Google Drive https://drive.google.com/drive/folders/1FWogWd6raiKsuWUa2_M1cmV-OiTJcNqN?usp=sharing. <br>Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
 
-Configurar nós iniciais:
-Se não houver cpfcnpj inicial configurado em rede.ini, o navegador abrirá um popup pedindo para inserir um cnpj ou nome. Colocando TESTE (ou teste), será inserido um ícone com um cnpj aleatório do banco de dados.
-Se desejar definir itens iniciais da rede de relacionamentos, edite o arquivo rede.ini em um editor de texto e altere a linha que começa com “cpfcnpjinicial=”. Isso só vai ser útil se vc estiver utilizando a base CNPJ_full.db completa.
+## Opções:
+Ao executar o arquivo rede.exe,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
 
-Banco de dados de teste:
-A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite com dados para teste. O arquivo completo com a base de CNPJ pode ser obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. 
-Para facilitar, o arquivo gerado pelo script do fabioserpa foi colocado no Google Drive https://drive.google.com/drive/folders/1FWogWd6raiKsuWUa2_M1cmV-OiTJcNqN?usp=sharing. Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
-
-Opções:
-Ao executar o arquivo rede.exe,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. 
-
-A roda do mouse expande ou diminui o tamanho da exibição.
-Fazendo click duplo em um ícone, a rotina expande as ligações.
-Apertando SHIFT, é possível selecionar mais de um ícone. 
+A roda do mouse expande ou diminui o tamanho da exibição.<br>
+Fazendo click duplo em um ícone, a rotina expande as ligações.<br>
+Apertando SHIFT, é possível selecionar mais de um ícone. <br>
 
 Outras opções da rede estão no menu contextual do mouse (botão direito), sendo configuradas teclas de atalho correspondentes aos comandos:
  
 
-Tecla – Descrição do comando.
+## Tecla – Descrição do comando.
 - TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
 - I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
 - CRTL+Z – Desfaz Inserção;
@@ -58,15 +57,15 @@ Tecla – Descrição do comando.
 Os comandos valem para o último nó Selecionado, que fica com um retângulo preto em volta do ícone. 
 Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão.
 
-Fonte dos dados:
+## Fonte dos dados:
 
-Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.
-https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj
+Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
+https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj<br>
 
-Scripts em python para converter a base de cnpj da receita em sqlite:
-https://github.com/fabioserpa/CNPJ-full
-Obs: é preciso alterar o script para indexar a coluna “razão_social” da tabela empresas, senão a consulta por nome é lenta.
+Scripts em python para converter a base de cnpj da receita em sqlite:<br>
+https://github.com/fabioserpa/CNPJ-full<br>
+Obs: é preciso alterar o script para indexar a coluna “razão_social” da tabela empresas, senão a consulta por nome é lenta.<br>
 
-Arquivo CNPJ_full.db completo, referência julho/2020, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:
-https://drive.google.com/drive/folders/1FWogWd6raiKsuWUa2_M1cmV-OiTJcNqN?usp=sharing 
-Para juntar os blocos, abra o primeiro (final 001) no 7zip. O arquivo compactado tem o tamanho de 4,1GB. O arquivo descompactado tem 22Gb.
+Arquivo CNPJ_full.db completo, referência julho/2020, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
+https://drive.google.com/drive/folders/1FWogWd6raiKsuWUa2_M1cmV-OiTJcNqN?usp=sharing <br>
+Para juntar os blocos, abra o primeiro (final 001) no 7zip. O arquivo compactado tem o tamanho de 4,1GB. O arquivo descompactado tem 22Gb.<br>
