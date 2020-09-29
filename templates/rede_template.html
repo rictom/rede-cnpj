@@ -4,8 +4,8 @@
 <title>Rede</title>
 <link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
 <link rel="icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
-<script type="text/javascript" src="/static/vivagraph/vivagraph.js"></script>
-<script type="text/javascript" src="/static/alertify/alertify.js"></script>
+<script type="text/javascript" src="/static/vivagraph/vivagraph.min.js"></script>
+<script type="text/javascript" src="/static/alertify/alertify.min.js"></script>
 <link  rel="stylesheet" href="/static/alertify/css/alertify.css" /><link  rel="stylesheet" href="/static/alertify/css/themes/default.css" />
 <!-- https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/ -->
 <link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css">
@@ -30,6 +30,8 @@ var gparam = {};
 	gparam.camadaInicial= {{ camadaInicial }};
 	gparam.confirmaAntesDeInserirNNos = 100;
 	gparam.renderer = null,
+	gparam.layout = null,
+	gparam.geom = null,
 	gdebug = null;
 	
 // cria a triangulo da seta.
@@ -67,8 +69,6 @@ var defs = graphics.getSvgRoot().append('defs');
 		</filter>';
 defs.append(marker);
 	  
-	  
-var geom = Viva.Graph.geom();
 
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
@@ -129,8 +129,8 @@ graphics.node(function(node) {
 		return;
 	};
 	ui.ondblclick = function(event) {
-		selecionaNoid(node.id, false);
 		if (event.which == 1) {
+			selecionaNoid(node.id, false);
 			jsonRede(node.id, 1);
 			event.preventDefault();
 		};
@@ -161,7 +161,7 @@ graphics.link(function(link){
 		var toNodeSize = gparam.nodeSize,
 		fromNodeSize = gparam.nodeSize;
 
-		var from = geom.intersectRect(
+		var from = gparam.geom.intersectRect(
 			fromPos.x - fromNodeSize / 2, // left
 			fromPos.y - fromNodeSize / 2, // top
 			fromPos.x + fromNodeSize / 2, // right
@@ -169,7 +169,7 @@ graphics.link(function(link){
 			fromPos.x, fromPos.y, toPos.x, toPos.y)
 		|| fromPos;
 
-		var to = geom.intersectRect(
+		var to = gparam.geom.intersectRect(
 			toPos.x - toNodeSize / 2, // left
 			toPos.y - toNodeSize / 2, // top
 			toPos.x + toNodeSize / 2, // right
@@ -277,7 +277,8 @@ function localizaNo(texto) { //retorna n. de nos localizados
 		}
 		gparam.idnoSelecionado = primeiroNoid;
 		ajustaMenuContextual(gparam.idnoSelecionado);
-		var position = gparam.renderer.getLayout().getNodePosition(gparam.idnoSelecionado);
+		//var position = gparam.renderer.getLayout().getNodePosition(gparam.idnoSelecionado);
+		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
 		gparam.renderer.moveTo(position.x,position.y);
 		return gparam.idNosSelecionados.size;
 	} else {
@@ -589,7 +590,8 @@ function menu_abrirNovaAba(bAbreVazio) {
 }
 
 function menu_pinarNo(){
-	var layout = gparam.renderer.getLayout();
+	//var layout = gparam.renderer.getLayout();
+	var layout = gparam.layout;
 	var no = graph.getNode(gparam.idnoSelecionado);
 	layout.pinNode(no, !layout.isNodePinned(no));
 };
@@ -725,11 +727,19 @@ function onClick(e){
 //.menu contextual
 
 function main() {
-	var renderer = Viva.Graph.View.renderer(graph, {
-			graphics : graphics
+	gparam.layout = Viva.Graph.Layout.forceDirected(graph, {
+		   springLength : 140, //80,
+		   springCoeff : 0.0002, //0.0002,
+		   dragCoeff : 0.02, 
+		   gravity : -1.2, 
+		   theta : 0.8
+	});
+	gparam.renderer = Viva.Graph.View.renderer(graph, {
+			graphics : graphics,
+			layout: gparam.layout
 		});
-	gparam.renderer = renderer;
-	renderer.run();
+	gparam.renderer.run();
+	gparam.geom = Viva.Graph.geom();
 	if (gparam.cpfcnpjInicial) {
 		jsonRede(gparam.cpfcnpjInicial, gparam.camadaInicial);
 		ativaAtalhos(true);
@@ -739,11 +749,7 @@ function main() {
 	//adicionaMenuContexto();
 	menu = document.querySelector('.menu');
 	document.addEventListener('contextmenu', onContextMenu, false);
-	
 } //main()
-
-
-
 
 </script>
 
