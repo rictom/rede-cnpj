@@ -1,6 +1,6 @@
 # rede-cnpj
 
-[![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](http://www.youtube.com/watch?v=nxz9Drhqn_I)
+[![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I?t=10)
 
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
@@ -28,7 +28,7 @@ A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite com dado
 Para facilitar, o arquivo gerado pelo script do fabioserpa foi colocado no Google Drive https://drive.google.com/drive/folders/1FWogWd6raiKsuWUa2_M1cmV-OiTJcNqN?usp=sharing. <br>Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
 
 ## Opções:
-Ao executar o arquivo rede.exe,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
+Ao iniciar o script,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
 
 A roda do mouse expande ou diminui o tamanho da exibição.<br>
 Fazendo click duplo em um ícone, a rotina expande as ligações.<br>
