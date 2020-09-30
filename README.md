@@ -49,6 +49,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
 - J – Abre o nó numa aba do site Jusbrasil;
 - A - Gráfico em Nova Aba;
+- SHIFT+A - Abre uma nova Aba vazia;
 - P - Fixar o nó na posição;
 - Q - Parar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
 - SHIFT-Q- reiniciar leiaute;
