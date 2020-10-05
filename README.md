@@ -1,11 +1,21 @@
-# rede-cnpj
+# rede-cnpj - Visualização de dados públicos de CNPJ
 
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
+<br>Vídeo no youtube<br>
 
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
 A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, esse arquivo tem cerca de mil registros com dados fictícios de empresas e de sócios. <br>
 Há duas versões, em python e outra executável em Windows.<br>
+
+## Versão online com base completa de dados públicos:
+http://168.138.150.250/rede/ <br>
+Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
+Funciona parcialmente em navegador de celular Android.
+
+## Versão online com base de testes:
+http://rtomi.pythonanywhere.com/rede/ <br>
+Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
 
 ## Versão em python:
 É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython.<br> 
@@ -18,9 +28,6 @@ Para facilitar a execução, edite o arquivo rede.bat, ajustando o caminho para 
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-versao-exe.7z](https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 
-## Versão online:
-http://rtomi.pythonanywhere.com/rede/ <br>
-Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
 
 ## Configurar nós iniciais:
 Se não houver cpfcnpj inicial configurado em rede.ini, o navegador abrirá um popup pedindo para inserir um cnpj ou nome. Colocando TESTE (ou teste), será inserido um ícone com um cnpj aleatório do banco de dados.<br>
