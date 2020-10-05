@@ -5,13 +5,12 @@
 
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
-A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, esse arquivo tem cerca de mil registros com dados fictícios de empresas e de sócios. <br>
-Há duas versões, em python e outra executável em Windows.<br>
+A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, este repositório tem o arquivo com cerca de mil registros com dados fictícios de empresas e de sócios. <br>
 
 ## Versão online com base completa de dados públicos:
 http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
-Funciona parcialmente em navegador de celular Android.
+Funciona parcialmente em navegador de celular Android, com inconsitência na hora de fazer um zoom e menu incompleto.
 
 ## Versão online com base de testes:
 http://rtomi.pythonanywhere.com/rede/ <br>
@@ -61,6 +60,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - A - Gráfico em Nova Aba;
 - SHIFT+A - Abre uma nova Aba vazia;
 - P - Fixar o nó na posição;
+- Escala Inicial - Coloca a exibição sem zoom, na escala inicial.
 - Q - Parar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
 - SHIFT-Q- reiniciar leiaute;
 - DEL – Excluir itens selecionados.
