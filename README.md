@@ -11,7 +11,7 @@ A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Par
 ## Versão online com base completa de dados públicos:
 http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
-Funciona parcialmente em navegador de celular Android, com inconsitência na hora de fazer um zoom e menu incompleto.
+Funciona parcialmente em navegador de celular Android, com inconsistência na hora de fazer um zoom e menu incompleto.
 
 ## Versão online com base de testes:
 http://rtomi.pythonanywhere.com/rede/ <br>
