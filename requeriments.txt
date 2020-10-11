@@ -1,0 +1,7 @@
+flask
+pandas
+sqlalchemy
+xlrd
+xlsxwriter
+requests
+uwsgi
