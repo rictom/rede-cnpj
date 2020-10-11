@@ -11,7 +11,7 @@ A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Par
 ## Versão online com base completa de dados públicos de CNPJ:
 http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
-Funciona parcialmente em navegador de celular Android, com inconsistência na hora de fazer um zoom e menu incompleto.
+Funciona parcialmente em celular, com menu errático.
 
 ## Versão online com base de testes:
 http://rtomi.pythonanywhere.com/rede/ <br>
@@ -21,6 +21,7 @@ Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra di
 É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython.<br> 
 Para iniciar esse script, em um console DOS digite<br>
 python rede.py<br>
+A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 
 ## Versão executável:
