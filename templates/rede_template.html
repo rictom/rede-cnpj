@@ -1,16 +1,27 @@
 <!DOCTYPE html>
 <html>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
 <head>
 <title>Rede</title>
+<!-- 
+projeto disponível em https://github.com/rictom/rede-cnpj' 
+
+utilizando os seguintes códigos:
+https://github.com/anvaka/VivaGraphJS
+https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
+https://fabien-d.github.io/alertify.js/
+https://fontawesome.com/v4.7.0/icon/trash
+-->
+
 <link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
 <link rel="icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
 <script type="text/javascript" src="/static/vivagraph/vivagraph.min.js"></script>
 <script type="text/javascript" src="/static/alertify/alertify.min.js"></script>
 <link  rel="stylesheet" href="/static/alertify/css/alertify.css" /><link  rel="stylesheet" href="/static/alertify/css/themes/default.css" />
-<!-- https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/ -->
 <link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css">
 <link rel="stylesheet" href="/static/menu/menu.css">
-	
+
 <script type="text/javascript">
 
 // http://jsfiddle.net/ibigd/z7ymfpmm/
@@ -18,6 +29,7 @@ var graph = Viva.Graph.graph();
 
 var graphics = Viva.Graph.View.svgGraphics();
 var gparam = {};
+	gdebug = null;
 	gparam.nodeSize = 24;
 	gparam.tamanhoFonte = 10;
 	gparam.kligacoes = 0;
@@ -26,13 +38,22 @@ var gparam = {};
 	gparam.idNosSelecionados = new Set();
 	//gparam.idNosInseridos = new Set();
 	gparam.listaIdNosInseridos = [];
-	gparam.cpfcnpjInicial = "{{cpfcnpjInicial}}";
-	gparam.camadaInicial= {{ camadaInicial }};
+	gparam.cpfcnpjInicial="{{cpfcnpjInicial}}";
+	gparam.camadaInicial={{camadaInicial}};
+	gparam.mensagemInicial="{{mensagemInicial}}".replace(/\.\./g,'.\n');
+	gparam.inserirDefault="{{inserirDefault}}";
 	gparam.confirmaAntesDeInserirNNos = 100;
-	gparam.renderer = null,
-	gparam.layout = null,
-	gparam.geom = null,
-	gdebug = null;
+	gparam.renderer = null;
+	gparam.layout = null;
+	gparam.geom = null;
+    gparam.ultimoToque = 0;
+    gparam.inicioToque = 0;
+	gparam.mobile = false;
+	gparam.safari = false;
+	gparam.eventclick = 'click'; //no safari ='touchend'
+	gparam.numeroInsercoes = 0;
+	gparam.bRotulosCompletos = true;
+
 	
 // cria a triangulo da seta.
 var createMarker = function(id) {
@@ -68,7 +89,6 @@ var defs = graphics.getSvgRoot().append('defs');
 		values="-1  0  0 0 0  0 -1  0 0 0 0 0 -1 0 0 1 1 1 0 0"/>\
 		</filter>';
 defs.append(marker);
-	  
 
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
@@ -90,32 +110,30 @@ graphics.node(function(node) {
 				.attr('width', gparam.nodeSize)
 				.attr('height', gparam.nodeSize)
 				.attr('visibility', 'hidden');  //hidden or visible
-
 	ui.insertAdjacentHTML('beforeEnd','<title>' + textoTooltip(node, true) + '</title>'); //title deve ser a primeira coisa apos g para funcionar no firefox 48
 
 	var labels = node.data.label.split('\n');
-	var textspan = Viva.Graph.svg('tspan').attr('x', 0).attr('dy', 0).text(labels[0]);
-	svgText.append(textspan)
-	if (labels.length==2) {
-		var textspan2 = Viva.Graph.svg('tspan').attr('x', 0).attr('dy', gparam.tamanhoFonte*1.1).text(labels[1])
-		svgText.append(textspan2);
+	var identificador = labels[0];
+	var nome = '';
+	if (labels.length>1) {
+		nome = labels[1];
+	}
+	if (gparam.bRotulosCompletos) {
+		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
+		svgText.append(textspan);
+		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);
+		svgText.append(textspan2);		
+	} else {
+		nome = nome.split(' ')[0];
+		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(nome);
+		svgText.append(textspan);
+		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text('');
+		svgText.append(textspan2);	
 	}
 	ui.append(svgText);
 	ui.append(rect);
 	ui.append(img);
-	
-	
-	/*
-	ui.onclick = function(event) {
-		if ( event.shiftKey || event.controlKey) {
-			event.preventDefault();
-			//event.stopPropagation();
-			//return true;
-			
-		}
-		return;
-	};
-	*/
+
 	ui.onclick = function(event) {
 		if ( event.shiftKey || event.controlKey) {
 			event.preventDefault();
@@ -136,7 +154,34 @@ graphics.node(function(node) {
 		};
 		return;
 	}; 
-
+	ui.ontouchstart = function(event) {
+		gparam.inicioToque = new Date().getTime();
+	};
+	ui.ontouchend = function(event) {
+		//todo verificar posição
+		var currentTime = new Date().getTime();
+		var tempoToque = currentTime - gparam.ultimoToque;
+		if (tempoToque<500 && tempoToque > 0) {
+			//double tab ondblclick
+			selecionaNoid(node.id, false);
+			jsonRede(node.id, 1);
+			event.preventDefault();
+		} else {
+			var touchLength = currentTime - gparam.inicioToque;
+			if (touchLength>=500 && gparam.inicioToque!=0) {
+				gparam.inicioToque=0;
+				//alert('Menu de contexto não implementado');
+				//event.preventDefault();
+				//return false;
+				return true;
+			}
+			//single tap onclick
+			selecionaNoid(node.id, event.shiftKey);
+			event.preventDefault();
+		}
+		gparam.ultimoToque = currentTime;
+		return false;
+	};
 	return ui;
 }).placeNode(function(nodeUI, pos) {
 	// 'g' element doesn't have convenient (x,y) attributes, instead
@@ -152,7 +197,7 @@ graphics.link(function(link){
 		.text(String(link.data.label));
 	gparam.idLigacoes[link.data.origem + '\n' + link.data.destino] = link.data.id;
 	graphics.getSvgRoot().childNodes[0].append(label);
-
+	
 	return Viva.Graph.svg('path')
 		.attr('stroke', 'gray')
 		.attr('marker-end', 'url(#Triangle)')
@@ -179,10 +224,7 @@ graphics.link(function(link){
 			|| toPos;
 
 		var data = 'M' + from.x + ',' + from.y + 'L' + to.x + ',' + to.y;
-
 		linkUI.attr("d", data);
-
-		//document.getElementById('label_'+linkUI.attr('id'))
 		document.getElementById('link_label_'+linkUI.attr('id'))
 			.attr("x", (from.x + to.x) / 2)
 			.attr("y", (from.y + to.y) / 2);
@@ -193,12 +235,9 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	var texto = node.id;
 	if (node.id.startsWith('PJ_')) {
 		texto += LF + node.data.descricao + LF + node.data.logradouro + LF + node.data.municipio + '/' + node.data.uf;
-	} else if (node.id.startsWith('PF_')) {
-		
-	}
+	} else if (node.id.startsWith('PF_')) {	}
 	return texto;
 }
-
 
 function selecionaNoid(nodeid, shift_pressionado) {
 	// ativa retângulo em torno do ícone do nó.
@@ -236,10 +275,9 @@ function selecionaNoid(nodeid, shift_pressionado) {
 			gparam.idNosSelecionados.add(nodeid);
 			gparam.idnoSelecionado = nodeid;
 		}
-		
 	}
 	//ajusta menu contextual
-	ajustaMenuContextual(nodeid);
+	//ajustaMenuContextual(nodeid);
 	return;
 }
 
@@ -256,13 +294,13 @@ function ajustaMenuContextual(nodeid) {
 		document.getElementById('mc_titulo').label = '';
 	}
 }
+
 function localizaNo(texto) { //retorna n. de nos localizados
 	var t = texto.toUpperCase(); 
 	var idNosLocalizados= new Set(); 
 	var primeiroNoid = null;
 	graph.forEachNode(function(node){
 		if ((node.id.search(t)!= -1) || (node.data.descricao.search(t)!=-1)) {
-		
 			idNosLocalizados.add(node.id);
 			if (!primeiroNoid) {
 				primeiroNoid = node.id;
@@ -284,7 +322,6 @@ function localizaNo(texto) { //retorna n. de nos localizados
 	} else {
 		return 0;
 	}
-	
 }
 
 function menu_localiza() {
@@ -305,7 +342,6 @@ function menu_localiza() {
 		}, function() { ativaAtalhos(true);
 			menu_rendererAtivarParar(true);
 		});
-	
 }
 
 function menu_rendererAtivarParar(bAtivar) {
@@ -320,7 +356,6 @@ function menu_rendererAtivarParar(bAtivar) {
 
 function removeIdNo(noId) { 
 	//remover o nó da lista de nós
-
 	//remover ligações que partem do nó e que chegam ao nó
 	//procura label do link para remover
 	graph.forEachLinkedNode(noId, function(nodeaux, link){
@@ -331,7 +366,6 @@ function removeIdNo(noId) {
 			element.parentNode.removeChild(element);
 		} catch (e){; };
 	});
-
 	graph.removeNode(noId);
 	//remove no da lista de selecionados
 	gparam.idNosSelecionados.delete(noId);
@@ -342,12 +376,14 @@ function menu_excluirNosSelecionados() {
 		alertify.alert('Exclusão', 'Não há itens selecionados para exclusão. Selecione e tente novamente.', function(){ ; });
 		return;
 	}
-	alertify.confirm('Excluir '+ gparam.idNosSelecionados.size + ' nós selecionados.', 'Deseja prosseguir? Não será possível reverter a exclusão.', 
+	var tmensagem = (gparam.idNosSelecionados.size==1) ? 'Excluir 1 nó.' : ('Excluir '+ gparam.idNosSelecionados.size + ' nós selecionados.');
+	var tsucesso = (gparam.idNosSelecionados.size==1) ? '1 nó foi excluído.' : (gparam.idNosSelecionados.size + ' nós foram excluídos.');
+	alertify.confirm(tmensagem, 'Deseja prosseguir? Não será possível reverter a exclusão.', 
 			function(){ 
 				for (let n of gparam.idNosSelecionados) {
 					removeIdNo(n);
 				}			
-				alertify.success('Os nós selecionados foram excluídos.') 
+				alertify.success(tsucesso);
 			}
             , function(){ ;}
 	);
@@ -358,12 +394,12 @@ function menu_excluirTudo() {
 	graph.forEachNode( function(node) { 
 		setNos.add(node.id);
 	});
-	alertify.confirm('Excluir todos os '+ setNos.size + ' nós.', 'Deseja prosseguir? Não será possível reverter a exclusão.', 
+	alertify.confirm('Excluir todos os '+ setNos.size +  ' nós.', 'Deseja prosseguir? Não será possível reverter a exclusão.', 
 			function(){ 
 				for (let n of setNos) {
 					removeIdNo(n);
 				}			
-				alertify.success('Os nós selecionados foram excluídos.') 
+				alertify.success(setNos.size + ' nós foram excluídos.') 
 			}
             , function(){ ;}
 	);
@@ -376,39 +412,8 @@ function menu_inserirDesfazer() {
 	for (let n of idNosInseridos) {
 		removeIdNo(n);
 	}
-	alertify.success('Foram removidos ' + tam + ' nós.');
-}
-
-function jsonRede(idin, camada) {
-	var url = "";
-	idin = idin.replace(/\//g, '');
-	if (!idin) {
-		return;
-	}
-	url = "/rede/grafojson/" + idin  + "/" + camada ;
-	document.body.style.cursor = 'wait';
-	fetch(url, {method: 'get', mode: 'cors',})
-	  .then(
-		function(response) {
-		  if (response.status !== 200) {
-		  	document.body.style.cursor = 'default'
-			console.log('Looks like there was a problem. Status Code: ' +  response.status);
-			alertify.error('Aconteceu um erro (' +  response.status + ')');
-			return;
-		  }
-		  // Examine the text in the response
-		  response.json().then(function(data) {
-			//console.log(data);
-			document.body.style.cursor = 'default'
-			insereJson(data);
-		  });
-		}
-	  )
-	  .catch(function(err) {
-	    document.body.style.cursor = 'default'
-		console.log('Fetch Error :-S', err);
-		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
-	  });
+	var tmensagem = (tam==1 ? 'Foi removido um nó.' : ('Foram removidos ' + tam + ' nós.'))
+	alertify.success(tmensagem);
 }
 
 function menu_dados() {
@@ -454,8 +459,7 @@ function menu_dadosNovaJanela() {
 	}
 }
 
-
-function insereJson(jsonIn) {
+function insereJson(jsonIn, texto) {
 	var no = jsonIn.no;
 	var ligacao = jsonIn.ligacao;
 	gparam.json = JSON.parse(JSON.stringify(jsonIn));
@@ -490,6 +494,7 @@ function insereJson(jsonIn) {
 	if (idNosInseridos.size) {
 		gparam.listaIdNosInseridos.push(idNosInseridos);
 	}
+
 	for (let ligaux of Object.values(ligacao)) {
 		//console.log(ligaux.origem);
 		if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
@@ -501,7 +506,7 @@ function insereJson(jsonIn) {
 					kl += 1;
 					gparam.kligacoes = gparam.kligacoes + 1;
 				} catch (e) {
-					console.log('erro na ligacao');
+					console.log('erro na ligacao' + texto);
 					console.log(e);
 					console.log(JSON.parse(JSON.stringify(ligaux)));
 				}
@@ -518,16 +523,16 @@ function insereJson(jsonIn) {
 		}
 	} 
 	
-	var textoMensagem = '';
-	if (kn)	textoMensagem = 'Foram inseridos ' + kn + ' cpfs/cnpjs';
+	var textoMensagem = texto;
+	if (kn)	textoMensagem += 'Foram inseridos ' + kn + ' cpfs/cnpjs';
 	if (kl) {
-		if (textoMensagem) {
-			textoMensagem += ' e ' + kn + 'ligações.';
+		if (kn) {
+			textoMensagem += ' e ' + kn + ' ligações.';
 		} else {
 			textoMensagem += 'Foram inseridos ' + kl + ' ligações.'
 		}
 	}
-	if (!textoMensagem) textoMensagem = 'Não encontrou novos itens';
+	if ((!kn) && (!kl)) textoMensagem += 'Não encontrou novos itens';
 	
 	if (jsonIn.mensagem_popup) {
 		alertify.alert('Alerta!', jsonIn.mensagem_popup, function(){ alertify.success(textoMensagem); });
@@ -539,15 +544,61 @@ function insereJson(jsonIn) {
 	}
 }
 
+function jsonRede(idin, camada) {
+	var url = "";
+	idin = idin.replace(/\//g, '');
+	if (!idin) {
+		return;
+	}
+	url = "/rede/grafojson/" + idin  + "/" + camada ;
+	document.body.style.cursor = 'wait';
+	fetch(url, {method: 'get', mode: 'cors',})
+	  .then(
+		function(response) {
+		  if (response.status !== 200) {
+		  	document.body.style.cursor = 'default'
+			console.log('Looks like there was a problem. Status Code: ' +  response.status);
+			alertify.error('Aconteceu um erro (' +  response.status + ')');
+			return;
+		  }
+		  // Examine the text in the response
+		  response.json().then(function(data) {
+			//console.log(data);
+			document.body.style.cursor = 'default'
+			insereJson(data, idin + ' em camada ' + camada +'. ');
+		  });
+		}
+	  )
+	  .catch(function(err) {
+	    document.body.style.cursor = 'default'
+		console.log('Fetch Error :-S', err);
+		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+	  });
+}
+
 function menu_inserir() {
 	//var cn = prompt('Digite CNPJ ou CPF-Nome, ou vários CNPJs separados por ;');
 	var camada = 0;
 	ativaAtalhos(false);
-	alertify.prompt( 'Inserir do Banco de Dados SQLITE', 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). Para visualizar um cnpj aleatório, digite TESTE', ''
+	alertify.prompt( 'Inserir item no gráfico', 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). Para visualizar um cnpj aleatório, digite TESTE', gparam.inserirDefault
                , function(evt, cnpjs) { 
-					if (cnpjs) { 
-						var camada = prompt('Camada',1);
-						if (camada) jsonRede(cnpjs, camada);
+					var cn = cnpjs.trim().toUpperCase();
+					if (cn) { 
+						if (cn=='T') {
+							cn='TESTE';
+						}
+						if (cn=='TESTE') {
+							if (gparam.numeroInsercoes==0) { //se for primeira insercao de teste, já coloca camada 2 
+								camada = 1;
+							}
+						}
+						if (camada==0) {
+							camada = prompt('Quantidade de Camadas (ou Níveis da consulta)', 1);
+						}
+						if (camada) {
+							jsonRede(cn, camada);
+							gparam.numeroInsercoes += 1;
+						}
 					}
 					ativaAtalhos(true);
 				}, function() { ativaAtalhos(true);}
@@ -628,6 +679,8 @@ function evento_teclasDown(e) {
 		menu_GoogleMaps('https://www.google.com/?#q=');;
 	} else if (e.code=='KeyJ') {
 		menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
+	} else if (e.code=='KeyN') {
+		menu_rotulosCompletos(!gparam.bRotulosCompletos);
 	} else if (e.code=='KeyL') {
 		menu_localiza();
 	} else 	if (e.code=='Delete') {
@@ -644,8 +697,32 @@ function evento_teclasDown(e) {
 	e.preventDefault();
 }
 
+function menu_rotulosCompletos(bCompleto) { 
+	gparam.bRotulosCompletos = bCompleto;
+	graph.forEachNode( function(node) {
+		var ui=graphics.getNodeUI(node.id); 
+		var labels = node.data.label.split('\n');
+		var identificador = labels[0];
+		var nome = '';
+		if (labels.length>1) {
+			nome = labels[1];
+		}
+		if (gparam.bRotulosCompletos) {
+			ui.getElementsByTagName('tspan')[0].text(identificador);
+			ui.getElementsByTagName('tspan')[1].text(nome);
+		} else {
+			nome = nome.split(' ')[0];
+			ui.getElementsByTagName('tspan')[0].text(nome);
+			ui.getElementsByTagName('tspan')[1].text('');
+		}			
+	});
+}
+
 function ativaAtalhos(bcaptura) {
 	// é preciso desativar antes de usar o alertify.prompt
+	if (gparam.mobile) {
+		return;
+	}
 	if (bcaptura) {
 		document.onkeydown = evento_teclasDown;
 	} else {
@@ -654,8 +731,7 @@ function ativaAtalhos(bcaptura) {
 }
 
 
-function saveTextAsFile(textToSave, nomeArquivo, mime)
-{   //salva arquivo texto sem precisar mandar para o servidor.
+function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto sem precisar mandar para o servidor.
 	var textToSaveAsBlob = new Blob([textToSave], mime); //{type:"text/plain"});
 	var textToSaveAsURL = window.URL.createObjectURL(textToSaveAsBlob);
 	var fileNameToSaveAs = nomeArquivo; 
@@ -668,8 +744,7 @@ function saveTextAsFile(textToSave, nomeArquivo, mime)
 	document.body.appendChild(downloadLink);
 	downloadLink.click();
 }
-function destroyClickedElement(event)
-{
+function destroyClickedElement(event){
 	document.body.removeChild(event.target);
 }
 
@@ -705,6 +780,28 @@ function menu_exporta(bSoSelecionados) {
 	iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
 }
 
+function menu_zoomin() {
+	menuOnClick() //firefox no android, não está fechando o menu
+	var vezes = gparam.mobile?6:3;
+	var escalamax = gparam.mobile?8:2;
+	if (gparam.renderer.getTransform().scale>escalamax) {
+		return;
+	}
+	for(var k=0; k<vezes; k++) {
+		var escala = gparam.renderer.zoomIn();
+		if (escala>escalamax) {
+			break;
+		}
+	}
+}
+
+function menu_zoomout() {
+	menuOnClick() //firefox no android, não está fechando o menu
+	var vezes = gparam.mobile?6:2;
+	for(var k=0; k<vezes; k++) {
+		var escala = gparam.renderer.zoomOut();;
+	}
+}
 //menu contextual
 var menu = null;
 function showMenu(x, y){
@@ -713,20 +810,117 @@ function showMenu(x, y){
     menu.classList.add('show-menu');
 }
 function hideMenu(){
+	//menu.classList.contains('show-menu') //para verificar
     menu.classList.remove('show-menu');
 }
 function onContextMenu(e){
-    e.preventDefault();
+	e.preventDefault();
     showMenu(e.pageX, e.pageY);
-    document.addEventListener('click', onClick, false);
+    document.addEventListener(gparam.eventclick, menuOnClick, false);
+
 }
-function onClick(e){
+function menuOnClick(e){
+	//devido a inconsistência no firefox e chrome no android, foi colocado menuOnClick(); antes de todos os comandos do menu
     hideMenu();
-    document.removeEventListener('click', onClick);
+    document.removeEventListener(gparam.eventclick, menuOnClick);
+}
+
+function menu_botao(event) {
+	event.preventDefault();
+	// menu funciona no chrome do android mas não no firefox (não fecha o menu)
+	showMenu(10,25);
+	setTimeout(function(){
+        document.addEventListener(gparam.eventclick, menuOnClick, false);
+	},1000);
+	event.preventDefault();
+	return false;
 }
 //.menu contextual
 
+alertifyfake = {
+	'prompt':function(titulo, texto, valor, func1, func2) {
+		menuOnClick(); //firefox no android, não está fechando o menu
+		var resp = 	prompt(titulo+'\n'+texto, valor);
+		if (resp) {
+			func1(null, resp);
+		} else {
+			func2();
+		};
+	},
+	'confirm':function(titulo, texto, func1,func2) {
+		menuOnClick();
+		var resp = confirm(titulo + '\n' + texto);
+		if (resp) {
+			func1();
+		} else {
+			func2();
+		}
+	},
+	'alert':function(titulo, texto, func) {
+		menuOnClick();
+		texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '')
+		setTimeout(function(){ alert(titulo + '\n\n' + texto);}, 500);	
+	},
+	'success':function(texto) {
+		menuOnClick();
+		setTimeout(function(){ alert(texto);}, 500);
+	},
+	'error':function(texto) {
+		menuOnClick();
+		setTimeout(function(){ alert('ERRO!!! ' + texto); }, 500);
+	}
+}
+
 function main() {
+	gparam.mobile = false;
+	if (gparam.mensagemInicial) {
+		alert(gparam.mensagemInicial);
+	}
+	if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ //mobile
+		//mobile. gambiarra, o alertify não funciona no ipad, no android fica muito pequeno
+		alertify.set('notifier','position', 'top-center'); //se fica de lado, os alertas não aparecem no mobile
+		gparam.mobile = true;
+		gparam.inserirDefault = 'TESTE'; //como é dificil digitar no mobile, coloca um valor padrão
+		if (/Android/i.test(navigator.userAgent)) { //android
+			//no android, tenta usar menu contextual. Aumenta o tamanho do menu para poder visualizar.
+			//document.getElementsByClassName('menu')[0].style.scale=2;
+			document.querySelectorAll('.menu-btn').forEach(function(element,key) {element.style.fontSize='30px'});
+			document.querySelectorAll('.menu-text').forEach(function(element,key) {element.style.marginLeft='50px'});
+			document.querySelector('.menu').style.width='500px';
+			menu = document.querySelector('.menu');
+			document.querySelector('body').style.fontSize='xx-large'; //para alterar tamanho do texto no alertify
+			for (let botao of document.getElementsByClassName('botaosuperior')) { 
+				botao.style.fontSize = '60px'; //="font-size:60px;";
+			}	
+		} else 	{ //safari
+			gparam.safari = true;
+			alertify.prompt = alertifyfake.prompt;
+			alertify.confirm = alertifyfake.confirm;
+			alertify.alert = alertifyfake.alert; 
+			//alertify.success = alertifyfake.success;
+			//alertify.error = alertifyfake.error;	
+			//safari, trocar onclick por ontouchend nos botoes
+    		var botoes = document.getElementsByClassName('botaosuperior');
+    		for (var i=0; i<botoes.length; i++) { //ipad antigo não aceita let
+    			botoes[i].ontouchend=botoes[i].onclick;
+    		}
+    		document.querySelectorAll('.menu-btn').forEach( function(element,key) {element.ontouchend = element.onclick;});
+			menu = document.querySelector('.menu');
+			gparam.eventclick = 'touchend';
+			//no safari, redimensiona botoes por css
+			document.querySelectorAll('.menu-btn').forEach(function(element,key) {element.style.fontSize='10px'});
+			document.querySelectorAll('.menu-text').forEach(function(element,key) {element.style.marginLeft='40px'});
+			document.querySelector('.menu').style.width='300px';
+			//document.getElementById('botaoDadosBasicos').ontouchend = "";
+		} 
+		alert('Isto não funciona corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
+	} else { //desktop
+		document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
+		document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";	
+		menu = document.querySelector('.menu');
+		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
+	}
+
 	gparam.layout = Viva.Graph.Layout.forceDirected(graph, {
 		   springLength : 140, //80,
 		   springCoeff : 0.0002, //0.0002,
@@ -740,77 +934,89 @@ function main() {
 		});
 	gparam.renderer.run();
 	gparam.geom = Viva.Graph.geom();
+	if (gparam.mobile) {
+		menu_zoomin();
+		menu_zoomin();
+	}
 	if (gparam.cpfcnpjInicial) {
 		jsonRede(gparam.cpfcnpjInicial, gparam.camadaInicial);
 		ativaAtalhos(true);
 	} else {
 		menu_inserir();
 	}
-	//adicionaMenuContexto();
-	menu = document.querySelector('.menu');
-	document.addEventListener('contextmenu', onContextMenu, false);
-} //main()
+} //.main()
 
 </script>
 
-<style type="text/css" media="screen">
-	html, body, svg { width: 100%; height: 100%;}
+<style type="text/css" media="screen"> 
+	html, body, svg { width: 100%; height: 100%;
+	/* para acertar texto dos botoes no safari */
+	-ms-text-size-adjust: 200%;
+	-webkit-text-size-adjust: 200%;
+	}
 </style>
 </head>
 <body id='corpo' onload='main()' style='overflow:hidden;'>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
-
-<menu class="menu">
+<div id='div_botoes'>
+<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>&nbsp;&nbsp;
+<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Abre o projeto no Github'>Rede</button>	&nbsp;&nbsp;
+<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj/')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin();" title='Aumenta visualização. A roda do mouse também faz isso.'>&nbsp;+&nbsp;</button>&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout();" title='Diminui visualização.  A roda do mouse também faz isso.'>&nbsp;-&nbsp;</button>
+</div>
+<menu id='menu_contexto' class="menu">
+  <li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 1);"> <i class="fa fa-layer-group"></i>
+	<span class="menu-text">Incluir uma Camada</span> </button>
+  </li>
   <li class="menu-item submenu">
-    <button type="button" class="menu-btn"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir Camada</span> </button>
+    <button type="button" class="menu-btn"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir mais camadas</span> </button>
     <menu class="menu">
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 1);"> <span class="menu-text">1</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 2);"> <span class="menu-text">2</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 2);"> <span class="menu-text">2</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 3);"> <span class="menu-text">3</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 3);"> <span class="menu-text">3</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 4);"> <span class="menu-text">4</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 4);"> <span class="menu-text">4</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 5);"> <span class="menu-text">5</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 5);"> <span class="menu-text">5</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 6);"> <span class="menu-text">6</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 6);"> <span class="menu-text">6</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 7);"> <span class="menu-text">7</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 7);"> <span class="menu-text">7</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 8);"> <span class="menu-text">8</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 8);"> <span class="menu-text">8</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 9);"> <span class="menu-text">9</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 9);"> <span class="menu-text">9</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:jsonRede(gparam.idnoSelecionado, 10);"> <span class="menu-text">10</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 10);"> <span class="menu-text">10</span> </button>
       </li>
     </menu>
   </li>
   <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_inserir();"> 
+    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserir();"> 
       <i class="fa fa-plus"></i> <span class="menu-text">Inserir CNPJ ou CPF (I)</span> 
     </button>
   </li>
   <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_inserirDesfazer();"> 
+    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserirDesfazer();"> 
       <i class="fa fa-undo"></i> <span class="menu-text">Desfazer Inserção (Ctrl+Z)</span> 
     </button>
   </li>
   <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_dados()"><i class="fa fa-newspaper"></i> <span class="menu-text">Dados Básicos (D)</span> </button>
+    <button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados()"><i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
   </li>
   <li class="menu-item">
-    <button type="button" class="menu-btn" id="mc_titulo" onclick="javascript:menu_dadosNovaJanela()">
+    <button type="button" class="menu-btn" id="mc_titulo" onclick="menuOnClick(); javascript:menu_dadosNovaJanela()">
       <i class="fa fa-folder-open"></i> 
       <span class="menu-text">Dados em Janela (Shift+D)</span>
     </button>
@@ -819,19 +1025,19 @@ function main() {
    <button type="button" class="menu-btn"> <i class="fa fa-file-excel"></i> <span class="menu-text">Exportar em Excel</span> </button>
     <menu class="menu">
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_exporta(true)"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exporta(true)"> 
           <i class="fa fa-file-excel"></i><span class="menu-text">Itens Selecionados</span> 
         </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_exporta(false)"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exporta(false)"> 
           <i class="fa fa-file-excel"></i><span class="menu-text">Todos</span> 
         </button>
       </li>
 	</menu>
   </li>
   <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_localiza();"> 
+    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza();"> 
       <i class="fa fa-search"></i> <span class="menu-text">Localizar CNPJ ou CPF (L)</span> 
     </button>
   </li>
@@ -839,46 +1045,66 @@ function main() {
     <button type="button" class="menu-btn"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
     <menu class="menu">
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_buscaEmSite('https://www.google.com/?#q=');"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.google.com/search?q=');"> 
           <i class="fab fa-google"></i><span class="menu-text" style="margin-left:12px">Google (G)</span> 
         </button>
 	  </li>
 	  <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_GoogleMaps();"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();"> 
           <i class="fab fa-google"></i><span class="menu-text" style="margin-left:12px">Google Maps(Shift+G)</span> 
         </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
           <i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil (J)</span> 
         </button>
       </li>
     </menu>
   </li>
-
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="javascript:menu_pinarNo();"> 
-      <i class="fa fa-thumbtack"></i> <span class="menu-text" alt="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós">Fixar o Nó (P)</span> 
-    </button>
-  </li>
-
   <li class="menu-item submenu">
-    <button type="button" class="menu-btn"> <i class="fa fa-project-diagram"></i> <span class="menu-text">Leiaute</span> </button>
+    <button type="button" class="menu-btn">  <span class="menu-text">Rótulos</span> </button>
     <menu class="menu">
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_rendererAtivarParar(false);"> 
-          <i class="fa fa-stop"></i> <span class="menu-text">Parar (Q)</span> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(true);"> 
+          <span class="menu-text" style="margin-left:12px">Nome Completo</span> 
         </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_rendererAtivarParar(true);"> 
-          <i class="fa fa-play"></i> <span class="menu-text">Continuar (Shift+Q)</span> 
+	  </li>
+	  <li class="menu-item">
+        <button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(false);"> 
+          <span class="menu-text" style="margin-left:12px">Só Primeiro Nome</span> 
         </button>
       </li>
     </menu>
+  </li>
+
+  <li class="menu-item">
+    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+  </li>
+  <li class="menu-item">
+    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo();"> 
+      <i class="fa fa-thumbtack"></i> <span class="menu-text" alt="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós">Fixar o Nó (P)</span> 
+    </button>
+  </li>
+  <li class="menu-item">
+    <button type="button" class="menu-btn" onclick="menuOnClick(); gparam.renderer.reset();"> 
+      <i class="fa fa-compress"></i> <span class="menu-text" alt="Reinicia escala">Escala Inicial</span> 
+    </button>
+  </li>
+  <!--
+  <li class="menu-item submenu">
+
+    <button type="button" class="menu-btn"> <i class="fa fa-project-diagram"></i> <span class="menu-text">Leiaute</span> </button>
+  
+    <menu class="menu">  -->
+  <li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(false);"> 
+	  <i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Q)</span> 
+	</button>
+  </li>
+  <li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(true);"> 
+	  <i class="fa fa-play"></i> <span class="menu-text">Leiaute: Continuar (Shift+Q)</span> 
+	</button>
   </li>
 
   <li class="menu-separator"></li>
@@ -887,17 +1113,24 @@ function main() {
     <button type="button" class="menu-btn"> <i class="fa fa-trash"></i> <span class="menu-text">Excluir</span> </button>
     <menu class="menu">
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_excluirNosSelecionados()"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirNosSelecionados()"> 
           <i class="fa fa-trash"></i> <span class="menu-text">Excluir Nós selecionados (Del)</span> 
         </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="javascript:menu_excluirTudo()"> 
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirTudo()"> 
           <i class="fa fa-trash"></i> <span class="menu-text">Excluir Tudo</span> 
         </button>
       </li>
     </menu>
   </li>
+  
+    <li class="menu-separator"></li>
+	<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj'); "> 
+		  <i></i> <span class="menu-text">Sobre...</span> 
+		</button>
+	</li>
 </menu>
 
 <iframe id="iframeAuxiliarDownload" src="" onload="" style="display:none"></iframe>
