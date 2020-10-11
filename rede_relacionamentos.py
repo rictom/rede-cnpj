@@ -182,7 +182,7 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
     #se fromTmpTable=False, espera que cpfcnpjIn='cpf-nome;cnpj;nome...'
     #se fromTmpTable=True, ignora cpfcnpjIn e pega dados a partir de tmp_cnpjs e tmp_cpfnomes
     #print('INICIANDO-------------------------')
-    print('camadasRede-inicio: ' + time.ctime())
+    print(f'camadasRede ({camada})-{cpfcnpjIn}-inicio: ' + time.ctime() + ' ', end='')
     mensagem_lateral, mensagem_popup, mensagem_confirmar = '', '', ''
     #con=sqlite3.connect(camDbSqlite)
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
@@ -265,7 +265,8 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
             orig_destAnt = ('PJ_'+k['cnpj'], destino)
             if cam+1==camada and bjson: #só pega dados na última camada
                 ligacao = {"origem":'PJ_'+k['cnpj'], "destino":destino, 
-                           "cor":"gray", "camada":cam+1, "tipoDescricao":'sócio',"label":dicQualificacao_socio.get(int(k['cod_qualificacao']),'')}
+                           "cor": "silver", #"cor":"gray", 
+                           "camada":cam+1, "tipoDescricao":'sócio',"label":dicQualificacao_socio.get(int(k['cod_qualificacao']),'')}
                 ligacoes.append(copy.deepcopy(ligacao))
                 setOrigDest.add('PJ_'+k['cnpj'])
                 setOrigDest.add(destino)
@@ -309,12 +310,13 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
             ''' #pode haver empresas fora da base de teste
     setCNPJsRecuperados = set()
     for k in con.execute(query):
+        listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
+        logradouro = ', '.join(listalogradouro)
         no = {'id': 'PJ_'+k['cnpj'], 'descricao': k['razao_social'], 
               'camada': camadasIds[k['cnpj']], 'tipo':0, 'situacao_ativa': k['situacao']=='02',
-              'logradouro': f'''{k['tipo_logradouro']} {', '.join([k['logradouro'], k['numero'], k['complemento'], k['bairro']])}''',
+              'logradouro': f'''{logradouro}''',
               'municipio': k['municipio'], 'uf': k['uf'] 
               }
-              #,'m1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0
         nosaux.append(copy.deepcopy(no))
         setCNPJsRecuperados.add(k['cnpj'])
     #trata caso excepcional com base de teste, cnpj que é sócio não tem registro na tabela empresas
@@ -336,7 +338,8 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
                'confirmar':mensagem_confirmar, 
                'mensagem_lateral':mensagem_lateral, 'mensagem_popup':mensagem_popup} 
     
-    print('camadasRede-fim: ' + time.ctime())
+    #print(' fim: ' + time.ctime())
+    print(' fim: ' + ' '.join(str(time.ctime()).split()[3:]))
     return textoJson
 
 def apagaLog():
@@ -363,27 +366,28 @@ def jsonDados(cpfcnpjIn):
         d = dict(k)  
         capital = d['capital_social']/100
         capital = f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.')
+        listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
+        logradouro = ', '.join(listalogradouro)
         dados = f'''<b>CNPJ:</b> {d['cnpj']} - {'Matriz' if d['matriz_filial']=='1' else 'Filial'}<br>
-                <b>Razão Social:</b> {d['razao_social']} <br>
-                <b>Nome Fantasia:</b> {d['nome_fantasia']} <br>
-                <b>Data início atividades:</b> {ajustaData(d['data_inicio_ativ'])} <br>
-                <b>Situação:</b> {d['situacao']} - {dicSituacaoCadastral.get(d['situacao'],'')}  <b>Data Situação:</b> {ajustaData(d['data_situacao'])} <br>
-                <b>Motivo situação:</b> {d['motivo_situacao']}-{dicMotivoSituacao.get(int(d['motivo_situacao']),'')} <br>
-                <b>Natureza jurídica:</b> {d['cod_nat_juridica']}-{dicNaturezaJuridica.get(d['cod_nat_juridica'],'')}<br>
-                <b>CNAE:</b> {d['cnae_fiscal']}-{dicCnae.get(int(d['cnae_fiscal']),'')} <br>
-                <b>Porte empresa:</b> {d['porte']}-{dicPorteEmpresa.get(d['porte'],'')} <br>
-                <b>Opção MEI:</b> {d['opc_mei']} <br>
-                <b>Endereço:</b> {d['tipo_logradouro']} {', '.join([d['logradouro'], d['numero'], d['complemento'], d['bairro']])} <br>
-                <b>Municipio:</b> {d['municipio']}/{d['uf']} - <b>CEP:</b>{d['cep']} <br>
-                <b>Endereço Exterior:</b> {d['nm_cidade_exterior']} <b>País:</b> {d['nome_pais']} <br>
-                <b>Telefone:</b> {d['ddd_1']} {d['telefone_1']}  {d['ddd_2']} {d['telefone_2']} <br>
-                <b>Fax:</b> {d['ddd_fax']} {d['num_fax']} <br>
-                <b>Email:</b> {d['email']} <br>
-                <b>Capital Social:</b> R$ {capital} <br>
-                '''    
+<b>Razão Social:</b> {d['razao_social']} <br>
+<b>Nome Fantasia:</b> {d['nome_fantasia']} <br>
+<b>Data início atividades:</b> {ajustaData(d['data_inicio_ativ'])} <br>
+<b>Situação:</b> {d['situacao']} - {dicSituacaoCadastral.get(d['situacao'],'')}  <b>Data Situação:</b> {ajustaData(d['data_situacao'])} <br>
+<b>Motivo situação:</b> {d['motivo_situacao']}-{dicMotivoSituacao.get(int(d['motivo_situacao']),'')} <br>
+<b>Natureza jurídica:</b> {d['cod_nat_juridica']}-{dicNaturezaJuridica.get(d['cod_nat_juridica'],'')}<br>
+<b>CNAE:</b> {d['cnae_fiscal']}-{dicCnae.get(int(d['cnae_fiscal']),'')} <br>
+<b>Porte empresa:</b> {d['porte']}-{dicPorteEmpresa.get(d['porte'],'')} <br>
+<b>Opção MEI:</b> {d['opc_mei']} <br>
+<b>Endereço:</b> {d['tipo_logradouro']} {logradouro} <br>
+<b>Municipio:</b> {d['municipio']}/{d['uf']} - <b>CEP:</b>{d['cep']} <br>
+<b>Endereço Exterior:</b> {d['nm_cidade_exterior']} <b>País:</b> {d['nome_pais']} <br>
+<b>Telefone:</b> {d['ddd_1']} {d['telefone_1']}  {d['ddd_2']} {d['telefone_2']} <br>
+<b>Fax:</b> {d['ddd_fax']} {d['num_fax']} <br>
+<b>Email:</b> {d['email']} <br>
+<b>Capital Social:</b> R$ {capital} <br>'''    
         break #só pega primeiro
     con = None
-    print('jsonDados-fim: ' + time.ctime())
+    print('jsonDados-fim: ' + time.ctime())   
     return dados
 
 def ajustaData(d): #aaaammdd
@@ -475,4 +479,8 @@ def provavelSexo(nome):
         sexo = 0
     return sexo
 
-
+def numeroDeEmpresasNaBase(): #nome tem que ser completo. Com Teste, pega item randomico
+    #remove acentos
+    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
+    r = con.execute('select count(*) as contagem from empresas;')
+    return r.fetchone()[0]

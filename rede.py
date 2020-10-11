@@ -14,7 +14,7 @@ import os
 #import busca_google, 
 import rede_relacionamentos
 app = Flask("rede")
-gp = None
+gp = {}
 '''
 import pysos #data persistence
 nomes_bloqueados = pysos.List('pysos_nomes_bloqueados')
@@ -32,14 +32,24 @@ except:
     cpfcnpjInicial=''
     camadaInicial=1
 
+gp['numeroDeEmpresasNaBase']=rede_relacionamentos.numeroDeEmpresasNaBase()
 
 @app.route("/rede/")
 @app.route("/rede/grafico/<cpfcnpj>/<int:camada>")
 def html_pagina(cpfcnpj='', camada=camadaInicial):
     print('htmlpagina',cpfcnpj, camada)
+    mensagemInicial = ''
+    inserirDefault=''
     if not cpfcnpj: #define cpfcnpj inicial, só para debugar.
-        cpfcnpj=cpfcnpjInicial 
-    return render_template('rede_template.html', cpfcnpjInicial=cpfcnpj, camadaInicial=camada)
+        cpfcnpj = cpfcnpjInicial
+        numeroEmpresas = gp['numeroDeEmpresasNaBase']
+        tnumeroEmpresas = format(numeroEmpresas,',').replace(',','.')
+        if numeroEmpresas>40000000: #no código do template, dois pontos será substituida por .\n
+            mensagemInicial = f"LEIA ANTES DE PROSSEGUIR..Todos os dados exibidos são públicos, provenientes da página de dados públicos da Secretaria da Receita Federal..O autor não se responsibiliza pela utilização desses dados, pelo mau uso das informações ou incorreções..A base tem {tnumeroEmpresas} empresas."
+        else:
+            mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas fictícias..Para inserir um novo elemento digite TESTE (CNPJ REAL NÃO SERÁ LOCALIZADO)"
+            inserirDefault =' TESTE'
+    return render_template('rede_template.html', cpfcnpjInicial=cpfcnpj, camadaInicial=camada, mensagemInicial=mensagemInicial, inserirDefault=inserirDefault)
 
 @app.route("/rede/dados_janela/<cpfcnpj>")
 def html_dados(cpfcnpj=''):
@@ -58,7 +68,7 @@ def html_dados(cpfcnpj=''):
 
 @app.route('/rede/grafojson/<cpfcnpj>/<int:camada>')
 def serve_rede_json(cpfcnpj, camada):
-    print('pedido json:', cpfcnpj)
+    print('serve_rede_json:', cpfcnpj)
     if not camada:
         camada=1
     else:
@@ -67,7 +77,7 @@ def serve_rede_json(cpfcnpj, camada):
 
 @app.route('/rede/dadosdetalhes/<cpfcnpj>')
 def serve_dados_detalhes(cpfcnpj):
-    print('pedido json:', cpfcnpj)
+    print('serve_dados_detalhes:', cpfcnpj)
     return jsonify(rede_relacionamentos.jsonDados(cpfcnpj))
 
 
@@ -101,7 +111,7 @@ def serve_form_download(): #formato='pdf'):
         </html>
     '''
 
-from requests.utils import unquote
+#from requests.utils import unquote
 
 def removeAcentos(data):
   import unicodedata, string
@@ -114,4 +124,4 @@ if __name__ == '__main__':
     import webbrowser
     webbrowser.open('http://127.0.0.1:5000/rede', new=0, autoraise=True)
     #app.run(debug=True, use_reloader=True)    
-    app.run(debug=True, use_reloader=False)
+    app.run(host='0.0.0.0',debug=True, use_reloader=False)
