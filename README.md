@@ -8,7 +8,7 @@ A rotina possibilita visualizar de forma gráfica os relacionamentos entre empre
 Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
 A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, este repositório tem o arquivo com cerca de mil registros com dados fictícios de empresas e de sócios. <br>
 
-## Versão online com base completa de dados públicos:
+## Versão online com base completa de dados públicos de CNPJ:
 http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
 Funciona parcialmente em navegador de celular Android, com inconsistência na hora de fazer um zoom e menu incompleto.
@@ -22,12 +22,10 @@ Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra di
 Para iniciar esse script, em um console DOS digite<br>
 python rede.py<br>
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
-Para facilitar a execução, edite o arquivo rede.bat, ajustando o caminho para ativar as variáveis de ambiente para o python.<br>
 
 ## Versão executável:
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-versao-exe.7z](https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
-
 
 ## Configurar nós iniciais:
 Se não houver cpfcnpj inicial configurado em rede.ini, o navegador abrirá um popup pedindo para inserir um cnpj ou nome. Colocando TESTE (ou teste), será inserido um ícone com um cnpj aleatório do banco de dados.<br>
@@ -58,6 +56,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - G – Abre o nó numa aba do site Google;
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
 - J – Abre o nó numa aba do site Jusbrasil;
+- N - Rótulo - Exibe apenas o primeiro nome;
 - A - Gráfico em Nova Aba;
 - SHIFT+A - Abre uma nova Aba vazia;
 - P - Fixar o nó na posição;
