@@ -175,7 +175,7 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', grupo='', listaCpfCnpjs=None):
     dftmptable['grupo'] = grupo
     dftmptable['camada'] = 0
     dftmptable.to_sql('tmp_cpfnomes', con=con, if_exists='append', index=False, dtype=dtype_tmp_cpfnomes)    
-    return camadasIds
+    return camadasIds, cnpjs, cpfnomes
 
 def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None  ):    
     #se cpfcnpjIn=='', usa dados das tabelas tmp_cnpjs e tmp_cpfnomes, não haverá camada=0
@@ -191,14 +191,14 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
     nosids = set()
     ligacoes = []
     setOrigDest = set()
-    camadasIds = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, grupo=grupo, listaCpfCnpjs=listaCpfCnpjs)
+    camadasIds,cnpjs, cpfnomes = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, grupo=grupo, listaCpfCnpjs=listaCpfCnpjs)
     # if cpfcnpjIn:
     #     camadasIds = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, grupo=grupo, listaCpfCnpjs=listaCpfCnpjs)
     # else:
     #     camadasIds = {}
  
-    cnpjs=set()
-    cpfnomes = set()
+    #cnpjs=set() #precisa adicionar os cnpjs que não tem sócios
+    #cpfnomes = set()
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
     for cam in range(camada):       
         query = ''' SELECT * From (
@@ -299,6 +299,7 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
     if not bjson:
         print('camadasRede-fim: ' + time.ctime())
         return len(camadasIds)
+    print('xxcnpjs', cnpjs) #xxx
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='append', index=False, dtype=dtype_tmp_cnpjs)
     query = '''
