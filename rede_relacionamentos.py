@@ -299,7 +299,6 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
     if not bjson:
         print('camadasRede-fim: ' + time.ctime())
         return len(camadasIds)
-    print('xxcnpjs', cnpjs) #xxx
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable.to_sql('tmp_cnpjs', con=con, if_exists='append', index=False, dtype=dtype_tmp_cnpjs)
     query = '''
@@ -323,7 +322,7 @@ def camadasRede(cpfcnpjIn='', camada=1, grupo='', bjson=True, listaCpfCnpjs=None
     #trata caso excepcional com base de teste, cnpj que é sócio não tem registro na tabela empresas
     diffCnpj = cnpjs.difference(setCNPJsRecuperados)
     for cnpj in diffCnpj:
-        no = {'id': 'PJ_'+cnpj, 'descricao': dicRazaoSocial[cnpj], 
+        no = {'id': 'PJ_'+cnpj, 'descricao': dicRazaoSocial.get(cnpj, 'NÃO FOI LOCALIZADO NA BASE'), 
               'camada': camadasIds[cnpj], 'tipo':0, 'situacao_ativa': True,
               'logradouro': '',
               'municipio': '', 'uf': ''
@@ -397,7 +396,7 @@ def ajustaData(d): #aaaammdd
 def dadosParaExportar(listaCpfCnpjs):    
     #print('INICIANDO-------------------------')
     print('dadosParaExportar-inicio: ' + time.ctime())
-    print(listaCpfCnpjs)
+    #print(listaCpfCnpjs)
     #con=sqlite3.connect(camDbSqlite)
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
 
