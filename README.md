@@ -78,7 +78,7 @@ Scripts em python para converter a base de cnpj da receita em sqlite:<br>
 https://github.com/fabioserpa/CNPJ-full<br>
 Obs: é preciso alterar o script para indexar a coluna “razão_social” da tabela empresas, senão a consulta por nome é lenta.<br>
 
-Arquivo CNPJ_full.db completo, referência julho/2020, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
+Arquivo CNPJ_full.db completo, referência 5/9/2020, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
 https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing <br>
 Para juntar os blocos, abra o primeiro (CNPJ_full-partes.7z.001) no 7zip. O arquivo compactado tem o tamanho de 4,1GB. O arquivo descompactado tem 22GB, por isso a descompactação demora.<br>
 
