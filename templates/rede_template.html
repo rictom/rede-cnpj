@@ -24,12 +24,10 @@ https://fontawesome.com/v4.7.0/icon/trash
 
 <script type="text/javascript">
 
-// http://jsfiddle.net/ibigd/z7ymfpmm/
+// adaptado de http://jsfiddle.net/ibigd/z7ymfpmm/
 var graph = Viva.Graph.graph();
-
 var graphics = Viva.Graph.View.svgGraphics();
 var gparam = {};
-	gdebug = null;
 	gparam.nodeSize = 24;
 	gparam.tamanhoFonte = 10;
 	gparam.kligacoes = 0;
@@ -54,9 +52,15 @@ var gparam = {};
 	gparam.numeroInsercoes = 0;
 	gparam.bRotulosCompletos = true;
 
+// variáveis globais
+var gdebug = null,
+	createMarker = null,
+	marker = null,
+	defs = null,
+	menu = null;
 	
 // cria a triangulo da seta.
-var createMarker = function(id) {
+createMarker = function(id) {
 	return Viva.Graph.svg('marker')
 	.attr('id', id)
 	.attr('viewBox', '0 0 10 10')
@@ -68,12 +72,12 @@ var createMarker = function(id) {
 	.attr('orient', 'auto')
 	.attr('stroke', 'gray')
 	.attr('fill', 'gray');
-},
+};
 
 marker = createMarker('Triangle');
 marker.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
 
-var defs = graphics.getSvgRoot().append('defs');
+defs = graphics.getSvgRoot().append('defs');
 	//insere filtro PB
 	defs.innerHTML = ' \
 		<filter id="filtroPB"> \
@@ -133,15 +137,18 @@ graphics.node(function(node) {
 	ui.append(svgText);
 	ui.append(rect);
 	ui.append(img);
-
-	ui.onclick = function(event) {
+/* 
+	ui.onclick = function(event) { //pra que servia isso??
 		if ( event.shiftKey || event.controlKey) {
 			event.preventDefault();
 			//event.stopPropagation();
 			//return true;
-		}
-	};
-	ui.onmouseup = function(event) {
+			return;
+		} 
+		
+	}; */
+	
+	ui.onmouseup = function(event) { 
 		selecionaNoid(node.id, event.shiftKey);
 		event.preventDefault();
 		return;
@@ -149,7 +156,7 @@ graphics.node(function(node) {
 	ui.ondblclick = function(event) {
 		if (event.which == 1) {
 			selecionaNoid(node.id, false);
-			jsonRede(node.id, 1);
+			menu_incluirCamada(node.id, 1);
 			event.preventDefault();
 		};
 		return;
@@ -161,17 +168,15 @@ graphics.node(function(node) {
 		//todo verificar posição
 		var currentTime = new Date().getTime();
 		var tempoToque = currentTime - gparam.ultimoToque;
-		if (tempoToque<500 && tempoToque > 0) {
+		if ((tempoToque<500) && (tempoToque > 0)) {
 			//double tab ondblclick
 			selecionaNoid(node.id, false);
-			jsonRede(node.id, 1);
+			menu_incluirCamada(node.id, 1);
 			event.preventDefault();
 		} else {
 			var touchLength = currentTime - gparam.inicioToque;
-			if (touchLength>=500 && gparam.inicioToque!=0) {
+			if ((touchLength>=500) && (gparam.inicioToque!=0)) {
 				gparam.inicioToque=0;
-				//alert('Menu de contexto não implementado');
-				//event.preventDefault();
 				//return false;
 				return true;
 			}
@@ -191,15 +196,17 @@ graphics.node(function(node) {
 
 graphics.link(function(link){
 	var label = Viva.Graph.svg('text')
+		//.attr('title', String(link.data.label))
 		.attr('id','link_label_'+link.data.id)
 		.attr('font-size',gparam.tamanhoFonte+'px')
 		.attr('fill',link.data.cor)
 		.text(String(link.data.label));
+	label.insertAdjacentHTML('beforeEnd','<title>' + String(link.data.label) + '</title>'); 
 	gparam.idLigacoes[link.data.origem + '\n' + link.data.destino] = link.data.id;
 	graphics.getSvgRoot().childNodes[0].append(label);
 	
 	return Viva.Graph.svg('path')
-		.attr('stroke', 'gray')
+		.attr('stroke', link.data.cor) // 'gray')
 		.attr('marker-end', 'url(#Triangle)')
 		.attr('id', link.data.id);
 	}).placeLink(function(linkUI, fromPos, toPos) {
@@ -225,9 +232,28 @@ graphics.link(function(link){
 
 		var data = 'M' + from.x + ',' + from.y + 'L' + to.x + ',' + to.y;
 		linkUI.attr("d", data);
-		document.getElementById('link_label_'+linkUI.attr('id'))
+		var elemento = document.getElementById('link_label_'+linkUI.attr('id'));
+		// se for grande, deixa o texto do link na horizontal, se for menor alinha com a ligacao.
+		if  (elemento.textContent.length> 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
+			elemento.attr("x", (from.x + to.x) / 2)
+				.attr("y", (from.y + to.y) / 2);
+		} else {
+			// calcula o angulo para exibir o rótulo inclinado
+			var angulo = 180.0/Math.PI* Math.atan2(toPos.y-fromPos.y,toPos.x - fromPos.x);
+			var baseline = '-1';
+			if (angulo>90) {
+				angulo = -(180.0 - angulo);
+				baseline = '-1';
+			} else if (angulo<-90) {
+				angulo = 180.0 + angulo;
+				baseline = '-2';
+			}
+			elemento.attr("transform","rotate(" + parseFloat(angulo) + " " + parseInt((from.x + to.x) / 2) + "," 
+				+ parseInt((from.y + to.y) / 2) + ") translate(0," + baseline + ")")
+			.attr('text-anchor','middle')
 			.attr("x", (from.x + to.x) / 2)
 			.attr("y", (from.y + to.y) / 2);
+		}
 	}); //.graphics.link(function(link)
 
 function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dados dos marcadores
@@ -281,6 +307,7 @@ function selecionaNoid(nodeid, shift_pressionado) {
 	return;
 }
 
+/*
 function ajustaMenuContextual(nodeid) {
 	gdebug = nodeid;
 	if (nodeid) {
@@ -293,7 +320,7 @@ function ajustaMenuContextual(nodeid) {
 	} else {
 		document.getElementById('mc_titulo').label = '';
 	}
-}
+} */
 
 function localizaNo(texto) { //retorna n. de nos localizados
 	var t = texto.toUpperCase(); 
@@ -317,7 +344,7 @@ function localizaNo(texto) { //retorna n. de nos localizados
 		ajustaMenuContextual(gparam.idnoSelecionado);
 		//var position = gparam.renderer.getLayout().getNodePosition(gparam.idnoSelecionado);
 		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
-		gparam.renderer.moveTo(position.x,position.y);
+		gparam.renderer.moveTo(position.x, position.y);
 		return gparam.idNosSelecionados.size;
 	} else {
 		return 0;
@@ -416,10 +443,40 @@ function menu_inserirDesfazer() {
 	alertify.success(tmensagem);
 }
 
-function menu_dados() {
+function dadosEmHtml(d) {
+	//for (var i of Object.entries(gparam.json)) {
+	//	texto += '<b>' + i[0] + ':<b> ' + i[1] + '<br> '; }
+	var ht = '';
+	ht += "<b>CNPJ:</b> " + d['cnpj'] + "<br>";
+	ht += "<b>Razão Social:</b> "+d['razao_social'] +  "<br>";
+	ht += "<b>Nome Fantasia:</b> "+d['nome_fantasia'] + "<br>";
+	ht += "<b>Data início atividades:</b> "+d['data_inicio_ativ']+"<br>";
+	ht += "<b>Situação:</b> "+d['situacao']+" <b>Data Situação:</b> "+d['data_situacao']+"<br>";
+	ht += "<b>Motivo situação:</b> "+d['motivo_situacao'] +"<br>";
+	ht += "<b>Natureza jurídica:</b> "+d['cod_nat_juridica'] +"<br>";
+	ht += "<b>CNAE:</b> "+d['cnae_fiscal'] +"<br>";
+	ht += "<b>Porte empresa:</b> "+d['porte'] +"<br>";
+	ht += "<b>Opção MEI:</b> "+d['opc_mei'] +"<br>";
+	ht += "<b>Endereço:</b> "+d['endereco'] +"<br>";
+	ht += "<b>Municipio:</b> "+d['municipio']+"/"+d['uf'] + " - <b>CEP:</b>" + d['cep'] +"<br>";
+	if (d['nm_cidade_exterior'] || d['nome_pais']) { 
+		ht += "<b>Endereço Exterior:</b> "+d['nm_cidade_exterior'] +" <b>País:</b> "+d['nome_pais']+"<br>";
+	}
+	ht += "<b>Telefone:</b> "+d['ddd_1']+" "+ d['telefone_1']+"  "+d['ddd_2']+" "+d['telefone_2'] +"<br>";
+	ht += "<b>Fax:</b> "+d['ddd_fax']+" "+d['num_fax'] +"<br>";
+	ht += "<b>Email:</b> "+d['email'] +"<br>";
+	ht += "<b>Capital Social:</b> R$ "+d['capital_social'] +"<br>";
+	return ht;
+}
+
+function menu_dados(bNovaJanela) {
 	var idin = gparam.idnoSelecionado;
 	if (!idin) return;
-	var url = "/rede/dadosdetalhes/" + idin ;
+	if (!idin.startsWith('PJ_')) {
+		alertify.error('Este comando funciona apenas para Pessoa Jurídica. Sem dados disponíveis para ' + gparam.idnoSelecionado);
+		return;
+	}
+	var url = "/rede/dadosjson/" + idin ;
 	fetch(url, {method: 'get', mode: 'cors',})
 	  .then(
 		function(response) {
@@ -433,11 +490,16 @@ function menu_dados() {
 			//console.log(data);
 			var texto = "";
 			gparam.json = data;
-			//for (var i of Object.entries(gparam.json)) {
-			//	texto += '<b>' + i[0] + ':<b> ' + i[1] + '<br> '; }
+
 			if (data) {
 				//document.getElementById("corpo").disabled = true; 
-				alertify.alert("Dados de "+gparam.idnoSelecionado, data, function(){});
+				if (bNovaJanela) { 
+					//var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+					var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+					win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + dadosEmHtml(data) + "</body></html>";
+				} else {
+					alertify.alert("Dados de "+gparam.idnoSelecionado, dadosEmHtml(data), function(){});
+				}
 			} else {
 				alertify.success('Sem dados disponíveis para ' + idin);
 			}
@@ -450,14 +512,18 @@ function menu_dados() {
 	  });
 }
 
+/*
 function menu_dadosNovaJanela() {
+	menu_dados(true);
+	return;
 	if (!gparam.idnoSelecionado) return;
 	if (gparam.idnoSelecionado.startsWith('PJ_')) { 
 		var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+		document.body.innerHTML =  dadosEmHtml(data);
 	} else {
-		alertify.success('Sem dados disponíveis para ' + gparam.idnoSelecionado);
+		alertify.error('Este comando funciona apenas para Pessoa Jurídica. Sem dados disponíveis para ' + gparam.idnoSelecionado);
 	}
-}
+} */
 
 function insereJson(jsonIn, texto) {
 	var no = jsonIn.no;
@@ -501,7 +567,7 @@ function insereJson(jsonIn, texto) {
 			ligaux.id = gparam.kligacoes;
 			
 			if ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.origem))) {
-				try { //dá erro com a rede de teste
+				try { //dava erro com a rede de teste
 					graph.addLink(ligaux.origem, ligaux.destino, JSON.parse(JSON.stringify(ligaux)));
 					kl += 1;
 					gparam.kligacoes = gparam.kligacoes + 1;
@@ -534,53 +600,102 @@ function insereJson(jsonIn, texto) {
 	}
 	if ((!kn) && (!kl)) textoMensagem += 'Não encontrou novos itens';
 	
-	if (jsonIn.mensagem_popup) {
-		alertify.alert('Alerta!', jsonIn.mensagem_popup, function(){ alertify.success(textoMensagem); });
+	if (jsonIn.mensagem.popup) {
+		alertify.alert('Alerta!', jsonIn.mensagem.popup, function(){ alertify.success(textoMensagem); });
 	} else {
 		alertify.success(textoMensagem);
 	}
-	if (jsonIn.mensagem_lateral) {
-		alertify.success(jsonIn.mensagem_lateral);
+	if (jsonIn.mensagem.lateral) {
+		alertify.success(jsonIn.mensagem.lateral);
 	}
 }
 
-function jsonRede(idin, camada) {
+
+
+function menu_incluirCamada(idin, camada, tipo) {
 	var url = "";
 	idin = idin.replace(/\//g, '');
 	if (!idin) {
 		return;
 	}
-	url = "/rede/grafojson/" + idin  + "/" + camada ;
-	document.body.style.cursor = 'wait';
-	fetch(url, {method: 'get', mode: 'cors',})
-	  .then(
-		function(response) {
-		  if (response.status !== 200) {
-		  	document.body.style.cursor = 'default'
-			console.log('Looks like there was a problem. Status Code: ' +  response.status);
-			alertify.error('Aconteceu um erro (' +  response.status + ')');
-			return;
-		  }
-		  // Examine the text in the response
-		  response.json().then(function(data) {
-			//console.log(data);
+	function fazFetch() {
+		document.body.style.cursor = 'wait';
+		fetch(url, {method: 'get', mode: 'cors',})
+		  .then(
+			function(response) {
+			  if (response.status !== 200) {
+				document.body.style.cursor = 'default'
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+			  }
+			  // Examine the text in the response
+			  response.json().then(function(data) {
+				//console.log(data);
+				document.body.style.cursor = 'default'
+				insereJson(data, idin + ' em camada ' + camada +'. ');
+			  });
+			}
+		  )
+		  .catch(function(err) {
 			document.body.style.cursor = 'default'
-			insereJson(data, idin + ' em camada ' + camada +'. ');
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
-		}
-	  )
-	  .catch(function(err) {
-	    document.body.style.cursor = 'default'
-		console.log('Fetch Error :-S', err);
-		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
-	  });
+	}
+	function dialogoParametrosLink() {
+		//https://stackoverflow.com/questions/30712759/multiple-input-boxes-in-alertifyjs-prompt-dialog
+		/* This is important : strip the HTML of dlgContent to ensure no conflict of IDs for input boxes arrises" */
+		/* Now instead of making a prompt Dialog , use a Confrm Dialog */
+		var dlgLink = document.getElementById('dlgLink');
+		//document.getElementById('dlgLink_camadas').value = camada;
+		var dlLinkhtml = dlgLink.outerHTML;
+		dlgLink.outerHTML = ''; 
+		ativaAtalhos(false);
+		alertify.confirm(dlgLink).set('onok', function(closeevent, value) { 
+			var valorMinimo = parseFloat(document.getElementById('dlgLink_valorMinimo').value).toString();
+			var valorMaximo = parseFloat(document.getElementById('dlgLink_valorMaximo').value).toString();
+			var numeroItens = parseInt(document.getElementById('dlgLink_numeroItens').value).toString();
+			var camada = parseInt(document.getElementById('dlgLink_camadas').value).toString();
+			/* Insert your code to work with the two values */ 	
+			// await new Promise(r => setTimeout(r, 1000)); //delay de 1 segundo
+			valorMinimo = (valorMinimo!='NaN')?valorMinimo:'0';			
+			valorMaximo = (valorMaximo!='NaN')?valorMaximo:'0';
+			numeroItens = (numeroItens!='NaN')?numeroItens:'0';
+			camada = (camada!='NaN')?camada:'0';
+			//alert('valores: ' + valorMinimo + ' '+ valorMaximo + ' ' + numeroItens + ' '+camadas);
+			console.log(valorMinimo, valorMaximo, numeroItens, camada);
+			ativaAtalhos(true);
+			//dlgLink.outerHTML = dlLinkhtml;
+			url = "/rede/grafojson/" + idin  + "/" + camada + "/links/" + numeroItens + '/' + valorMinimo + '/' + valorMaximo;
+			fazFetch();
+		}).set('oncancel', function() {console.log('saindo'); ativaAtalhos(true);  })
+		.set('title',"Inserir Ligacoes");
+		dlgLink.outerHTML = dlLinkhtml; //não sei se isso tem que ficar dentro dos callbacks
+		document.getElementById('dlgLink_camadas').value = camada; //estranho, mas tem que por isso pra ajustar o campo com o valor
+	}
+	
+	if (tipo) {
+		url += '/' + tipo;
+	} else {
+		url += '/' + 'cnpj';
+	}
+	if (tipo=='links') {
+		dialogoParametrosLink();
+	} else {
+		url = "/rede/grafojson/" + idin  + "/" + camada + "/cnpj";
+		fazFetch();
+	}
 }
 
-function menu_inserir() {
-	//var cn = prompt('Digite CNPJ ou CPF-Nome, ou vários CNPJs separados por ;');
+function menu_inserir(textoDefault) {
 	var camada = 0;
 	ativaAtalhos(false);
-	alertify.prompt( 'Inserir item no gráfico', 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). Para visualizar um cnpj aleatório, digite TESTE', gparam.inserirDefault
+	var itensDefault = gparam.inserirDefault;
+	if (textoDefault) {
+		itensDefault = textoDefault;
+	}
+	alertify.prompt( 'Inserir item no gráfico', 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). Para visualizar um cnpj aleatório, digite TESTE', itensDefault
                , function(evt, cnpjs) { 
 					var cn = cnpjs.trim().toUpperCase();
 					if (cn) { 
@@ -596,7 +711,7 @@ function menu_inserir() {
 							camada = prompt('Quantidade de Camadas (ou Níveis da consulta)', 1);
 						}
 						if (camada) {
-							jsonRede(cn, camada);
+							menu_incluirCamada(cn, camada);
 							gparam.numeroInsercoes += 1;
 						}
 					}
@@ -607,9 +722,7 @@ function menu_inserir() {
 
 function menu_buscaEmSite(siteUrl){
 	var strUrl = siteUrl + '"' + graph.getNode(gparam.idnoSelecionado).data.descricao + '"';		
-	//if (strUrl == '') { return; }
-	var novaJanela=window.open(strUrl);
-	novaJanela.focus();
+	window.open(strUrl).focus();
 };
 
 function menu_GoogleMaps() {
@@ -641,7 +754,6 @@ function menu_abrirNovaAba(bAbreVazio) {
 }
 
 function menu_pinarNo(){
-	//var layout = gparam.renderer.getLayout();
 	var layout = gparam.layout;
 	var no = graph.getNode(gparam.idnoSelecionado);
 	layout.pinNode(no, !layout.isNodePinned(no));
@@ -650,11 +762,15 @@ function menu_pinarNo(){
 function evento_teclasDown(e) {
 	if (e.code.startsWith('Digit') && (e.code.length==6)) {
 		var ns = e.code.substr(-1);
+		var tipo = 'cnpj';
+		if (e.shiftKey) {
+			tipo = 'links';
+		}
 		if (('0' <= ns) && (ns <='9')) {
 			if (ns=='0') {
-				jsonRede(gparam.idnoSelecionado, 10);
+				menu_incluirCamada(gparam.idnoSelecionado, 10, tipo);
 			} else {
-				jsonRede(gparam.idnoSelecionado, parseInt(ns));
+				menu_incluirCamada(gparam.idnoSelecionado, parseInt(ns), tipo);
 			}
 			e.preventDefault();
 			return;
@@ -666,9 +782,9 @@ function evento_teclasDown(e) {
 	} else if (e.code=='KeyI') {
 		menu_inserir();
 	} else if ((!e.shiftKey) && (e.code=='KeyD')) {
-		menu_dados();
+		menu_dados(false);
 	} else if ((e.shiftKey) && (e.code=='KeyD')) {
-		menu_dadosNovaJanela();
+		menu_dados(true);
 	} else if ((!e.shiftKey) && (e.code=='KeyA')) {
 		menu_abrirNovaAba(false);
 	} else if ((e.shiftKey) && (e.code=='KeyA')) {
@@ -730,7 +846,6 @@ function ativaAtalhos(bcaptura) {
 	}
 }
 
-
 function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto sem precisar mandar para o servidor.
 	var textToSaveAsBlob = new Blob([textToSave], mime); //{type:"text/plain"});
 	var textToSaveAsURL = window.URL.createObjectURL(textToSaveAsBlob);
@@ -744,6 +859,7 @@ function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto
 	document.body.appendChild(downloadLink);
 	downloadLink.click();
 }
+
 function destroyClickedElement(event){
 	document.body.removeChild(event.target);
 }
@@ -802,23 +918,25 @@ function menu_zoomout() {
 		var escala = gparam.renderer.zoomOut();;
 	}
 }
+
 //menu contextual
-var menu = null;
 function showMenu(x, y){
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
     menu.classList.add('show-menu');
 }
+
 function hideMenu(){
 	//menu.classList.contains('show-menu') //para verificar
     menu.classList.remove('show-menu');
 }
+
 function onContextMenu(e){
 	e.preventDefault();
     showMenu(e.pageX, e.pageY);
     document.addEventListener(gparam.eventclick, menuOnClick, false);
-
 }
+
 function menuOnClick(e){
 	//devido a inconsistência no firefox e chrome no android, foi colocado menuOnClick(); antes de todos os comandos do menu
     hideMenu();
@@ -836,6 +954,50 @@ function menu_botao(event) {
 	return false;
 }
 //.menu contextual
+
+//resposta a evento drop no div do menu, para abrir opção de inserção. Por exemplo, arrastar do word ou excel uma lista de cnpjs.
+function dragover_handler(ev) {
+	ev.preventDefault();
+	// Define o dropEffect para ser do tipo move
+	ev.dataTransfer.dropEffect = "copy"
+}
+function drop_handler(ev) {
+	ev.preventDefault();
+	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
+	var data = ev.dataTransfer.getData("text");
+	//console.log(escape(data));
+	var itens = data.replace(/\n/g,';')
+	//console.log(escape(itens));
+	menu_inserir(itens);
+}
+
+function desabilitaDrop() {
+	var dropzoneId = "div_botoes"; //só esta região vai aceitar drop
+
+	window.addEventListener("dragenter", function(e) {
+	  if (e.target.id != dropzoneId) {
+		e.preventDefault();
+		e.dataTransfer.effectAllowed = "none";
+		e.dataTransfer.dropEffect = "none";
+	  }
+	}, false);
+
+	window.addEventListener("dragover", function(e) {
+	  if (e.target.id != dropzoneId) {
+		e.preventDefault();
+		e.dataTransfer.effectAllowed = "none";
+		e.dataTransfer.dropEffect = "none";
+	  }
+	});
+
+	window.addEventListener("drop", function(e) {
+	  if (e.target.id != dropzoneId) {
+		e.preventDefault();
+		e.dataTransfer.effectAllowed = "none";
+		e.dataTransfer.dropEffect = "none";
+	  }
+	});
+}
 
 alertifyfake = {
 	'prompt':function(titulo, texto, valor, func1, func2) {
@@ -939,11 +1101,13 @@ function main() {
 		menu_zoomin();
 	}
 	if (gparam.cpfcnpjInicial) {
-		jsonRede(gparam.cpfcnpjInicial, gparam.camadaInicial);
+		menu_incluirCamada(gparam.cpfcnpjInicial, gparam.camadaInicial);
 		ativaAtalhos(true);
 	} else {
 		menu_inserir();
 	}
+	//desabilita drop na área, para não confundir com o drop no menu
+	desabilitaDrop();
 } //.main()
 
 </script>
@@ -958,49 +1122,54 @@ function main() {
 </head>
 <body id='corpo' onload='main()' style='overflow:hidden;'>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
-<div id='div_botoes'>
+<div id='div_botoes' ondrop="drop_handler(event);" ondragover="dragover_handler(event);" title="Arraste CNPJs para esta área">
 <button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>&nbsp;&nbsp;
 <button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Abre o projeto no Github'>Rede</button>	&nbsp;&nbsp;
 <button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj/')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
 <button class='botaosuperior' type="button" onclick="javascript:menu_zoomin();" title='Aumenta visualização. A roda do mouse também faz isso.'>&nbsp;+&nbsp;</button>&nbsp;
 <button class='botaosuperior' type="button" onclick="javascript:menu_zoomout();" title='Diminui visualização.  A roda do mouse também faz isso.'>&nbsp;-&nbsp;</button>
 </div>
+
 <menu id='menu_contexto' class="menu">
   <li class="menu-item">
-	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 1);"> <i class="fa fa-layer-group"></i>
-	<span class="menu-text">Incluir uma Camada</span> </button>
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção"> <i class="fa fa-layer-group"></i>
+	<span class="menu-text">Incluir uma Camada (1)</span> </button>
   </li>
   <li class="menu-item submenu">
-    <button type="button" class="menu-btn"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir mais camadas</span> </button>
+    <button type="button" class="menu-btn" title="Expande vinculos de sócios em mais níveis. Aperte a tecla 2-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir mais Camadas</span> </button>
     <menu class="menu">
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 2);"> <span class="menu-text">2</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 2);"> <span class="menu-text">2</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 3);"> <span class="menu-text">3</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 3);"> <span class="menu-text">3</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 4);"> <span class="menu-text">4</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 4);"> <span class="menu-text">4</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 5);"> <span class="menu-text">5</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 5);"> <span class="menu-text">5</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 6);"> <span class="menu-text">6</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 6);"> <span class="menu-text">6</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 7);"> <span class="menu-text">7</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 7);"> <span class="menu-text">7</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 8);"> <span class="menu-text">8</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 8);"> <span class="menu-text">8</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 9);"> <span class="menu-text">9</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 9);"> <span class="menu-text">9</span> </button>
       </li>
       <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:jsonRede(gparam.idnoSelecionado, 10);"> <span class="menu-text">10</span> </button>
+        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 10);"> <span class="menu-text">10</span> </button>
       </li>
     </menu>
+  </li>
+   <li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 1,'links');"> <i class="fa fa-layer-group"></i>
+	<span class="menu-text" title="Inclui outros vínculos na tabela links (ver documentação no github)">Incluir outras Ligacões (SHIFT+1)</span> </button>
   </li>
   <li class="menu-item">
     <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserir();"> 
@@ -1013,16 +1182,17 @@ function main() {
     </button>
   </li>
   <li class="menu-item">
-    <button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados()"><i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
+    <button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(false)">
+		<i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
   </li>
   <li class="menu-item">
-    <button type="button" class="menu-btn" id="mc_titulo" onclick="menuOnClick(); javascript:menu_dadosNovaJanela()">
+    <button type="button" class="menu-btn" id="mc_titulo" onclick="menuOnClick(); javascript:menu_dados(true)">
       <i class="fa fa-folder-open"></i> 
       <span class="menu-text">Dados em Janela (Shift+D)</span>
     </button>
   </li>
   <li class="menu-item submenu">
-   <button type="button" class="menu-btn"> <i class="fa fa-file-excel"></i> <span class="menu-text">Exportar em Excel</span> </button>
+   <button type="button" class="menu-btn" title="Exporta para o Excel os dados do item selecionado ou de todos os itens do gráfico"> <i class="fa fa-file-excel"></i> <span class="menu-text">Exportar em Excel</span> </button>
     <menu class="menu">
       <li class="menu-item">
         <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exporta(true)"> 
@@ -1076,7 +1246,6 @@ function main() {
       </li>
     </menu>
   </li>
-
   <li class="menu-item">
     <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
   </li>
@@ -1090,12 +1259,6 @@ function main() {
       <i class="fa fa-compress"></i> <span class="menu-text" alt="Reinicia escala">Escala Inicial</span> 
     </button>
   </li>
-  <!--
-  <li class="menu-item submenu">
-
-    <button type="button" class="menu-btn"> <i class="fa fa-project-diagram"></i> <span class="menu-text">Leiaute</span> </button>
-  
-    <menu class="menu">  -->
   <li class="menu-item">
 	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(false);"> 
 	  <i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Q)</span> 
@@ -1106,9 +1269,7 @@ function main() {
 	  <i class="fa fa-play"></i> <span class="menu-text">Leiaute: Continuar (Shift+Q)</span> 
 	</button>
   </li>
-
   <li class="menu-separator"></li>
-
   <li class="menu-item submenu">
     <button type="button" class="menu-btn"> <i class="fa fa-trash"></i> <span class="menu-text">Excluir</span> </button>
     <menu class="menu">
@@ -1123,9 +1284,8 @@ function main() {
         </button>
       </li>
     </menu>
-  </li>
-  
-    <li class="menu-separator"></li>
+   </li>
+	<li class="menu-separator"></li>
 	<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj'); "> 
 		  <i></i> <span class="menu-text">Sobre...</span> 
@@ -1134,6 +1294,21 @@ function main() {
 </menu>
 
 <iframe id="iframeAuxiliarDownload" src="" onload="" style="display:none"></iframe>
+
+<div style="display:none;">
+	<div id="dlgLink">
+		<p><b>Digite parâmetros para inserir os dados da tabela Links.db</b></p>
+		<p>Número máximo de itens (Serão ordenados de forma decrescente)</p>
+		<input class="ajs-input" id="dlgLink_numeroItens" type="number" value="15" /> 
+		<p>Valor mínimo</p>
+		<input class="ajs-input" id="dlgLink_valorMinimo" type="text" value="100000"/> 
+		<p>Valor máximo</p>
+		<input class="ajs-input" id="dlgLink_valorMaximo" type="text" value=""/> 
+		<p>Número de camadas (Profundidade de níveis na consulta)</p>
+		<input class="ajs-input" id="dlgLink_camadas" type="number" value="1" /> 
+
+	</div>
+</div>
 
 </body>
 </html>
