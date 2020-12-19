@@ -5286,7 +5286,28 @@ function svgGraphics() {
             fireRescaled(this);
             return actualScale;
         },
+		//inserido para fazer selecao retangular com ctrl
+		transformClientToGraphCoordinates :  function (position) {
+            var p = svgRoot.createSVGPoint(),
+                t = svgContainer.getCTM(),
+                origin = svgRoot.createSVGPoint().matrixTransform(t.inverse());
 
+            p.x = 0;//dx;
+            p.y = 0; //dy;
+
+            p = p.matrixTransform(t.inverse());
+            p.x = (p.x - origin.x) * t.a;
+            p.y = (p.y - origin.y) * t.d;
+
+            t.e += p.x;
+            t.f += p.y;
+			//return {scale:t.d, ox:t.e,oy:t.f};
+			var pos={};
+			pos.x = (position.x - t.e) / t.d;
+			pos.y = (position.y - t.f) / t.d;
+
+			return pos;
+		},
         resetScale : function () {
             actualScale = 1;
             var transform = "matrix(1, 0, 0, 1, 0, 0)";

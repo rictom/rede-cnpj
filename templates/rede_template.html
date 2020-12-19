@@ -16,7 +16,7 @@ https://fontawesome.com/v4.7.0/icon/trash
 
 <link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
 <link rel="icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
-<script type="text/javascript" src="/static/vivagraph/vivagraph.min.js"></script>
+<script type="text/javascript" src="/static/vivagraph/vivagraph.js"></script>
 <script type="text/javascript" src="/static/alertify/alertify.min.js"></script>
 <link  rel="stylesheet" href="/static/alertify/css/alertify.css" /><link  rel="stylesheet" href="/static/alertify/css/themes/default.css" />
 <link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css">
@@ -38,6 +38,7 @@ var gparam = {};
 	gparam.listaIdNosInseridos = [];
 	gparam.cpfcnpjInicial="{{cpfcnpjInicial}}";
 	gparam.camadaInicial={{camadaInicial}};
+	gparam.idArquivoServidorInicial = "{{idArquivoServidor}}";
 	gparam.mensagemInicial="{{mensagemInicial}}".replace(/\.\./g,'.\n');
 	gparam.inserirDefault="{{inserirDefault}}";
 	gparam.confirmaAntesDeInserirNNos = 100;
@@ -50,12 +51,14 @@ var gparam = {};
 	gparam.safari = false;
 	gparam.eventclick = 'click'; //no safari ='touchend'
 	gparam.numeroInsercoes = 0;
-	gparam.bRotulosCompletos = true;
+	gparam.bRotulosCompletos = true,
+	gparam.AreaSelecaoRetangular = {},
+	gparam.springLength=200;
 
 // variáveis globais
 var gdebug = null,
 	createMarker = null,
-	marker = null,
+	markerSeta = null,
 	defs = null,
 	menu = null;
 	
@@ -74,8 +77,8 @@ createMarker = function(id) {
 	.attr('fill', 'gray');
 };
 
-marker = createMarker('Triangle');
-marker.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
+markerSeta = createMarker('Triangle');
+markerSeta.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
 
 defs = graphics.getSvgRoot().append('defs');
 	//insere filtro PB
@@ -92,51 +95,93 @@ defs = graphics.getSvgRoot().append('defs');
 		<feColorMatrix type="matrix" \
 		values="-1  0  0 0 0  0 -1  0 0 0 0 0 -1 0 0 1 1 1 0 0"/>\
 		</filter>';
-defs.append(marker);
+defs.append(markerSeta);
+
+function labelsNo(node) {
+	//antes se passava node.data.label, mas era redundante com id e descricao
+	var idno = node.data.id;
+	var descricao = node.data.descricao;
+	if (idno.startsWith('PF_')) {
+		idno = idno.substr(3);
+		idno = idno.split('-')[0];
+	} else if (idno.startsWith('EN_')) {
+		var partes = idno.substr(3).split('-');
+		idno = partes[0];
+		descricao = partes[1] + '/' + partes[2];
+	} else {
+		idno = idno.substr(3);
+	}
+	return [idno, descricao]
+}
 
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	var ui = Viva.Graph.svg('g'),
-	  svgText = Viva.Graph.svg('text').attr('y', String(gparam.tamanhoFonte*1.1 + gparam.nodeSize) + 'px') 
-			.attr('x', String(gparam.nodeSize/2)).attr('text-anchor','middle').attr('font-size',gparam.tamanhoFonte+'px'); 
-	  var img = Viva.Graph.svg('image');
-	  if (!node.data.situacao_ativa) {
+	svgText = Viva.Graph.svg('text').attr('y', String(gparam.tamanhoFonte*1.1 + gparam.nodeSize) + 'px') 
+		.attr('x', String(gparam.nodeSize/2)).attr('text-anchor','middle').attr('font-size',gparam.tamanhoFonte+'px'); 
+	var img = Viva.Graph.svg('image');
+	if (!node.data.situacao_ativa) {
 		img.attr('filter','url(#filtroPB)');
-	  };
-	  img.attr('width', gparam.nodeSize)
-		 .attr('height', gparam.nodeSize)
-		 .link(node.data.imagem);
+	};
+	let urlImagem = node.data.imagem;
+	//xxx
+	if (urlImagem.indexOf('/rede/')==-1) {
+		urlImagem = '/rede/static/imagem/' + urlImagem;
+	}
+	img.attr('width', gparam.nodeSize)
+		.attr('height', gparam.nodeSize)
+		.link(urlImagem);
+	var corFundo = node.data.cor ? node.data.cor:'transparent';
+	var	rectCor = Viva.Graph.svg('rect')
+			.attr('stroke', 'black')
+			.attr('stroke-width', 0)		//.attr('stroke-width', 1)			
+			.attr('fill', corFundo) //corFundoImagemF(node)) 
+			.attr('width', gparam.nodeSize)
+			.attr('height', gparam.nodeSize)
+			.attr('visibility', 'visible');  //hidden or visible
+	var	rect = Viva.Graph.svg('rect') //destacar se está selecionado
+			.attr('stroke', 'black')
+			.attr('stroke-width', 2)		//.attr('stroke-width', 1)			
+			.attr('fill', 'transparent') //corFundoImagemF(node)) 
+			.attr('width', gparam.nodeSize)
+			.attr('height', gparam.nodeSize)
+			.attr('stroke-dasharray', '4, 2')
+			.attr('visibility', 'hidden');  //hidden or visible
 
-		var	rect = Viva.Graph.svg('rect')
-				.attr('stroke', 'black')
-				.attr('stroke-width', 3)		//.attr('stroke-width', 1)			
-				.attr('fill', 'transparent') //corFundoImagemF(node)) 
-				.attr('width', gparam.nodeSize)
-				.attr('height', gparam.nodeSize)
-				.attr('visibility', 'hidden');  //hidden or visible
 	ui.insertAdjacentHTML('beforeEnd','<title>' + textoTooltip(node, true) + '</title>'); //title deve ser a primeira coisa apos g para funcionar no firefox 48
 
-	var labels = node.data.label.split('\n');
+	var labels = labelsNo(node); //node.data.label.split('\n');
 	var identificador = labels[0];
 	var nome = '';
 	if (labels.length>1) {
 		nome = labels[1];
 	}
+	var nota = node.data.nota? node.data.nota: '';
+	node.data.nota = nota;
 	if (gparam.bRotulosCompletos) {
 		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
 		svgText.append(textspan);
 		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);
 		svgText.append(textspan2);		
+		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
+			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
+		svgText.append(textspan3);		
 	} else {
 		nome = nome.split(' ')[0];
 		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(nome);
 		svgText.append(textspan);
 		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text('');
 		svgText.append(textspan2);	
+		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
+			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
+		svgText.append(textspan3);	
 	}
 	ui.append(svgText);
-	ui.append(rect);
+
+	ui.append(rectCor);
 	ui.append(img);
+	ui.append(rect);
+
 /* 
 	ui.onclick = function(event) { //pra que servia isso??
 		if ( event.shiftKey || event.controlKey) {
@@ -147,17 +192,32 @@ graphics.node(function(node) {
 		} 
 		
 	}; */
-	
+/*	ui.onclick = function( event ) { //necessário, mesmo que preventDefault 
+		if ( event.shiftKey || event.controlKey) {
+			event.preventDefault();
+			//event.stopPropagation();
+			//return true;
+		}
+		return;
+	};
+	*/
 	ui.onmouseup = function(event) { 
-		selecionaNoid(node.id, event.shiftKey);
-		event.preventDefault();
+		if (event.which == 1) {
+			event.preventDefault();	
+			selecionaNoid(node.id, event.shiftKey);
+		} else if (event.which == 2) {
+			//botão central abre edição de nota
+			event.preventDefault();
+			menu_editarNota(node.id);
+		}
 		return;
 	};
 	ui.ondblclick = function(event) {
 		if (event.which == 1) {
+			event.preventDefault();
 			selecionaNoid(node.id, false);
 			menu_incluirCamada(node.id, 1);
-			event.preventDefault();
+			
 		};
 		return;
 	}; 
@@ -204,11 +264,14 @@ graphics.link(function(link){
 	label.insertAdjacentHTML('beforeEnd','<title>' + String(link.data.label) + '</title>'); 
 	gparam.idLigacoes[link.data.origem + '\n' + link.data.destino] = link.data.id;
 	graphics.getSvgRoot().childNodes[0].append(label);
-	
-	return Viva.Graph.svg('path')
+	var vpath = Viva.Graph.svg('path')
 		.attr('stroke', link.data.cor) // 'gray')
 		.attr('marker-end', 'url(#Triangle)')
 		.attr('id', link.data.id);
+	if ((link.data.origem.startsWith('ID_')) || (link.data.destino.startsWith('EN_')) || (link.data.destino.startsWith('EM_')) || (link.data.destino.startsWith('TE_'))) {
+		vpath.attr('stroke-dasharray', '5, 5');
+	};
+	return vpath
 	}).placeLink(function(linkUI, fromPos, toPos) {
 		var toNodeSize = gparam.nodeSize,
 		fromNodeSize = gparam.nodeSize;
@@ -265,16 +328,20 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	return texto;
 }
 
-function selecionaNoid(nodeid, shift_pressionado) {
+function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	// ativa retângulo em torno do ícone do nó.
 	// se o shift está pressionado, pode ter mais de um nó
 	// quando node=null e shift_pressionado=false, remove todos os nós da seleção.
+	//selecionaRetangular=true, seleciona, não inverte
 	var nodeEstavaSelecionado = false;
 	if (nodeid) {
 		nodeEstavaSelecionado = gparam.idNosSelecionados.has(nodeid);
+		if (selecionaRetangular) {
+			nodeEstavaSelecionado=false;
+		}
 	} else {
 		for (let n of gparam.idNosSelecionados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[0].setAttribute('visibility', 'hidden');  //hidden or visible)		
+			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');  //hidden or visible)		
 		}
 		gparam.idNosSelecionados = new Set(); 
 		gparam.idnoSelecionado = null;
@@ -284,20 +351,20 @@ function selecionaNoid(nodeid, shift_pressionado) {
 		if (nodeEstavaSelecionado) {
 			gparam.idnoSelecionado = null;
 			gparam.idNosSelecionados.delete(nodeid);
-			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[0].setAttribute('visibility', 'hidden');
+			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');
 		} else {
 			gparam.idnoSelecionado = nodeid;
 			gparam.idNosSelecionados.add(nodeid);
-			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[0].setAttribute('visibility', 'visible');
+			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');
 		}
 	} else {
 		for (let n of gparam.idNosSelecionados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[0].setAttribute('visibility', 'hidden');  //hidden or visible)		
+			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');  //hidden or visible)		
 		}
 		gparam.idNosSelecionados = new Set(); 
 		gparam.idnoSelecionado = nodeid;
 		if (nodeid) {
-			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[0].setAttribute('visibility', 'visible');  //hidden or visible)
+			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');  //hidden or visible)
 			gparam.idNosSelecionados.add(nodeid);
 			gparam.idnoSelecionado = nodeid;
 		}
@@ -322,26 +389,183 @@ function ajustaMenuContextual(nodeid) {
 	}
 } */
 
-function localizaNo(texto) { //retorna n. de nos localizados
+//gparam.AreaSelecaoRetangular
+gparam.AreaSelecaoRetangular = {
+	Setup:function() {
+		/*seleção retangular */
+		var multiSelectOverlay;
+		document.addEventListener('keydown', function(e) {
+			if (e.which === 17 && !multiSelectOverlay) { // ctrl key
+				multiSelectOverlay = gparam.AreaSelecaoRetangular.startMultiSelect(graph, gparam.renderer, gparam.layout);
+			}
+		});
+		document.addEventListener('keyup', function(e) {
+			if (e.which === 17 && multiSelectOverlay) {
+				multiSelectOverlay.destroy();
+				multiSelectOverlay = null;
+			}
+		});
+	}, startMultiSelect: function(graph, renderer, layout) {
+		var graphics = renderer.getGraphics();
+		var domOverlay = document.querySelector('.graph-overlay');
+		var overlay = gparam.AreaSelecaoRetangular.createOverlay(domOverlay);
+		overlay.onAreaSelected(handleAreaSelected);
+	  
+		return overlay;
+
+		function handleAreaSelected(area) {
+			// For the sake of this demo we are using silly O(n) implementation.
+			// Could be improved with spatial indexing if required.
+			var topLeft = graphics.transformClientToGraphCoordinates({
+			  x: area.x,
+			  y: area.y
+			});
+
+		var bottomRight = graphics.transformClientToGraphCoordinates({
+			x: area.x + area.width,
+			y: area.y + area.height
+		});
+
+		graph.forEachNode(higlightIfInside);
+		renderer.rerender();
+
+		return;
+
+		function higlightIfInside(node) {
+			var nodeUI = graphics.getNodeUI(node.id);
+			if (isInside(node.id, topLeft, bottomRight)) {
+				selecionaNoid(node.id, true, true);
+			}
+		}
+		 
+		function isInside(nodeId, topLeft, bottomRight) {
+			var nodePos = layout.getNodePosition(nodeId);
+			return ((topLeft.x < nodePos.x) && (nodePos.x < bottomRight.x) &&
+				(topLeft.y < nodePos.y) && (nodePos.y < bottomRight.y));
+		}
+	  }
+	}, createOverlay: function(overlayDom) {
+		var selectionClasName = 'graph-selection-indicator';
+		var selectionIndicator = overlayDom.querySelector('.' + selectionClasName);
+		if (!selectionIndicator) {
+			selectionIndicator = document.createElement('div');
+			selectionIndicator.className = selectionClasName;
+			overlayDom.appendChild(selectionIndicator);
+		}	
+
+		var notify = [];
+		var dragndrop = Viva.Graph.Utils.dragndrop(overlayDom);
+		var selectedArea = {
+			x: 0,
+			y: 0,
+			width: 0,
+			height: 0
+		};
+		var startX = 0;
+		var startY = 0;
+
+		dragndrop.onStart(function(e) {
+			startX = selectedArea.x = e.clientX;
+			startY = selectedArea.y = e.clientY;
+			selectedArea.width = selectedArea.height = 0;
+			updateSelectedAreaIndicator();
+			selectionIndicator.style.display = 'block';
+		});
+
+		dragndrop.onDrag(function(e) {
+			recalculateSelectedArea(e);
+			updateSelectedAreaIndicator();
+			notifyAreaSelected();
+		});
+
+		dragndrop.onStop(function() {
+			selectionIndicator.style.display = 'none';
+		});
+
+		overlayDom.style.display = 'block';
+
+		return {
+			onAreaSelected: function(cb) {
+				notify.push(cb);
+			},
+			destroy: function () {
+				overlayDom.style.display = 'none';
+				dragndrop.release();
+			}
+		};
+
+		function notifyAreaSelected() {
+			notify.forEach(function(cb) {
+				cb(selectedArea);
+			});
+		}
+
+		function recalculateSelectedArea(e) {
+			var bcr = document.getElementById('principal').getBoundingClientRect();
+			selectedArea.width = Math.abs(e.clientX - startX);
+			selectedArea.height = Math.abs(e.clientY - startY);
+			selectedArea.x = Math.min(e.clientX, startX)- bcr.x;
+			selectedArea.y = Math.min(e.clientY, startY)- bcr.y;
+		}
+
+		function updateSelectedAreaIndicator() {
+			var bcr = document.getElementById('principal').getBoundingClientRect();
+			selectionIndicator.style.left = (selectedArea.x) + 'px';
+			selectionIndicator.style.top = (selectedArea.y) + 'px';
+			selectionIndicator.style.width = selectedArea.width + 'px';
+			selectionIndicator.style.height = selectedArea.height + 'px';
+		}	
+	}
+}//gparam.AreaSelecaoRetangular
+
+/* Para usar a seleção retangular, criar a seguinte função depois de scale na função svgGraphics() em vivagraph.js
+		transformClientToGraphCoordinates :  function (position) {
+            var p = svgRoot.createSVGPoint(),
+                t = svgContainer.getCTM(),
+                origin = svgRoot.createSVGPoint().matrixTransform(t.inverse());
+
+            p.x = 0;//dx;
+            p.y = 0; //dy;
+
+            p = p.matrixTransform(t.inverse());
+            p.x = (p.x - origin.x) * t.a;
+            p.y = (p.y - origin.y) * t.d;
+
+            t.e += p.x;
+            t.f += p.y;
+			//return {scale:t.d, ox:t.e,oy:t.f};
+			var pos={};
+			pos.x = (position.x - t.e) / t.d;
+			pos.y = (position.y - t.f) / t.d;
+
+			return pos;
+		},
+*/
+//.gparam.AreaSelecaoRetangular
+
+function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localizados
+	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
 	var t = texto.toUpperCase(); 
 	var idNosLocalizados= new Set(); 
 	var primeiroNoid = null;
 	graph.forEachNode(function(node){
 		if ((node.id.search(t)!= -1) || (node.data.descricao.search(t)!=-1)) {
-			idNosLocalizados.add(node.id);
-			if (!primeiroNoid) {
-				primeiroNoid = node.id;
+			if ((!bFiltroNosSelecionados) || ((bFiltroNosSelecionados) && (gparam.idNosSelecionados.has(node.id)))) {
+				idNosLocalizados.add(node.id);
+				if (!primeiroNoid) {
+					primeiroNoid = node.id;
+				}
 			}
 		}
 	});
 	if (idNosLocalizados.size) {
 		selecionaNoid(null, false); //apaga seleção primeiro
 		for (let n of idNosLocalizados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[0].setAttribute('visibility', 'visible'); 
+			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible'); 
 			gparam.idNosSelecionados.add(n);
 		}
 		gparam.idnoSelecionado = primeiroNoid;
-		ajustaMenuContextual(gparam.idnoSelecionado);
+		//ajustaMenuContextual(gparam.idnoSelecionado);
 		//var position = gparam.renderer.getLayout().getNodePosition(gparam.idnoSelecionado);
 		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
 		gparam.renderer.moveTo(position.x, position.y);
@@ -349,37 +573,44 @@ function localizaNo(texto) { //retorna n. de nos localizados
 	} else {
 		return 0;
 	}
-}
+}//.function localizaNo
 
-function menu_localiza() {
-	menu_rendererAtivarParar(false);
+function menu_localiza(bFiltroNosSelecionados) {
+	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
 	ativaAtalhos(false);
-	alertify.prompt( 'Localizar item na tela', 'Digite partes do Nome, CNPJ ou CPF', ''
+	menu_rendererAtivarParar(false);
+	var tmensagem = bFiltroNosSelecionados? 'Filtrar nos itens selecionados':'Localizar item na tela'; 
+	alertify.prompt( tmensagem, 'Digite partes do Nome, CNPJ ou CPF', ''
 	   , function(evt, texto) { 
-			ativaAtalhos(true);
 			if (texto) { 
-				contagem = localizaNo(texto);
+				contagem = localizaNo(texto, bFiltroNosSelecionados);
 				if (contagem) {
 					alertify.success('Localizou '+ contagem + ' ocorrencias(s) de ' + texto);
 				} else {
 					alertify.error('Não localizou ' + texto);
 				};
-				menu_rendererAtivarParar(true);
 			}
-		}, function() { ativaAtalhos(true);
+			menu_rendererAtivarParar(true);
+			ativaAtalhos(true);
+		}, function() { 
+			ativaAtalhos(true);
 			menu_rendererAtivarParar(true);
 		});
-}
+}//.function menu_localiza
 
-function menu_rendererAtivarParar(bAtivar) {
+function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 	if (!bAtivar) {
 		gparam.renderer.pause();
-		alertify.success('O leiaute foi pausado. Para ativar, pressione SHIFT+Q.');
+		if (bMostraMensagem) {
+			alertify.success('O leiaute foi pausado. Para ativar, pressione SHIFT+Q.');
+		}
 	} else {
 		gparam.renderer.resume();
-		alertify.success('O leiaute foi reiniciado. Para parar, pressione Q.') 
+		if (bMostraMensagem) {
+			alertify.success('O leiaute foi reiniciado. Para parar, pressione Q.');
+		}
 	}
-}
+}//.function menu_rendererAtivarParar
 
 function removeIdNo(noId) { 
 	//remover o nó da lista de nós
@@ -396,7 +627,10 @@ function removeIdNo(noId) {
 	graph.removeNode(noId);
 	//remove no da lista de selecionados
 	gparam.idNosSelecionados.delete(noId);
-}
+	if (gparam.idnoSelecionado==noId) {
+		gparam.idnoSelecionado=null;
+	}
+}//.function removeIdNo
 
 function menu_excluirNosSelecionados() {
 	if (!gparam.idNosSelecionados.size) {
@@ -410,11 +644,12 @@ function menu_excluirNosSelecionados() {
 				for (let n of gparam.idNosSelecionados) {
 					removeIdNo(n);
 				}			
+				gparam.idnoSelecionado=null;
 				alertify.success(tsucesso);
 			}
             , function(){ ;}
 	);
-}
+}//.function menu_excluirNosSelecionados
 
 function menu_excluirTudo() {
 	var setNos = new Set();
@@ -430,7 +665,7 @@ function menu_excluirTudo() {
 			}
             , function(){ ;}
 	);
-}
+}//.function menu_excluirTudo
 
 function menu_inserirDesfazer() {
 	var idNosInseridos = gparam.listaIdNosInseridos.pop();
@@ -441,9 +676,9 @@ function menu_inserirDesfazer() {
 	}
 	var tmensagem = (tam==1 ? 'Foi removido um nó.' : ('Foram removidos ' + tam + ' nós.'))
 	alertify.success(tmensagem);
-}
+}//.menu_inserirDesfazer
 
-function dadosEmHtml(d) {
+function dadosEmHtmlPJ(d) {
 	//for (var i of Object.entries(gparam.json)) {
 	//	texto += '<b>' + i[0] + ':<b> ' + i[1] + '<br> '; }
 	var ht = '';
@@ -467,17 +702,33 @@ function dadosEmHtml(d) {
 	ht += "<b>Email:</b> "+d['email'] +"<br>";
 	ht += "<b>Capital Social:</b> R$ "+d['capital_social'] +"<br>";
 	return ht;
-}
+}//.dadosEmHtmlPJ
 
 function menu_dados(bNovaJanela) {
 	var idin = gparam.idnoSelecionado;
 	if (!idin) return;
 	if (!idin.startsWith('PJ_')) {
-		alertify.error('Este comando funciona apenas para Pessoa Jurídica. Sem dados disponíveis para ' + gparam.idnoSelecionado);
+		//alertify.error('Este comando funciona apenas para Pessoa Jurídica. Sem dados disponíveis para ' + gparam.idnoSelecionado);
+		var ht = '';
+		ht += "<b>ID:</b> " + idin + "<br>";
+		var noData = graph.getNode(idin).data;
+		if (noData.descricao) { 
+			ht += "<b>Descrição:</b> "+ noData.descricao + "<br>";
+		}
+		if (noData.nota) {
+			ht += "<b>Nota:</b> "+ noData.nota + "<br>";
+		}
+		if (bNovaJanela) { 
+			var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=200, width=400');
+			win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + ht + "</body></html>";
+		} else {
+			alertify.alert("Dados de "+gparam.idnoSelecionado, ht, function(){});
+		}		
+		
 		return;
 	}
 	var url = "/rede/dadosjson/" + idin ;
-	fetch(url, {method: 'get', mode: 'cors',})
+	fetch(url, {method: 'get'}) //, mode: 'cors',})
 	  .then(
 		function(response) {
 		  if (response.status !== 200) {
@@ -496,9 +747,9 @@ function menu_dados(bNovaJanela) {
 				if (bNovaJanela) { 
 					//var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
 					var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
-					win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + dadosEmHtml(data) + "</body></html>";
+					win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + dadosEmHtmlPJ(data) + "</body></html>";
 				} else {
-					alertify.alert("Dados de "+gparam.idnoSelecionado, dadosEmHtml(data), function(){});
+					alertify.alert("Dados de "+gparam.idnoSelecionado, dadosEmHtmlPJ(data), function(){});
 				}
 			} else {
 				alertify.success('Sem dados disponíveis para ' + idin);
@@ -510,20 +761,112 @@ function menu_dados(bNovaJanela) {
 		console.log('Fetch Error :-S', err);
 		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 	  });
-}
+}//.function menu_dados
 
-/*
-function menu_dadosNovaJanela() {
-	menu_dados(true);
-	return;
-	if (!gparam.idnoSelecionado) return;
-	if (gparam.idnoSelecionado.startsWith('PJ_')) { 
-		var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
-		document.body.innerHTML =  dadosEmHtml(data);
+function menu_importaJsonArquivo(evt, tipo) {
+	menuOnClick();
+	if (tipo=='drop') {
+		var files = evt.dataTransfer.files;
 	} else {
-		alertify.error('Este comando funciona apenas para Pessoa Jurídica. Sem dados disponíveis para ' + gparam.idnoSelecionado);
+		var files = evt.target.files; // FileList object
 	}
-} */
+	var f=files[0];
+	var reader = new FileReader();
+	reader.onload = (function(f) {
+		return function(e) {
+			var contents = e.target.result;
+			//alert( "Got the file.n"  +"name: " + f.name + "n"  +"type: " + f.type + "n"  +"size: " + f.size + " bytesn"  + "starts with: " + contents.substr(1, contents.indexOf("n"))); 
+			if (f.name.endsWith('.csv')) {
+				insere_lista(contents);
+			} else if (f.name.endsWith('.json')){
+				//importaJSON(contents);
+				insereJson(JSON.parse(contents), 'Leitura de arquivo. ');
+			} else {
+				alertify.error('O arquivo a ser importado deve ter extensão .json ou .csv');
+			}
+		};
+	})(f);
+	reader.readAsText(f);
+}//.function menu_importaJsonArquivo
+
+function menu_exportaJSONServidor(idArquivoServidor) {
+	if (!idArquivoServidor) {
+		idArquivoServidor =  prompt('Digite o nome do arquivo no JSON para exportar.\nO servidor adicionará um sufixo:', 'rede');
+	}
+	if (!idArquivoServidor) {
+		return;
+	}
+	var jsonDados = redeNosLigacoes();
+	var url = '/rede/arquivos_json_upload/' + idArquivoServidor;
+	fazFetch(url, jsonDados); 
+	function fazFetch(url, idArquivoServidor) {
+		document.body.style.cursor = 'wait';
+		fetch(url, {method: 'post', body:JSON.stringify(jsonDados), headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		  .then(
+			function(response) {
+			  if (response.status !== 200) {
+				document.body.style.cursor = 'default';
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+			  }
+			  // Examine the text in the response
+			  response.json().then(function(data) {
+				//console.log(data);
+				document.body.style.cursor = 'default';
+				if (data.nomeArquivoServidor) {
+					alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.');
+					var novaJanela=window.open("/rede/grafico_no_servidor/" + data.nomeArquivoServidor);
+				} else {
+					alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
+				}
+			  });
+			}
+		  )
+		  .catch(function(err) {
+			document.body.style.cursor = 'default';
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		  });
+	}
+}//.function menu_exportaJSONServidor
+
+function menu_importaJSONServidor(idArquivoServidor) {
+	if (!idArquivoServidor) {
+		idArquivoServidor =  prompt('Digite o nome do arquivo no JSON no servidor:');
+	}
+	if (!idArquivoServidor) {
+		return;
+	}
+	var url = "/rede/arquivos_json/" + idArquivoServidor ;
+	fazFetch(url, idArquivoServidor); 
+	function fazFetch(url, idArquivoServidor) {
+		document.body.style.cursor = 'wait';
+		//fetch(url, {method: 'get'}) // mode: 'cors',
+		fetch(url, {method: 'get', headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		  .then(
+			function(response) {
+			  if (response.status !== 200) {
+				document.body.style.cursor = 'default';
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+			  }
+			  // Examine the text in the response
+			  response.json().then(function(data) {
+				//console.log(data);
+				document.body.style.cursor = 'default';
+				insereJson(data, ' Arquivo do Servidor: ' + idArquivoServidor);
+			  });
+			}
+		  )
+		  .catch(function(err) {
+			document.body.style.cursor = 'default';
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		  });
+	}
+}//.function menu_importaJSONServidor
 
 function insereJson(jsonIn, texto) {
 	var no = jsonIn.no;
@@ -547,9 +890,19 @@ function insereJson(jsonIn, texto) {
 		}
 		gparam.confirmaAntesDeInserirNNos = kNosAInserir;
 	}
+	pinarNoSegundos(Math.sqrt(kNosAInserir)*4000); //fixa temporariamente o nó selecionado
 	for (let noaux of Object.values(no)) {
 		if (!graph.hasNode(noaux.id)) { 
 			graph.addNode(noaux.id, JSON.parse(JSON.stringify(noaux)));
+			if (noaux.posicao) { 
+				if ((noaux.posicao.x) && (noaux.posicao.y)) {
+				gparam.layout.setNodePosition(noaux.id, noaux.posicao.x, noaux.posicao.y);
+				//refreshPosicoes = true;
+				}
+			} else if (gparam.idnoSelecionado) { //insere novos em torno do nó selecionado.
+				let posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+				gparam.layout.setNodePosition(noaux.id, posicaoReferencia.x + Math.random()*gparam.springLength-gparam.springLength/2, posicaoReferencia.y + Math.random()*gparam.springLength-gparam.springLength/2);
+			}
 			kn += 1;
 			idNosInseridos.add(noaux.id);
 			if (!noaux.camada) {
@@ -560,25 +913,43 @@ function insereJson(jsonIn, texto) {
 	if (idNosInseridos.size) {
 		gparam.listaIdNosInseridos.push(idNosInseridos);
 	}
-
 	for (let ligaux of Object.values(ligacao)) {
 		//console.log(ligaux.origem);
-		if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
+		var nosExistem = ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino)));
+		if (!nosExistem) {
+			console.log('erro. Um dados de um dos nós da ligação não foi definido');
+			console.log('ligacao '+ ligaux.origem + ' para ' + ligaux.destino);
+			alertify.error('Erro na ligacao '+ ligaux.origem + ' para ' + ligaux.destino);
+			continue;
+		}
+		var ligExistente = graph.hasLink(ligaux.origem, ligaux.destino);
+		if (!ligExistente) {
+			ligExistente = graph.hasLink(ligaux.destino, ligaux.origem);
+		}
+		if (ligExistente) { 
+			labelLigacao = ligExistente.data.label;
+			var conjLabel = new Set(labelLigacao.split(';')); //; é separador dos tipos de ligação
+			var conjNovo = new Set(ligaux.label.split(';'));
+			let uniao = new Set([...conjLabel, ...conjNovo]);
+			ligExistente.data.label = [...uniao].join(';')
+			document.getElementById('link_label_'+ligExistente.data.id).text(ligExistente.data.label);
+		} else { //if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
 			ligaux.id = gparam.kligacoes;
-			
-			if ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.origem))) {
+			if (1) { //((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino))) {
 				try { //dava erro com a rede de teste
 					graph.addLink(ligaux.origem, ligaux.destino, JSON.parse(JSON.stringify(ligaux)));
 					kl += 1;
-					gparam.kligacoes = gparam.kligacoes + 1;
+					gparam.kligacoes += 1;
 				} catch (e) {
-					console.log('erro na ligacao' + texto);
-					console.log(e);
-					console.log(JSON.parse(JSON.stringify(ligaux)));
+					console.log('erro na ligacao ' + texto);
+					console.log('ligacao '+ ligaux.origem + ' para ' + ligaux.destino);
+					alertify.error('Erro json na ligacao '+ ligaux.origem + ' para ' + ligaux.destino);
+					//console.log(e);
+					//console.log(JSON.parse(JSON.stringify(ligaux)));
 				}
 			} else {
 				console.log('faltando um dos nós da ligação.');
-				console.log(JSON.parse(JSON.stringify(ligaux)));
+				console.log('ligacao '+ ligaux.origem + ' para ' + ligaux.origem);
 			}
 		}
 	}
@@ -588,18 +959,19 @@ function insereJson(jsonIn, texto) {
 			selecionaNoid(n, true);
 		}
 	} 
-	
 	var textoMensagem = texto;
-	if (kn)	textoMensagem += 'Foram inseridos ' + kn + ' cpfs/cnpjs';
+	if (kn)	textoMensagem += '. Foram inseridos ' + kn + ' cpfs/cnpjs';
 	if (kl) {
 		if (kn) {
 			textoMensagem += ' e ' + kn + ' ligações.';
 		} else {
-			textoMensagem += 'Foram inseridos ' + kl + ' ligações.'
+			textoMensagem += '. Foram inseridos ' + kl + ' ligações.'
 		}
 	}
 	if ((!kn) && (!kl)) textoMensagem += 'Não encontrou novos itens';
-	
+	if (!jsonIn.mensagem) {
+		jsonIn.mensagem = {'lateral': '', 'popup': '', 'confirmar': ''};
+	}
 	if (jsonIn.mensagem.popup) {
 		alertify.alert('Alerta!', jsonIn.mensagem.popup, function(){ alertify.success(textoMensagem); });
 	} else {
@@ -608,23 +980,30 @@ function insereJson(jsonIn, texto) {
 	if (jsonIn.mensagem.lateral) {
 		alertify.success(jsonIn.mensagem.lateral);
 	}
-}
-
-
+}//.function insereJson
 
 function menu_incluirCamada(idin, camada, tipo) {
+	//if idin='', manda dados dos nós selecionados
 	var url = "";
 	idin = idin.replace(/\//g, '');
-	if (!idin) {
-		return;
+	if ((!idin) && (!gparam.idnoSelecionado)) return; //se idin vazio, manda lista de ids selecionados
+	if (tipo=='links') {
+		dialogoParametrosLink();
+	} else {
+		url = '/rede/grafojson/cnpj/' + camada + '/';
+		fazFetch(url, idin);
 	}
-	function fazFetch() {
+	return;
+	function fazFetch(url, idin) {
 		document.body.style.cursor = 'wait';
-		fetch(url, {method: 'get', mode: 'cors',})
+		//fetch(url, {method: 'get'}) // mode: 'cors',
+		let bodyjson = idin ?  JSON.stringify([]) :  JSON.stringify([...gparam.idNosSelecionados]);
+		url += idin ? idin : gparam.idnoSelecionado;
+		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
-				document.body.style.cursor = 'default'
+				document.body.style.cursor = 'default';
 				console.log('Looks like there was a problem. Status Code: ' +  response.status);
 				alertify.error('Aconteceu um erro (' +  response.status + ')');
 				return;
@@ -632,13 +1011,13 @@ function menu_incluirCamada(idin, camada, tipo) {
 			  // Examine the text in the response
 			  response.json().then(function(data) {
 				//console.log(data);
-				document.body.style.cursor = 'default'
+				document.body.style.cursor = 'default';
 				insereJson(data, idin + ' em camada ' + camada +'. ');
 			  });
 			}
 		  )
 		  .catch(function(err) {
-			document.body.style.cursor = 'default'
+			document.body.style.cursor = 'default';
 			console.log('Fetch Error :-S', err);
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
@@ -647,16 +1026,31 @@ function menu_incluirCamada(idin, camada, tipo) {
 		//https://stackoverflow.com/questions/30712759/multiple-input-boxes-in-alertifyjs-prompt-dialog
 		/* This is important : strip the HTML of dlgContent to ensure no conflict of IDs for input boxes arrises" */
 		/* Now instead of making a prompt Dialog , use a Confrm Dialog */
-		var dlgLink = document.getElementById('dlgLink');
+		//var dlgLink = document.getElementById('dlgLink');
+		var dlgLinkOriginal = document.getElementById('dlgLink');
+		var dlgLink = document.getElementById('dlgLink').cloneNode(true); //clone para não mexer no original, soluciona problema de instabilidade (parava de funcionar depois de misturar tipos de consulta, cnpj e link)
 		//document.getElementById('dlgLink_camadas').value = camada;
+		//var dlLinkhtml = dlgLink.outerHTML;
 		var dlLinkhtml = dlgLink.outerHTML;
 		dlgLink.outerHTML = ''; 
 		ativaAtalhos(false);
 		alertify.confirm(dlgLink).set('onok', function(closeevent, value) { 
-			var valorMinimo = parseFloat(document.getElementById('dlgLink_valorMinimo').value).toString();
-			var valorMaximo = parseFloat(document.getElementById('dlgLink_valorMaximo').value).toString();
-			var numeroItens = parseInt(document.getElementById('dlgLink_numeroItens').value).toString();
-			var camada = parseInt(document.getElementById('dlgLink_camadas').value).toString();
+			/*
+			var valorMinimo = parseFloat(dlgLink.getElementById('dlgLink_valorMinimo').value).toString();
+			var valorMaximo = parseFloat(dlgLink.getElementById('dlgLink_valorMaximo').value).toString();
+			var numeroItens = parseInt(dlgLink.getElementById('dlgLink_numeroItens').value).toString();
+			var camada = parseInt(dlgLink.getElementById('dlgLink_camadas').value).toString();*/	
+			var listaInput = dlgLink.getElementsByTagName('input');
+			var valorMinimo = parseFloat(listaInput.dlgLink_valorMinimo.value).toString();
+			var valorMaximo = parseFloat(listaInput.dlgLink_valorMaximo.value).toString();
+			var numeroItens = parseInt(listaInput.dlgLink_numeroItens.value).toString();
+			var camada = parseInt(listaInput.dlgLink_camadas.value).toString();
+			//copia parametros para formulário original
+			var listaInputOriginal = dlgLinkOriginal.getElementsByTagName('input');
+			listaInputOriginal.dlgLink_valorMinimo.value = listaInput.dlgLink_valorMinimo.value;
+			listaInputOriginal.dlgLink_valorMaximo.value = listaInput.dlgLink_valorMaximo.value;
+			listaInputOriginal.dlgLink_numeroItens.value = listaInput.dlgLink_numeroItens.value;
+			listaInputOriginal.dlgLink_camadas.value = listaInput.dlgLink_camadas.value;
 			/* Insert your code to work with the two values */ 	
 			// await new Promise(r => setTimeout(r, 1000)); //delay de 1 segundo
 			valorMinimo = (valorMinimo!='NaN')?valorMinimo:'0';			
@@ -664,29 +1058,24 @@ function menu_incluirCamada(idin, camada, tipo) {
 			numeroItens = (numeroItens!='NaN')?numeroItens:'0';
 			camada = (camada!='NaN')?camada:'0';
 			//alert('valores: ' + valorMinimo + ' '+ valorMaximo + ' ' + numeroItens + ' '+camadas);
-			console.log(valorMinimo, valorMaximo, numeroItens, camada);
+			//console.log(valorMinimo, valorMaximo, numeroItens, camada);
 			ativaAtalhos(true);
 			//dlgLink.outerHTML = dlLinkhtml;
-			url = "/rede/grafojson/" + idin  + "/" + camada + "/links/" + numeroItens + '/' + valorMinimo + '/' + valorMaximo;
-			fazFetch();
-		}).set('oncancel', function() {console.log('saindo'); ativaAtalhos(true);  })
+			//url = "/rede/grafojson/links/"  + camada + "/" + idin  + "/" + numeroItens + '/' + valorMinimo + '/' + valorMaximo;
+			url = "/rede/grafojson/links/"  + camada +  "/" + numeroItens + '/' + valorMinimo + '/' + valorMaximo  + "/" ;
+			fazFetch(url, idin);
+			//dlgLink.outerHTML = dlLinkhtml; 
+			ativaAtalhos(true); 
+		}, function() { 
+			//console.log('cancel'); 
+			//dlgLink.outerHTML = dlLinkhtml; 
+			ativaAtalhos(true); }
+		).set('oncancel', function() { ativaAtalhos(true);  })
 		.set('title',"Inserir Ligacoes");
-		dlgLink.outerHTML = dlLinkhtml; //não sei se isso tem que ficar dentro dos callbacks
+		//dlgLink.outerHTML = dlLinkhtml; //não sei se isso tem que ficar dentro dos callbacks
 		document.getElementById('dlgLink_camadas').value = camada; //estranho, mas tem que por isso pra ajustar o campo com o valor
 	}
-	
-	if (tipo) {
-		url += '/' + tipo;
-	} else {
-		url += '/' + 'cnpj';
-	}
-	if (tipo=='links') {
-		dialogoParametrosLink();
-	} else {
-		url = "/rede/grafojson/" + idin  + "/" + camada + "/cnpj";
-		fazFetch();
-	}
-}
+}//.function menu_incluirCamada
 
 function menu_inserir(textoDefault) {
 	var camada = 0;
@@ -718,12 +1107,12 @@ function menu_inserir(textoDefault) {
 					ativaAtalhos(true);
 				}, function() { ativaAtalhos(true);}
 	);
-}
+}//.function menu_inserir(
 
 function menu_buscaEmSite(siteUrl){
 	var strUrl = siteUrl + '"' + graph.getNode(gparam.idnoSelecionado).data.descricao + '"';		
 	window.open(strUrl).focus();
-};
+} //.function menu_buscaEmSite
 
 function menu_GoogleMaps() {
 	var data = graph.getNode(gparam.idnoSelecionado).data;
@@ -734,32 +1123,90 @@ function menu_GoogleMaps() {
 	} else {
 		alertify.error('Não há endereço cadastrado.');
 	}
-}
+}//.function menu_GoogleMaps
 
 function menu_abrirNovaAba(bAbreVazio) {
 	var novaJanela=null;
 	if (bAbreVazio) {
-		novaJanela=window.open("/rede/");
+		novaJanela=window.open("/rede/?pula_mensagem=sim");
 		novaJanela.focus(); 
 		return;
 	}
-	var strUrl = "/rede/grafico/" + gparam.idnoSelecionado+ "/";
 	ativaAtalhos(false);
 	alertify.prompt( 'Abrir ' + gparam.idnoSelecionado+  ' em nova aba', 'Selecione camadas', '1', 
 		function(evt, cam) { 	
 			ativaAtalhos(true);
-			novaJanela=window.open(strUrl+cam);
+			let strUrl = "/rede/grafico/" + cam + "/" + gparam.idnoSelecionado;
+			novaJanela=window.open(strUrl);
 			novaJanela.focus();} , 
 		function() { ativaAtalhos(true);}	) ;
-}
+}//.function menu_abrirNovaAba
 
-function menu_pinarNo(){
+function menu_selecionarTudo() {
+	graph.forEachNode(
+		function(node) {
+			var nodeUI = graphics.getNodeUI(node.id);
+				selecionaNoid(node.id, true, true);
+		}	
+	);
+	alertify.success('Foram selecionados ' + graph.getNodesCount() + ' itens.');
+}//.function menu_selecionarTudo
+
+function menu_pinarNo(bfixar){
 	var layout = gparam.layout;
+	for (let n of gparam.idNosSelecionados) {
+		let no = graph.getNode(n);
+		if (bfixar==null) { //inverte
+			layout.pinNode(no, !layout.isNodePinned(no));
+		} else if (bfixar==1) {
+			layout.pinNode(no, true);
+		} else if (bfixar==0) {
+			layout.pinNode(no, false);
+		}
+	}
+//	var no = graph.getNode(gparam.idnoSelecionado);
+//	layout.pinNode(no, !layout.isNodePinned(no));
+}//.function menu_pinarNo
+
+function pinarNoSegundos(segundos) {
+	var layout = gparam.layout;
+	if (!gparam.idnoSelecionado) {
+		return;
+	}
 	var no = graph.getNode(gparam.idnoSelecionado);
-	layout.pinNode(no, !layout.isNodePinned(no));
-};
+	if (layout.isNodePinned(no)) {
+		return;
+	}
+	layout.pinNode(no, true);
+	setTimeout(
+		function() { layout.pinNode(no, false); 
+		}, segundos
+	);
+}//.function pinarNoSegundos
+
+function ativaAtalhos(bcaptura) {
+	// é preciso desativar antes de usar o alertify.prompt
+	if (gparam.mobile) {
+		return;
+	}
+	if (bcaptura) {
+		document.onkeydown = evento_teclasDown;
+	} else {
+		document.onkeydown = null;
+	}
+}//.function ativaAtalhos
 
 function evento_teclasDown(e) {
+	function testa(keyIn, pressShift, pressCtrl) {
+		if (keyIn!=e.code) {
+			return false;
+		} else if (pressShift!=e.shiftKey) {
+			return false;
+		} else if (pressCtrl!=e.ctrlKey) {
+			return false;
+		}
+		return true;
+	}
 	if (e.code.startsWith('Digit') && (e.code.length==6)) {
 		var ns = e.code.substr(-1);
 		var tipo = 'cnpj';
@@ -768,56 +1215,72 @@ function evento_teclasDown(e) {
 		}
 		if (('0' <= ns) && (ns <='9')) {
 			if (ns=='0') {
-				menu_incluirCamada(gparam.idnoSelecionado, 10, tipo);
+				menu_incluirCamada('', 10, tipo);
 			} else {
-				menu_incluirCamada(gparam.idnoSelecionado, parseInt(ns), tipo);
+				menu_incluirCamada('', parseInt(ns), tipo);
 			}
 			e.preventDefault();
 			return;
 		}
-	} else if (e.ctrlKey && (e.code=='KeyZ')) {
+	} else if (testa('KeyZ', false, true)) { //if (e.ctrlKey && (e.code=='KeyZ')) {
 		menu_inserirDesfazer();
-	} else if (e.code=='KeyF') {
+	} else if (testa('KeyF', false, false)) { // if (e.code=='KeyF') {
 		menu_localiza();
-	} else if (e.code=='KeyI') {
+	} else if (testa('KeyI', false, false)) { 
 		menu_inserir();
-	} else if ((!e.shiftKey) && (e.code=='KeyD')) {
+	} else if (testa('KeyI', true, false)) { 
+		menu_ligar_novo();
+	} else if (testa('KeyD', false, false)) { // if ((!e.shiftKey) && (e.code=='KeyD')) {
 		menu_dados(false);
-	} else if ((e.shiftKey) && (e.code=='KeyD')) {
+	} else if (testa('KeyD', true, false)) { // if ((e.shiftKey) && (e.code=='KeyD')) {
 		menu_dados(true);
-	} else if ((!e.shiftKey) && (e.code=='KeyA')) {
+	} else if (testa('KeyA', false, false)) { // if ((!e.ctrlKey) && (!e.shiftKey) && (e.code=='KeyA')) {
 		menu_abrirNovaAba(false);
-	} else if ((e.shiftKey) && (e.code=='KeyA')) {
+	} else if (testa('KeyA', true, false)) { // if ((!e.ctrlKey) && (e.shiftKey) && (e.code=='KeyA')) {
 		menu_abrirNovaAba(true);
-	} else if ((!e.shiftKey) && (e.code=='KeyG')) {
+	} else if (testa('KeyA', false, true)) { // if ((e.ctrlKey) && (!e.shiftKey) && (e.code=='KeyA')) {
+		menu_selecionarTudo();
+	} else if (testa('KeyG', false, false)) { // if ((!e.shiftKey) && (e.code=='KeyG')) {
 		menu_buscaEmSite('https://www.google.com/?#q=');;
-	} else if ((e.shiftKey) &&(e.code=='KeyG')) {
+	} else if (testa('KeyG', true, false)) { // if ((e.shiftKey) &&(e.code=='KeyG')) {
 		menu_GoogleMaps('https://www.google.com/?#q=');;
-	} else if (e.code=='KeyJ') {
+	} else if (testa('KeyJ', false, false)) { // if (e.code=='KeyJ') {
 		menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
-	} else if (e.code=='KeyN') {
+	} else if (testa('KeyN', false, false)) { // if (e.code=='KeyN') {
 		menu_rotulosCompletos(!gparam.bRotulosCompletos);
-	} else if (e.code=='KeyL') {
+	} else if (testa('KeyF', false, false)) { 
 		menu_localiza();
-	} else 	if (e.code=='Delete') {
+	} else if (testa('KeyF', true, false)) { 
+		menu_localiza(true);
+	} else if (testa('KeyL', false, false)) { 
+		menu_ligar_selecionados(true);
+	} else if (testa('KeyL', true, false)) { 
+		menu_desligar_selecionados();
+	} else if (testa('Delete', false, false)) { // 	if ((!e.shiftKey) && (e.code=='Delete')){
 		menu_excluirNosSelecionados();
-	} else 	if (e.code=='KeyP') {
+	} else if (testa('Delete', true, false)) { // 	if ((e.shiftKey) && (e.code=='Delete')){
+		menu_excluirTudo();
+	} else if (testa('KeyP', false, false)) { // 	if (e.code=='KeyP') {
 		menu_pinarNo();
-	} else 	if ((!e.shiftKey) && (e.code=='KeyQ')) {
-		menu_rendererAtivarParar(false);
-	} else 	if ((e.shiftKey) && (e.code=='KeyQ')) {
-		menu_rendererAtivarParar(true);
+	} else if (testa('KeyC', false, false)) { // 	if ((!e.shiftKey) && (e.code=='KeyC')) {
+		menu_colorir();
+	} else if (testa('KeyC', true, false)) { // if ((e.shiftKey) && (e.code=='KeyC')) {
+		menu_colorir('transparent');
+	} else if (testa('KeyQ', false, false)) { // 	if ((!e.shiftKey) && (e.code=='KeyQ')) {
+		menu_rendererAtivarParar(false, true);
+	} else if (testa('KeyQ', true, false)) { // 	if ((e.shiftKey) && (e.code=='KeyQ')) {
+		menu_rendererAtivarParar(true, true);
 	} else {
 		return;
 	} 
 	e.preventDefault();
-}
+}//.function evento_teclasDown
 
 function menu_rotulosCompletos(bCompleto) { 
 	gparam.bRotulosCompletos = bCompleto;
 	graph.forEachNode( function(node) {
 		var ui=graphics.getNodeUI(node.id); 
-		var labels = node.data.label.split('\n');
+		var labels = labelsNo(node); //node.data.label.split('\n');
 		var identificador = labels[0];
 		var nome = '';
 		if (labels.length>1) {
@@ -832,19 +1295,144 @@ function menu_rotulosCompletos(bCompleto) {
 			ui.getElementsByTagName('tspan')[1].text('');
 		}			
 	});
-}
+}//.function menu_rotulosCompletos
 
-function ativaAtalhos(bcaptura) {
-	// é preciso desativar antes de usar o alertify.prompt
-	if (gparam.mobile) {
+function menu_colorir(corEscolhida) {
+	function colorir(n, cor) {
+		var node = graphics.getNodeUI(n);
+		try {
+			node.getElementsByTagName('rect')[0].setAttribute('fill',cor);
+		} catch (e){; };
+		var no = graph.getNode(n);
+		if (no) {
+			no.data.cor = cor;
+		}
+
+	}
+	if (!gparam.idNosSelecionados.size) {
+		alertify.alert('Colorir', 'Não há itens selecionados para colorir. Selecione e tente novamente.', function(){ ; });
 		return;
 	}
-	if (bcaptura) {
-		document.onkeydown = evento_teclasDown;
-	} else {
-		document.onkeydown = null;
+	var cor = document.querySelector("#palheta").value; 
+	if (corEscolhida) {
+		cor = corEscolhida;
 	}
-}
+	var tmensagem = (gparam.idNosSelecionados.size==1) ? 'Colorir 1 nó.' : ('Colorir '+ gparam.idNosSelecionados.size + ' nós selecionados.');
+	var tsucesso = (gparam.idNosSelecionados.size==1) ? '1 nó foi colorido.' : (gparam.idNosSelecionados.size + ' nós foram coloridos.');
+	for (let n of gparam.idNosSelecionados) {
+		colorir(n, cor);
+	}			
+	alertify.success(tsucesso);
+}//.function menu_colorir
+
+function menu_ligar_selecionados(bEstrela) {
+	// se bEstrela, liga o primeiro selecionado com todos os outros
+	// se !bEstrela, liga linearmente do primeiro ao segundo, segundo ao terceiro e sucessivamente.
+	if (!gparam.idNosSelecionados.size) {
+		alertify.alert('Ligar nós selecionados', 'Não há itens selecionados. Selecione e tente novamente.', function(){ ; });
+		return;
+	}
+	let label = prompt('Ligar itens selecionados.\n Digite o texto da ligação:','');
+	if (label===null) {
+		return;
+	}
+	var ligacoes = [];
+	var anterior = null;
+	var destino = null;
+	var inicial = null
+	for (let n of gparam.idNosSelecionados) {
+		if (!inicial) {
+			anterior = n;
+			inicial = n;
+		} else {
+			destino = n;
+			ligacoes.push({'origem': anterior,
+						   'destino': destino,
+						   'cor': 'green',
+						   'camada': 1,		   
+						   'tipoDescricao': 'link',
+						   'label': label});
+			if (!bEstrela) {
+				anterior = destino;
+			} 
+		}
+	}
+	if (!bEstrela) {
+		anterior = destino;
+		ligacoes.push({'origem': anterior,
+								   'destino': inicial,
+								   'cor': 'green',
+								   'camada': 1,		   
+								   'tipoDescricao': 'link',
+								   'label': label});
+	} 
+	var noLigacoes = {'no':[], 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+	insereJson(noLigacoes,' Ligações. ');
+	return true;
+}//.function menu_ligar_selecionados
+
+function menu_ligar_novo() {
+	//cria novo item (não PJ) e liga com nós selecionados.
+	let idNovo = prompt('Ligar seleção a um item novo.\nSe for adicionar PJ, utilize a rotina Inserir CNPJ (I).\nDigite nome ou identificador de novo item','');
+	if (idNovo===null) {
+		return;
+	}
+	idNovo = tipoPresumido(idNovo);
+	if (graph.hasNode(idNovo)) {
+		alert('Ligar seleção a um item novo.\n' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
+		return;
+	}
+	if (idNovo.startsWith('PJ_')) {
+		alert('Para inserir um PJ, use a opção Inserir CNPJ ou CPF (I)');
+		return;
+	}
+	let descricaoaux = idNovo.startsWith('PF_')?idNovo.substr(15):'';
+	var no = {'id': idNovo,
+			   'descricao': descricaoaux,
+			   'camada': 0,
+			   'situacao_ativa': true,
+			   'imagem': 'icone-grafo-id.png',
+			   'cor': 'yellow'};
+	graph.addNode(idNovo, JSON.parse(JSON.stringify(no)));
+	if (gparam.idnoSelecionado) {
+		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+		position.x = position.x + Math.random()*gparam.springLength-gparam.springLength/2;
+		position.y = position.y + Math.random()*gparam.springLength-gparam.springLength/2;
+		gparam.layout.setNodePosition(idNovo, position.x, position.y);
+	}
+	let ids = [...gparam.idNosSelecionados];
+	ids.unshift(idNovo);
+	gparam.idNosSelecionados = new Set(ids);
+	gparam.idnoSelecionado = idNovo;
+	gparam.listaIdNosInseridos.push(new Set([idNovo]));
+	selecionaNoid(idNovo, true, true);
+	if (!menu_ligar_selecionados(true)) {
+		gparam.renderer.moveTo(position.x, position.y);
+		gparam.layout.pinNode(graph.getNode(idNovo),true);
+		menu_rendererAtivarParar(true, false);
+	}
+}//.function menu_ligar_novo
+
+function menu_desligar_selecionados() {
+	if (!gparam.idNosSelecionados.size) {
+		alertify.alert('Remover ligação', 'Não há itens selecionados. Selecione e tente novamente.', function(){ ; });
+		return;
+	}
+	for (let n1 of gparam.idNosSelecionados) {
+		graph.forEachLinkedNode(n1, function(n2, link){
+			console.log(n1 + '->' + n2.id);
+			if (gparam.idNosSelecionados.has(n2.id)) {
+				var linkUIaux=null;
+				try {
+					linkUIaux = graphics.getLinkUI(link.id);
+					element=document.getElementById('link_label_'+linkUIaux.attr('id'));
+					element.parentNode.removeChild(element);
+					graph.removeLink(link);
+				} catch (e){; };
+			}
+		});
+	}
+}//.function menu_desligar_selecionados
 
 function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto sem precisar mandar para o servidor.
 	var textToSaveAsBlob = new Blob([textToSave], mime); //{type:"text/plain"});
@@ -858,13 +1446,13 @@ function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto
 	downloadLink.style.display = "none";
 	document.body.appendChild(downloadLink);
 	downloadLink.click();
-}
+}//.function saveTextAsFile
 
 function destroyClickedElement(event){
 	document.body.removeChild(event.target);
 }
 
-function exportaJsonParaDownload() {
+function exportaIdsParaDownloadExcel() {
 	//var dadosJSON = JSON.stringify({'no':['1','2'], 'ligacao':[]});;
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
 	var idArray = [];
@@ -886,18 +1474,115 @@ function exportaJsonParaDownload() {
 	form.dadosJSON.value = dadosJSON;
 	form.action = "/rede/dadosemarquivo/xlsx" ;
 	form.submit();
-}
+}//.function exportaIdsParaDownloadExcel
 
-function menu_exporta(bSoSelecionados) {
+function menu_exportaExcel(bSoSelecionados) {
 	var formato='xlsx';
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
-	iframeAuxiliar.onload = exportaJsonParaDownload;
+	iframeAuxiliar.onload = exportaIdsParaDownloadExcel;
 	iframeAuxiliar.src = '/rede/formdownload.html';
 	iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
+}//.function menu_exportaExcel
+
+function redeNosLigacoes() {	
+	//return dojo.toJson({'no':listaNoInicial, 'ligacao':listaLigacaoInicial});
+	//return JSON.stringify({'no':listaNoInicial, 'ligacao':listaLigacaoInicial}, filtroDeMembros);
+	var nosAux=[], ligacoesAux=[];
+	//pega dados apartir do vivagraph, assim não é preciso fazer ajustes em listaLigacaoInicial ou listaNoInicial
+	graph.forEachNode( 
+		function(node) {
+			var nodedata = JSON.parse(JSON.stringify(node.data));
+			nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
+			nosAux.push(nodedata);						
+		}
+	);
+	graph.forEachLink(function(link){
+		/* ligacoesAux.push(
+			{"origem":link.fromId,
+			"destino":link.toId ,
+			"cor":link.data.cor,
+			"camada":link.data.camada,
+			"tipoDescricao": link.data.tipoDescricao,
+			"label": link.data.label
+			}
+		); */
+		ligacoesAux.push(JSON.parse(JSON.stringify(link.data)));		
+	}); 
+	return {'no':nosAux, 'ligacao':ligacoesAux};
+}//.function redeNosLigacoes
+
+function menu_exportaJsonArquivo(bSoSelecionados) {
+	var rede = redeNosLigacoes();
+	saveTextAsFile(JSON.stringify(rede), 'rede.json', {type:"application/json"});
+}//.function menu_exportaJsonArquivo
+
+function replaceAll(texto, textoAProcurar, textoASubstituir) {
+	//return texto.split(textoAProcurar).join(textoASubstituir);
+	return texto.replace(new RegExp(textoAProcurar,'g'), textoASubstituir); 
 }
 
-function menu_zoomin() {
-	menuOnClick() //firefox no android, não está fechando o menu
+function getXMLdeSVG() {
+	var listaImagens= [
+			'icone-grafo-masculino.png',
+			'icone-grafo-feminino.png',
+			'icone-grafo-desconhecido.png',
+			'icone-grafo-endereco.png',
+			'icone-grafo-telefone.png',
+			'icone-grafo-email.png',
+			'icone-grafo-empresa-publica.png',
+			'icone-grafo-empresa-individual.png',
+			'icone-grafo-empresa.png',
+			'icone-grafo-empresa-fundacao.png',
+			'icone-grafo-empresa-estrangeira.png',
+			'icone-grafo-id.png' ];
+	function converteImagens2Base64() {
+		var dicionarioBase64 = {};
+		var c = document.createElement('canvas');
+		for (let nomeImagem of listaImagens) {
+			var img = new Image();
+			img.src = '/rede/static/imagem/' + nomeImagem;
+			img_home.appendChild(img);
+			if (1) {
+				c.height = img.naturalHeight;
+				c.width = img.naturalWidth;
+				var ctx = c.getContext('2d');
+				ctx.drawImage(img, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
+				var base64String = c.toDataURL();
+				dicionarioBase64[nomeImagem] = base64String;
+			}
+		}
+		return dicionarioBase64;
+	} //.function converteImagens2Base64() 
+	//ver http://d3export.housegordon.org/ exemplo para exportação svg		
+	var svg_xml = (new XMLSerializer).serializeToString(document.getElementsByTagName('svg')[0]); 
+	svg_xml = replaceAll(svg_xml,'xmlns:xlink="http://www.w3.org/1999/xlink"',''); //esse link é acrescentado em campo de texto, causando erro no svg
+	svg_xml = svg_xml.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" '); //define namespace para link
+	var dicionario = converteImagens2Base64();
+	for (let key of listaImagens) {
+		var baseStr=dicionario[key];
+		var strProcurar = 'xlink:href="/rede/static/imagem/' + key + '"';
+		var strSubstituicao = 'xlink:href="'+baseStr + '"';
+		svg_xml = replaceAll(svg_xml, strProcurar, strSubstituicao);
+	}
+	return svg_xml;
+}//.function getXMLdeSVG()
+
+function menu_exportaSVG() {
+	var mime={type:"image/svg"};
+	alertify.success("SVG (Scalable Vector Graphics)");
+	saveTextAsFile(getXMLdeSVG(), 'rede.svg', mime);
+}
+
+function menu_zoomin(event) {
+	menuOnClick(); //firefox no android, não está fechando o menu
+	if (event) {
+		if (event.ctrlKey) {
+			return;
+		}
+		if (event.shiftKey) {
+			return menu_configurar_springLength(1);
+		}
+	}
 	var vezes = gparam.mobile?6:3;
 	var escalamax = gparam.mobile?8:2;
 	if (gparam.renderer.getTransform().scale>escalamax) {
@@ -909,15 +1594,74 @@ function menu_zoomin() {
 			break;
 		}
 	}
-}
+}//.function menu_zoomin
 
-function menu_zoomout() {
-	menuOnClick() //firefox no android, não está fechando o menu
+function menu_zoomout(event) {
+	menuOnClick(); //firefox no android, não está fechando o menu
+	if ((event) && (event.shiftKey)) {
+		return menu_configurar_springLength(-1);
+	}
 	var vezes = gparam.mobile?6:2;
 	for(var k=0; k<vezes; k++) {
 		var escala = gparam.renderer.zoomOut();;
 	}
+}//.function menu_zoomout
+
+function menu_configurar_springLength(zoomInOut) {
+	var tamanho = gparam.layout.simulator.springLength();
+	if (zoomInOut==-1) {
+		gparam.layout.simulator.springLength(tamanho*0.9);
+		gparam.springLength = tamanho*0.9;
+	} else if (zoomInOut==1) {
+		gparam.layout.simulator.springLength(tamanho*1.1);
+		gparam.springLength = tamanho*1.1;
+	} else {
+		var parametro = prompt('Digite o comprimento da ligação (valor padrão ' + gparam.springLength + ')', tamanho);
+		if (parametro) {
+			gparam.layout.simulator.springLength(parametro);
+			gparam.springLength = parametro;
+		}
+	}
+	menu_rendererAtivarParar(true, false); //para atualizar tela
+}//.function menu_configurar_springLength
+
+function balanca() {
+//deslocamento para o renderizador atualizar tela, não adianta se renderer estiver parado.
+	if (!gparam.idnoSelecionado) {
+		return;
+	}
+	var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+	gparam.layout.setNodePosition(noaux.id, position.x+10, position.y+10);
 }
+
+function menu_configurar_springCoeff() {
+	var parametro = prompt('Digite o coeficiente da "mola" da ligação (valor padrão 0.0002)', gparam.layout.simulator.springCoeff());
+	if (parametro) {
+		gparam.layout.simulator.springCoeff(parametro);
+	}
+}//.function menu_configurar_springCoeff
+
+function menu_configurar_gravity() {
+	var parametro = prompt('Digite o valor da gravidade (valor padrão -1.2)', gparam.layout.simulator.gravity());
+	if (parametro) {
+		gparam.layout.simulator.gravity(parametro);
+	}
+}
+
+function menu_configurar_dragCoeff() {
+	var parametro = prompt('Digite o coeficiente de arrasto (valor padrão 0.02)', gparam.layout.simulator.dragCoeff());
+	if (parametro) {
+		gparam.layout.simulator.dragCoeff(parametro);
+	}
+}
+
+function menu_configurar_theta() {
+	var parametro = prompt('Digite do coeficiente theta (valor padrão 0.8)', gparam.layout.simulator.theta());
+	if (parametro) {
+		gparam.layout.simulator.theta(parametro);
+	}
+}
+
 
 //menu contextual
 function showMenu(x, y){
@@ -961,17 +1705,46 @@ function dragover_handler(ev) {
 	// Define o dropEffect para ser do tipo move
 	ev.dataTransfer.dropEffect = "copy"
 }
-function drop_handler(ev) {
+
+function drop_handler01(ev) {
 	ev.preventDefault();
 	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
 	var data = ev.dataTransfer.getData("text");
 	//console.log(escape(data));
-	var itens = data.replace(/\n/g,';')
-	//console.log(escape(itens));
-	menu_inserir(itens);
+	insere_lista(data);
 }
 
-function desabilitaDrop() {
+function drop_handler(ev) {
+	ev.preventDefault();
+	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
+	var tipos = ev.dataTransfer.types;
+	if (tipos.includes("text/plain")) {
+		var data = ev.dataTransfer.getData("text");
+		insere_lista(data);
+		return;
+	} else if (tipos.includes("Files")) {
+		menu_importaJsonArquivo(ev, 'drop');
+		/*
+		var file = ev.dataTransfer.files[0],
+		textoArquivo = '',
+		reader = new FileReader();
+		reader.onload = function(event) {
+			if (file.name.endsWith('.json')) {
+				var entrada = JSON.parse(event.target.result);
+				console.log(entrada);	
+				insereJson(entrada, 'Leitura de arquivo. ');
+			} else {
+				alertify.error('só aceita .json');
+			} 
+		};
+		reader.readAsText(file);
+		*/
+	} else {
+		alertify.error('tipo não reconhecido');
+	}
+}//.function drop_handler
+
+function ajustaRegiaoDrop() {
 	var dropzoneId = "div_botoes"; //só esta região vai aceitar drop
 
 	window.addEventListener("dragenter", function(e) {
@@ -997,7 +1770,251 @@ function desabilitaDrop() {
 		e.dataTransfer.dropEffect = "none";
 	  }
 	});
+}//.function ajustaRegiaoDrop
+
+function soDigitos(id) { 
+//usar com cautela, só deixar digitos para verificar cpf/cnpj pode dar resultado incorreto, p. ex: XX12345678901 seria considerado cpf
+	return id.replace(/\D+/g, '');
 }
+
+function isNumeric(str) {
+  var er = /^[0-9]+$/;
+  return (er.test(str));
+}
+
+function tipoPresumido(id) {
+	// supõe se tiver undercores na terceira posicao, já começa com tipo EN_, PF_ , PJ_, etc
+	if (!id) {
+		return '';
+	}
+	if ((id.length>3) && (id.substr(2,1) == '_') && (!isNumeric(id.substr(0,2)))) { 
+		return id; 
+	}
+	//var digitos = soDigitos(id); //problema em usar soDigitos, pode ter letra + 14 ou 11 numeros
+	var idlimpo = id.replace(/[\.\-\//]/g, '').trim();
+	if (isNumeric(idlimpo) && (idlimpo.length==14)) {
+		return 'PJ_' + idlimpo;
+	} else if (isNumeric(idlimpo) && (idlimpo.length==11)) {
+			return 'PF_' + idlimpo;
+	} else {
+		return 'ID_'+id;
+	}
+}//.function tipoPresumido
+
+function insere_lista(entrada) {
+   	var itens = entrada.replace(/\n/g,';');
+	var max = 0;
+	for (let linha of entrada.split('\n')){
+		elems = linha.split('\t');
+		max = Math.max(max, elems.length);
+	}
+	if (false) { //max==1) { //se estiver em só uma linha (sem tabs), abre opção menu_inserir
+		menu_inserir(itens);
+		return;
+	} else {
+		var lista = [];
+		for (let linha of entrada.split('\n')){
+			if (!linha.trim()) {
+				continue;
+			}
+			elems = linha.split('\t');
+			if (max==1) {
+				lista.push([tipoPresumido(elems[0]), '', '', '', '']);
+			} else if (max==2) {
+				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), '', '', '']);
+			} else if (max==3) {
+				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), '', '']);
+			} else if (max==4) {
+				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), elems[3].trim(), '']);
+			} else if (max>=5) {
+				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), elems[3].trim(), elems[4].trim()]);
+			}
+		}	
+	}
+	if (!lista.length) {
+		alertify.error('Precisa de 3 ou 5 colunas, formato id1, id2, nome_ligacao, nome id1, nome id2');
+		return;
+	}
+	/*
+    var entradaExemplo = [['ID_a1','ID_a2','l1','nome 1','nome 2'], 
+					['ID_a1','ID_a3','l2', 'nome 1', 'nome 3'],
+					['ID_a3','ID_a4','l3', 'nome 3', 'nome 4'] ]; */
+	function ajustaArvore(lista, bSoConta, kGrupo) {
+		//se um ID tiver mais de kGrupo ligacoes, vai quebrando em subarvores de no máximo kGrupo elementos.
+		//const kGrupo=10;
+		if (!kGrupo) {
+			kGrupo=10;
+		}
+		var contagemIds = {}; //itens que não são cpf/cnpj ou EN_
+		//conta elementos ID_ para abrir arvore
+		for (let linha of lista) {
+			var id1 = linha[0]; 
+			if (id1.substr(0,3)=='ID_') {
+				if (! contagemIds[id1]) {
+					contagemIds[id1] = 0;
+				}
+				contagemIds[id1] += 1;
+			}
+		}
+		//verifica quais itens tem muita repetição
+		var idsArvore = new Set();
+		for (let k of Object.keys(contagemIds)) {
+			if (contagemIds[k]>kGrupo) {
+				idsArvore.add(k);
+			}
+		}
+		if (bSoConta) {
+			return idsArvore.size;
+		}
+		contagemIds = {}; //contagem para loop da lista
+		var listaAdicional = [];
+		var listaSaida = [];
+		for (let linha of lista) {
+			let linhaSaida = [...linha];
+			var id1 = linha[0]; 
+			if (idsArvore.has(id1)) {
+				if (!contagemIds[id1]) {
+					contagemIds[id1]=0;
+				}
+				contagemIds[id1] += 1;
+				idgrupo = id1 + '(' + String(Math.floor(contagemIds[id1]/kGrupo)+1) + ')';
+				if (contagemIds[id1]%kGrupo==1) {
+					listaSaida.push([id1, idgrupo,'','','']);
+				}
+				linhaSaida[0] = idgrupo;
+			}
+			listaSaida.push(JSON.parse(JSON.stringify(linhaSaida)));
+		}
+		return listaSaida;
+	}//.function ajustaArvore
+	var tamanhoGrupo=0;
+	if (ajustaArvore(lista, true, 10)>0){
+		tamanhoGrupo = prompt('A lista tem identificadores que não são PJ ou PF repetidos diversas vezes.\nPara facilitar a visualização, pode-se dividir esses identificadores em ramos.\nDigite uma quantidade de itens por ramos ou Cancele para inserir sem ramos.', 10);
+	}
+	if (tamanhoGrupo) {
+		lista = ajustaArvore(lista, false, tamanhoGrupo);
+	}
+	var nos = [];
+	var ligacoes = [];
+	var nosid = new Set();
+	var cnpjsids = new Set();
+	var cnpjDescricao = {};
+    for (let linha of lista) {
+		var id1 = linha[0]; 
+		var id2 = linha[1]; 
+		//var id1limpo = id1.replace(/[\.\-\//]/g, '');
+		//var id2limpo = id2.replace(/[\.\-\//]/g, '');
+		//TODO verificar se sem pontos e virgulas tem 14 dígitos
+		if ((!id1) && (!id2)) {
+			continue;
+		}	
+		if (id1.startsWith('PJ_')) {
+			cnpjsids.add(id1);
+			cnpjDescricao[id1] = linha[3];			
+		} else if (id1) {
+			let descricaoaux = id1.startsWith('PF_')?id1.substr(15):linha[3];
+			if (!nosid.has(id1)) {
+				nosid.add(id1);
+				nos.push({'id': id1,
+			   'descricao': descricaoaux, //linha[3],
+			   'camada': 0,
+			   'situacao_ativa': true,
+			   'imagem': 'icone-grafo-id.png',
+			   'cor': 'yellow'});
+			}
+		}
+		if (id2.startsWith('PJ_')) {
+			cnpjsids.add(id2);
+			cnpjDescricao[id2] = linha[4];
+		} else if (id2) {
+			let descricaoaux = id2.startsWith('PF_')?id2.substr(15):linha[4];
+			if (!nosid.has(id2)) {
+				nosid.add(id2);
+				nos.push({'id': id2,
+			   'descricao': descricaoaux, //linha[4],
+			   'camada': 0,
+			   'situacao_ativa': true,
+			   'imagem': 'icone-grafo-id.png',
+			   'cor': 'yellow'});
+			}
+		}
+	    if ((id1) && (id2)) {
+		   ligacoes.push({'origem': id1,
+			   'destino': id2,
+			   'cor': 'green',
+			   'camada': 1,		   
+			   'tipoDescricao': 'link',
+			   'label': linha[2]});
+		}
+	}
+	if (cnpjsids.size) {
+		fazFetchCnpjs(cnpjsids, nos, ligacoes);
+	} else {
+		var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+		insereJson(noLigacoes,' drop lista ');
+	}
+	
+	function fazFetchCnpjs(cnpjsids, nos, ligacoes) {
+		//var idin = [...cnpjsids].join(';');		
+		var idinlista = [...cnpjsids];
+		document.body.style.cursor = 'wait';
+		let bodyjson = JSON.stringify(idinlista);
+		var url =  "/rede/grafojson/cnpj/0/" + idinlista[0];
+		//fetch(url, {method: 'get'}) // mode: 'cors',pos
+		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		  .then(
+			function(response) {
+			  if (response.status !== 200) {
+				document.body.style.cursor = 'default'
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+			  }
+			  // Examine the text in the response
+			  response.json().then(function(data) {
+				//console.log(data);
+				document.body.style.cursor = 'default';
+				for (let n of data['no']) {
+					nos.push(JSON.parse(JSON.stringify(n)));
+					//todo verificar se todos os cnpjs supostos apareceram
+				}
+				for (let li of data['ligacao']) {
+					ligacoes.push(JSON.parse(JSON.stringify(li)));
+				}
+				var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+				insereJson(noLigacoes,' drop lista ');
+
+				//insereJson(data, idin + ' em camada ' + camada +'. ');
+			  });
+			}
+		  )
+		  .catch(function(err) {
+			document.body.style.cursor = 'default';
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		  });
+	}
+}//.function insere_lista
+
+function menu_editarNota(noid){
+	var ui=graphics.getNodeUI(noid); 
+	var nota = graph.getNode(noid).data.nota;
+	nota = nota? nota: '';
+	ativaAtalhos(false);
+	menu_rendererAtivarParar(false, false);
+	alertify.prompt( 'Editar Nota', 'Digite texto de anotação:', nota
+	   , function(evt, texto) { 
+			if (texto) { 
+				ui.getElementsByTagName('tspan')[2].text(texto);
+				graph.getNode(noid).data.nota = texto;
+			}
+			menu_rendererAtivarParar(true, false);
+			ativaAtalhos(true);
+		}, function() { 
+			ativaAtalhos(true);
+			menu_rendererAtivarParar(true, false);
+	});
+}//.function menu_editarNota
 
 alertifyfake = {
 	'prompt':function(titulo, texto, valor, func1, func2) {
@@ -1031,13 +2048,9 @@ alertifyfake = {
 		menuOnClick();
 		setTimeout(function(){ alert('ERRO!!! ' + texto); }, 500);
 	}
-}
+}//.alertifyfake
 
-function main() {
-	gparam.mobile = false;
-	if (gparam.mensagemInicial) {
-		alert(gparam.mensagemInicial);
-	}
+function ajustaAmbiente() {
 	if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ //mobile
 		//mobile. gambiarra, o alertify não funciona no ipad, no android fica muito pequeno
 		alertify.set('notifier','position', 'top-center'); //se fica de lado, os alertas não aparecem no mobile
@@ -1082,9 +2095,18 @@ function main() {
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
 	}
+}//.function ajustaAmbiente
 
+function main() {
+	const urlParams = new URLSearchParams(window.location.search);
+	if (urlParams.get('pula_mensagem')!='sim') {
+		if (gparam.mensagemInicial) {
+			alert(gparam.mensagemInicial);
+		}
+	}
+	ajustaAmbiente();
 	gparam.layout = Viva.Graph.Layout.forceDirected(graph, {
-		   springLength : 140, //80,
+		   springLength : gparam.springLength, //170, //140, //80,
 		   springCoeff : 0.0002, //0.0002,
 		   dragCoeff : 0.02, 
 		   gravity : -1.2, 
@@ -1092,23 +2114,30 @@ function main() {
 	});
 	gparam.renderer = Viva.Graph.View.renderer(graph, {
 			graphics : graphics,
-			layout: gparam.layout
+			layout: gparam.layout,
+			container  : document.getElementById('principal')
 		});
 	gparam.renderer.run();
 	gparam.geom = Viva.Graph.geom();
 	if (gparam.mobile) {
-		menu_zoomin();
-		menu_zoomin();
+		menu_zoomin(false);
+		menu_zoomin(false);
+	} else {
+		//desabilita drop nos botoes
+		ajustaRegiaoDrop();
+		gparam.AreaSelecaoRetangular.Setup();
 	}
 	if (gparam.cpfcnpjInicial) {
 		menu_incluirCamada(gparam.cpfcnpjInicial, gparam.camadaInicial);
 		ativaAtalhos(true);
+	} else if (gparam.idArquivoServidorInicial ) {
+		menu_importaJSONServidor(gparam.idArquivoServidorInicial);
+		ativaAtalhos(true);
 	} else {
 		menu_inserir();
 	}
-	//desabilita drop na área, para não confundir com o drop no menu
-	desabilitaDrop();
-} //.main()
+
+}//.main()
 
 </script>
 
@@ -1118,178 +2147,321 @@ function main() {
 	-ms-text-size-adjust: 200%;
 	-webkit-text-size-adjust: 200%;
 	}
+	.graph-overlay {
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+	  width: 100%;
+	  height: 100%;
+	  display: none;
+	}
+	.graph-selection-indicator {
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+	  background: transparent;
+	  border: 1px solid orange;
+	}
 </style>
 </head>
 <body id='corpo' onload='main()' style='overflow:hidden;'>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
-<div id='div_botoes' ondrop="drop_handler(event);" ondragover="dragover_handler(event);" title="Arraste CNPJs para esta área">
+<div id='div_botoes' ondrop="drop_handler(event);" ondragover="dragover_handler(event);" title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
 <button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>&nbsp;&nbsp;
-<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Abre o projeto no Github'>Rede</button>	&nbsp;&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (SHIFT+Q)'><i class="fa fa-play"></i></button>&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Q)'><i class="fa fa-stop"></i></button>&nbsp;
+<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i> </button>&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'>&nbsp;+&nbsp;</button>&nbsp;
+<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'>&nbsp;-&nbsp;</button>
 <button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj/')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
-<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin();" title='Aumenta visualização. A roda do mouse também faz isso.'>&nbsp;+&nbsp;</button>&nbsp;
-<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout();" title='Diminui visualização.  A roda do mouse também faz isso.'>&nbsp;-&nbsp;</button>
+<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Abre o projeto no Github'>Rede</button>	&nbsp;&nbsp;
+</div>
+ <!-- 
+<div id="principal" style="width: 100%; height: 100%; position: absolute;  left: 0; top: 30;" charset="utf-8">
+-->
+<div id="principal" style="width: 100%; height: 100%; position: absolute;" charset="utf-8"> 
+<!-- top=0 desativa botoes-->
+	<div class="graph-overlay" style="cursor:crosshair;"></div>
 </div>
 
 <menu id='menu_contexto' class="menu">
-  <li class="menu-item">
-	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção"> <i class="fa fa-layer-group"></i>
-	<span class="menu-text">Incluir uma Camada (1)</span> </button>
-  </li>
-  <li class="menu-item submenu">
-    <button type="button" class="menu-btn" title="Expande vinculos de sócios em mais níveis. Aperte a tecla 2-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir mais Camadas</span> </button>
-    <menu class="menu">
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 2);"> <span class="menu-text">2</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 3);"> <span class="menu-text">3</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 4);"> <span class="menu-text">4</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 5);"> <span class="menu-text">5</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 6);"> <span class="menu-text">6</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 7);"> <span class="menu-text">7</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 8);"> <span class="menu-text">8</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 9);"> <span class="menu-text">9</span> </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 10);"> <span class="menu-text">10</span> </button>
-      </li>
-    </menu>
-  </li>
-   <li class="menu-item">
-	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada(gparam.idnoSelecionado, 1,'links');"> <i class="fa fa-layer-group"></i>
-	<span class="menu-text" title="Inclui outros vínculos na tabela links (ver documentação no github)">Incluir outras Ligacões (SHIFT+1)</span> </button>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserir();"> 
-      <i class="fa fa-plus"></i> <span class="menu-text">Inserir CNPJ ou CPF (I)</span> 
-    </button>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserirDesfazer();"> 
-      <i class="fa fa-undo"></i> <span class="menu-text">Desfazer Inserção (Ctrl+Z)</span> 
-    </button>
-  </li>
-  <li class="menu-item">
-    <button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(false)">
-		<i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" id="mc_titulo" onclick="menuOnClick(); javascript:menu_dados(true)">
-      <i class="fa fa-folder-open"></i> 
-      <span class="menu-text">Dados em Janela (Shift+D)</span>
-    </button>
-  </li>
-  <li class="menu-item submenu">
-   <button type="button" class="menu-btn" title="Exporta para o Excel os dados do item selecionado ou de todos os itens do gráfico"> <i class="fa fa-file-excel"></i> <span class="menu-text">Exportar em Excel</span> </button>
-    <menu class="menu">
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exporta(true)"> 
-          <i class="fa fa-file-excel"></i><span class="menu-text">Itens Selecionados</span> 
-        </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exporta(false)"> 
-          <i class="fa fa-file-excel"></i><span class="menu-text">Todos</span> 
-        </button>
-      </li>
-	</menu>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza();"> 
-      <i class="fa fa-search"></i> <span class="menu-text">Localizar CNPJ ou CPF (L)</span> 
-    </button>
-  </li>
-  <li class="menu-item submenu">
-    <button type="button" class="menu-btn"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
-    <menu class="menu">
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.google.com/search?q=');"> 
-          <i class="fab fa-google"></i><span class="menu-text" style="margin-left:12px">Google (G)</span> 
-        </button>
-	  </li>
-	  <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();"> 
-          <i class="fab fa-google"></i><span class="menu-text" style="margin-left:12px">Google Maps(Shift+G)</span> 
-        </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
-          <i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil (J)</span> 
-        </button>
-      </li>
-    </menu>
-  </li>
-  <li class="menu-item submenu">
-    <button type="button" class="menu-btn">  <span class="menu-text">Rótulos</span> </button>
-    <menu class="menu">
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(true);"> 
-          <span class="menu-text" style="margin-left:12px">Nome Completo</span> 
-        </button>
-	  </li>
-	  <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(false);"> 
-          <span class="menu-text" style="margin-left:12px">Só Primeiro Nome</span> 
-        </button>
-      </li>
-    </menu>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo();"> 
-      <i class="fa fa-thumbtack"></i> <span class="menu-text" alt="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós">Fixar o Nó (P)</span> 
-    </button>
-  </li>
-  <li class="menu-item">
-    <button type="button" class="menu-btn" onclick="menuOnClick(); gparam.renderer.reset();"> 
-      <i class="fa fa-compress"></i> <span class="menu-text" alt="Reinicia escala">Escala Inicial</span> 
-    </button>
-  </li>
-  <li class="menu-item">
-	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(false);"> 
-	  <i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Q)</span> 
-	</button>
-  </li>
-  <li class="menu-item">
-	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(true);"> 
-	  <i class="fa fa-play"></i> <span class="menu-text">Leiaute: Continuar (Shift+Q)</span> 
-	</button>
-  </li>
-  <li class="menu-separator"></li>
-  <li class="menu-item submenu">
-    <button type="button" class="menu-btn"> <i class="fa fa-trash"></i> <span class="menu-text">Excluir</span> </button>
-    <menu class="menu">
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirNosSelecionados()"> 
-          <i class="fa fa-trash"></i> <span class="menu-text">Excluir Nós selecionados (Del)</span> 
-        </button>
-      </li>
-      <li class="menu-item">
-        <button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirTudo()"> 
-          <i class="fa fa-trash"></i> <span class="menu-text">Excluir Tudo</span> 
-        </button>
-      </li>
-    </menu>
-   </li>
-	<li class="menu-separator"></li>
+	<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Expande vinculos de sócios. Aperte a tecla 1-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir Camadas</span> </button>
+		<menu class="menu">
+			<li class="menu-item">
+				<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção">
+				<i class="fa fa-layer-group"></i><span class="menu-text">1 (Tecla 1)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 2);" title="Expande vinculos de sócios em 2 níveis. Aperte a tecla 2"><i class="fa fa-layer-group"></i><span class="menu-text">2 (Tecla 2)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 3);" title="Expande vinculos de sócios em 3 níveis. Aperte a tecla 3"><i class="fa fa-layer-group"></i><span class="menu-text">3 (Tecla 3)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 4);" title="Expande vinculos de sócios em 4 níveis. Aperte a tecla 4"><i class="fa fa-layer-group"></i><span class="menu-text">4 (Tecla 4)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 5);" title="Expande vinculos de sócios em 5 níveis. Aperte a tecla 5"><i class="fa fa-layer-group"></i><span class="menu-text">5 (Tecla 5)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 6);" title="Expande vinculos de sócios em 6 níveis. Aperte a tecla 6"><i class="fa fa-layer-group"></i><span class="menu-text">6 (Tecla 6)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 7);" title="Expande vinculos de sócios em 7 níveis. Aperte a tecla 7"><i class="fa fa-layer-group"></i><span class="menu-text">7 (Tecla 7)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 8);" title="Expande vinculos de sócios em 8 níveis. Aperte a tecla 8"><i class="fa fa-layer-group"></i><span class="menu-text">8 (Tecla 8)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 9);" title="Expande vinculos de sócios em 9 níveis. Aperte a tecla 9"><i class="fa fa-layer-group"></i><span class="menu-text">9 (Tecla 9)</span> </button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 10);" title="Expande vinculos de sócios em 10 níveis. Aperte a tecla 0"><i class="fa fa-layer-group"></i><span class="menu-text">10 (Tecla 0)</span> </button>
+			</li>
+		</menu>
+	</li>
 	<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj'); "> 
-		  <i></i> <span class="menu-text">Sobre...</span> 
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 1,'links');"> <i class="fa fa-layer-group"></i>
+	<span class="menu-text" title="Inclui outros vínculos na tabela links (ver documentação no github)">Incluir outras Ligacões (SHIFT+1)</span> </button>
+	</li>
+	<li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserir();" title="Digite CNPJ para inserir com informações do Banco de Dados"> 
+	<i class="fa fa-plus"></i> <span class="menu-text">Inserir CNPJ ou CPF (I)</span> 
+	</button>
+	</li>
+	<li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserirDesfazer();" title="Desfaz última inserção de itens"> 
+	<i class="fa fa-undo"></i> <span class="menu-text">Desfazer Inserção (Ctrl+Z)</span> 
+	</button>
+	</li>
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn" title="Inserir Ligações que não constam do Banco de Dados"><i class="fa fa-link"></i><span class="menu-text">Ligar</span> </button>
+	<menu class="menu">
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo(true);" title="Liga itens selecionados para um Item a ser criado. O item a ser criado não pode ser CNPJ."> 
+		<span class="menu-text">Para Novo Item (SHIFT+I)</span> 
 		</button>
+		</li>      
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(true);" title="Liga o primeiro aos demais itens selecionados"> 
+		<span class="menu-text">Em Estrela (L)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(false);" title="Liga os itens selecionados em fila indiana"> 
+		<span class="menu-text">Em Fila</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados();" title="Remove ligações entre os itens selecionados"> 
+		<span class="menu-text">Remover (SHIFT+L)</span> 
+		</button>
+		</li>
+	</menu>
+	</li>
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn" title="Opções diversas para exibição: colorir, exibição de rótulos..."><i class="fa fa-eye"></i><span class="menu-text">Visualização</span> </button>
+	<menu class="menu">
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo();"> 
+		<i class="fa fa-thumbtack"></i> <span class="menu-text" alt="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós">Fixar o Nó (P)</span> 
+		</button>
+		</li>
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn"><i class="fa fa-tags"></i><span class="menu-text">Rótulos</span> </button>
+		<menu class="menu">
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(true);"> 
+			<i class="fa fa-tags"></i><span class="menu-text">Nome Completo</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(false);"> 
+			<i class="fa fa-tag"></i><span class="menu-text">Só Primeiro Nome</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_editarNota(gparam.idnoSelecionado);"> 
+			<i class="fa fa-sticky-note"></i><span class="menu-text">Editar Nota</span> 
+			</button>
+			</li>
+		</menu>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_colorir();"> 
+		<i class="fa fa-fill-drip"></i><span class="menu-text">Colorir (C)</span>
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick();"> 
+		<i class="fa fa-palette"></i><span class="menu-text">Escolher Cor:</span> <input type="color" id="palheta" title="Selecione uma cor" value="#FF0000" />
+		</button>
+		</li>
+		<li class="menu-item">
+		<button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(false)" title="Exibe dados em popup">
+		<i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(true)" title="Exibe Dados em nova Janela do navegador">
+		<i class="fa fa-folder-open"></i><span class="menu-text">Dados em Janela (Shift+D)</span>
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); gparam.renderer.reset();"> 
+		<i class="fa fa-compress"></i> <span class="menu-text" alt="Reinicia escala">Escala Inicial</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(false, true);"> 
+		<i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Q)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(true, true);"> 
+		<i class="fa fa-play"></i> <span class="menu-text">Leiaute: Continuar (Shift+Q)</span> 
+		</button>
+		</li>  
+	</menu>
+	</li>
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn" title="Opções para Filtrar ou Localizar itens no Gráfico e Busca no Google.">
+	<i class="fa fa-search"></i><span class="menu-text">Filtrar/Localizar</span>
+	</button>
+	<menu class="menu">
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza(false);" title="Procura por palavra nos itens exibidos do gráfico"> 
+		<i class="fa fa-search"></i><span class="menu-text">Localizar CNPJ ou CPF (F)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza(true);" title="Procura por palavra nos itens selecionados do gráfico "> 
+		<i class="fa fa-search"></i><span class="menu-text">Filtra na Seleção (SHIFT+F)</span> 
+		</button>
+		</li>
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Abre aba com busca em sites"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
+		<menu class="menu">
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.google.com/search?q=');"> 
+			<i class="fab fa-google"></i><span class="menu-text">Google (G)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();"> 
+			<i class="fab fa-google"></i><span class="menu-text">Google Maps(Shift+G)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
+			<i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil (J)</span> 
+			</button>
+			</li>
+		</menu>
+		</li>
+	</menu>
+	</li>
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn" title="Exporta dados para o Excel, JSON, SVG ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Exportar/Importar</span> </button>
+	<menu class="menu">
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(true)"> 
+		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel-Selecão</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)"> 
+		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaSVG()" title="Salva imagem escalável em formato SVG" >
+		<i class="fa fa-save"></i> </i><span class="menu-text" >Exportar Imagem SVG</span>
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo()" title="Salva arquivo JSON com os itens e ligações, que pode ser aberto pela opção Importar JSON">
+		<i class="fa fa-save"></i> <span class="menu-text">Exportar Arquivo Json</span>
+		</button>
+		</li>  
+		<li class="menu-item">
+		<button type="button" class="menu-btn" id="menu_botao_importaJsonArquivo" disabled title="Importa dados de um arquivo JSON salvo pela opção Exportar Arquivo JSON"> 
+		<i class="fa fa-folder-open"></i><span class="menu-text">Importar Arquivo Json</span>
+		<input value="Importar" type="file" id="fileImportJSON" title="Adiciona grafico no formato JSON" />
+		</button>
+		<script>
+			document.getElementById('fileImportJSON').addEventListener('change', menu_importaJsonArquivo, false);
+		</script>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor()" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
+		<i class="fa fa-upload"></i><span class="menu-text">Exportar ao Servidor</span>
+		</button>
+		</li>  
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_importaJSONServidor()" title="Carrega um arquivo de visualização exportado ao servidor.">
+		<i class="fa fa-download"></i> <span class="menu-text">Importar do Servidor</span>
+		</button>
+		</li>  
+	</menu>
+	</li>
+
+	<li class="menu-separator"></li>
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn"> <i class="fa fa-trash"></i> <span class="menu-text">Excluir</span> </button>
+	<menu class="menu">
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirNosSelecionados()"> 
+		<i class="fa fa-trash"></i> <span class="menu-text">Excluir Nós selecionados (Del)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirTudo()"> 
+		<i class="fa fa-trash"></i> <span class="menu-text">Excluir Tudo</span> 
+		</button>
+		</li>
+	</menu>
+	</li>
+	<li class="menu-separator"></li>
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn"><i class="fa fa-sliders-h"></i><span class="menu-text">Configurar</span> </button>
+	<menu class="menu">
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_configurar_springLength()"> 
+		<span class="menu-text">Comprimento da Ligação</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_configurar_springCoeff()"> 
+		<span class="menu-text">Coeficiente da "Mola"</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_configurar_dragCoeff()"> 
+		<span class="menu-text">Coeficiente de Arrasto</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_configurar_gravity()"> 
+		<span class="menu-text">Gravidade</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_configurar_theta()"> 
+		<span class="menu-text">Coeficiente Theta</span> 
+		</button>
+		</li>
+	</menu>
+	</li>	
+	<li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj'); "> 
+	<i class="fa fa-info-circle"></i><span class="menu-text">Sobre...</span> 
+	</button>
 	</li>
 </menu>
 
@@ -1306,9 +2478,8 @@ function main() {
 		<input class="ajs-input" id="dlgLink_valorMaximo" type="text" value=""/> 
 		<p>Número de camadas (Profundidade de níveis na consulta)</p>
 		<input class="ajs-input" id="dlgLink_camadas" type="number" value="1" /> 
-
 	</div>
 </div>
-
+<div id="img_home" style="display:none;"></div>
 </body>
 </html>
