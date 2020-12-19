@@ -29,7 +29,7 @@ python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 
-## Versão executável (desatualizada):
+## Versão executável:
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 
