@@ -18,7 +18,7 @@ http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
 Funciona parcialmente em celular, com menu errático.
 
-## Versão (desatualizada) online com base de testes:
+## Versão online com base de testes:
 http://rtomi.pythonanywhere.com/rede/ <br>
 Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
 
@@ -30,7 +30,7 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 
 ## Versão executável (desatualizada):
-Para iniciar a versão executável, primeiro descompacte o arquivo [rede-versao-exe.7z](https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
+Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 
 ## Como utilizar o Banco de dados públicos de cnpj:

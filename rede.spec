@@ -5,17 +5,16 @@ block_cipher = None
 import sys
 sys.setrecursionlimit(5000)
 a = Analysis(['rede.py'],
-             pathex=['D:\\cgu\\rede-sqlite-py'],
+             #pathex=['C:\xxx\rede-cnpj-master\'],
              binaries=[],
              datas=[
-			 ('static','static'),
-			 ('templates','templates'),
+			 ('static','static'), 
+			 ('templates','templates'),			 
+			 ('arquivos_json','arquivos_json'),
 			 ('rede.ini','.'),
-			 ('rede.padrao.ini','.'),
 			 ('tabelas/*.csv','tabelas'),
 			 ('tabelas/*.xlsx', 'tabelas'),
-			 ('CNPJ_full.db','.'),
-			 ('Rede dados abertos.docx','.')],
+			 ('CNPJ_full.db','.')],
              hiddenimports=['numpy.random.common', 'numpy.random.bounded_integers','numpy.random.entropy'],
              hookspath=[],
              runtime_hooks=[],
