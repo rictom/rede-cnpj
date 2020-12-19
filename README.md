@@ -3,7 +3,12 @@
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
 
-<br>
+<br>Outros vídeos de utilização:<br>
+Opção básicas dos botões: https://youtu.be/-Ug6ToTRnE4 <br>
+Criar uma ligação no gráfico: https://youtu.be/8I0oNb4U9Rw <br>
+Aumentar tamanho da ligação: https://youtu.be/7hy74LE8e7A <br>
+Exportar dados como json: https://youtu.be/WKn02G9yHbQ <br>
+Arrastar células do Excel: https://youtu.be/Oxze-d4V7kE <br>
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
 A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, este repositório tem o arquivo com cerca de mil registros com dados fictícios de empresas e de sócios. <br>
@@ -13,7 +18,7 @@ http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
 Funciona parcialmente em celular, com menu errático.
 
-## Versão online com base de testes:
+## Versão (desatualizada) online com base de testes:
 http://rtomi.pythonanywhere.com/rede/ <br>
 Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
 
@@ -24,13 +29,9 @@ python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 
-## Versão executável:
+## Versão executável (desatualizada):
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-versao-exe.7z](https://www.dropbox.com/s/dl9d0cwhj378rfd/rede-versao-exe.7z?dl=0). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
-
-## Configurar nós iniciais:
-Se não houver cpfcnpj inicial configurado em rede.ini, o navegador abrirá um popup pedindo para inserir um cnpj ou nome. Colocando TESTE (ou teste), será inserido um ícone com um cnpj aleatório do banco de dados.<br>
-Se desejar definir itens iniciais da rede de relacionamentos, edite o arquivo rede.ini em um editor de texto e altere a linha que começa com “cpfcnpjinicial=”. Isso só vai ser útil se vc estiver utilizando a base CNPJ_full.db completa.<br>
 
 ## Como utilizar o Banco de dados públicos de cnpj:
 A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite com dados para teste. Substitua esse arquivo pela base de CNPJ em sqlite que pode ser obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. Esse script converte os arquivos zipados no site da Receita Federal para o formato sqlite ou csv.<br>
@@ -42,6 +43,8 @@ Ao iniciar o script,  será aberto um console (para coletar erros) e http://127.
 A roda do mouse expande ou diminui o tamanho da exibição.<br>
 Fazendo click duplo em um ícone, a rotina expande as ligações.<br>
 Apertando SHIFT, é possível selecionar mais de um ícone. <br>
+Pressionando CTRL e arrastando na tela, adiciona a seleção os itens da área.
+Clicar no botão do meio do mouse (roda) faz aparecer janela para editar uma Nota, que aparece numa terceira linha abaixo do ícone.
 
 Outras opções da rede estão no menu contextual do mouse (botão direito), sendo configuradas teclas de atalho correspondentes aos comandos:
  
@@ -49,17 +52,23 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 ## Tecla – Descrição do comando.
 - TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
 - I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
+- SHIFT+I - Criar item novo e ligar aos selecionados;
 - CRTL+Z – Desfaz Inserção;
+- L - Ligar itens selecionados;
+- SHIFT+L - Remover ligação entre os itens selecionados;
 - D – Abre um popup com dados de CNPJ;
-- SHIFT+D – Abre numa nova janela com Dados, que pode ser selecionada e copiada;
+- SHIFT+D – Abre numa nova aba com Dados;
 - Exportar dados em Excel (somente itens selecionados ou toda a rede);
-- L – Localizar na Tela Nome, CNPJ ou CPF;
+- Exportar imagem em formato SVG;
+- Exportar/Importar dados do gráfico em formato JSON;
+- F – Localizar na Tela Nome, CNPJ ou CPF;
 - G – Abre o nó numa aba do site Google;
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
 - J – Abre o nó numa aba do site Jusbrasil;
 - N - Rótulo - Exibe apenas o primeiro nome;
 - A - Gráfico em Nova Aba;
 - SHIFT+A - Abre uma nova Aba vazia;
+- C - Colorir os nós selecionados;
 - P - Fixar o nó na posição;
 - Escala Inicial - Coloca a exibição sem zoom, na escala inicial.
 - Q - Parar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
