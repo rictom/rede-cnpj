@@ -52,8 +52,10 @@ def html_pagina(cpfcnpj='', camada=camadaInicial, idArquivoServidor=''):
         else:
             mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas fictícias..Para inserir um novo elemento digite TESTE (CNPJ REAL NÃO SERÁ LOCALIZADO)"
             inserirDefault =' TESTE'
+    bBaseFullTextSearch = 1 if config['rede'].get('caminhoDBSqliteFTS','') else 0
     return render_template('rede_template.html', cpfcnpjInicial=cpfcnpj, camadaInicial=camada, 
-                           mensagemInicial=mensagemInicial, inserirDefault=inserirDefault, idArquivoServidor=idArquivoServidor)
+                           mensagemInicial=mensagemInicial, inserirDefault=inserirDefault, idArquivoServidor=idArquivoServidor,
+                           bBaseFullTextSearch = bBaseFullTextSearch)
 
 @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
 def serve_rede_json_cnpj(cpfcnpj, camada=1):

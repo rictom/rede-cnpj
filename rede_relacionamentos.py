@@ -12,6 +12,7 @@ Não fazer Create table ou criar índice para uma tabela a ser criada ou modific
 import time, copy, re, string, unicodedata, collections
 
 import pandas as pd, sqlalchemy
+from fnmatch import fnmatch 
 #import sqlite3, 
 import sys, configparser
 config = configparser.ConfigParser()
@@ -21,6 +22,7 @@ try:
     camDbSqlite = config['rede']['caminhoDBSqlite']
 except:
     sys.exit('o arquivo sqlite não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto.')
+camDBSqliteFTS = config['rede'].get('caminhoDBSqliteFTS','')
 caminhoDBLinks = config['rede'].get('caminhoDBLinks', '')
 caminhoDBEnderecoNormalizado = config['rede'].get('caminhoDBEnderecoNormalizado', '')
 #logAtivo = True if config['rede']['logAtivo']=='1' else False #registra cnpjs consultados
@@ -43,6 +45,7 @@ dfaux=None
 
 gTableIndex = 0
 gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'pool_size':1} #poll_size=1 força usar só uma conexão??
+kCaractereSeparadorLimite = '@'
 
 #decorator para medir tempo de execução de função
 def timeit(method):
@@ -69,7 +72,105 @@ def apagaTabelasTemporarias():
 
 apagaTabelasTemporarias() #apaga quando abrir o módulo
 
-def buscaPorNome(nome): #nome tem que ser completo. Com Teste, pega item randomico
+def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega item randomico
+    '''camDBSqliteFTS base com indice full text search, fica rápido com match mas com = fila lento, por isso
+        precisa fazer consulta em camDbSqlite quando não for usar match
+    '''
+    #remove acentos
+    nomeIn = nomeIn.strip().upper()
+    nomeMatch = ''
+    try:
+        limite = int(limite)
+    except:
+        limite = 0
+    # print('limite', limite)
+    limite =  min(limite,100) if limite else 10
+    if '*' in nomeIn or '?' in nomeIn or '"' in nomeIn:
+        nomeMatch = nomeIn.strip()
+        if nomeMatch.startswith('*'): #match do sqlite não aceita * no começo
+            nomeMatch = nomeMatch[1:].strip()
+        if camDBSqliteFTS:
+            con = sqlalchemy.create_engine(f"sqlite:///{camDBSqliteFTS}", execution_options=gEngineExecutionOptions)
+        tabelaSocios = 'socios_search'
+        tabelaEmpresas = 'empresas_search'
+    else:
+        con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+        tabelaSocios = 'socios'
+        tabelaEmpresas = 'empresas'
+
+    nome = ''.join(x for x in unicodedata.normalize('NFKD', nomeIn) if x in string.printable).upper()
+    cjs, cps = set(), set()
+    #if (' ' not in nome) and (nome not in ('TESTE',)): #só busca nome
+    #    return cjs, cps
+    # print('nomeMatch', nomeMatch)
+    # print('nome',nome)
+    if nomeMatch:
+         if not camDBSqliteFTS: #como não há tabela, não faz consulta por match
+             #con = None
+             return set(), set()
+         query = f'''
+                SELECT DISTINCT cnpj_cpf_socio, nome_socio
+                FROM {tabelaSocios} 
+                where nome_socio match \'{nomeMatch}\'
+                limit {limite*10}
+            '''
+    elif nomeIn=='TESTE':
+        query = f'select cnpj_cpf_socio, nome_socio from {tabelaSocios} where rowid > (abs(random()) % (select (select max(rowid) from {tabelaSocios})+1)) LIMIT 1;'
+
+    else:
+        query = f'''
+                SELECT distinct cnpj_cpf_socio, nome_socio
+                FROM {tabelaSocios} 
+                where nome_socio=\'{nome}\'
+                limit {limite}
+            '''
+    nomeMatch = nomeMatch.replace('"','')
+    # print('query', query)
+    contagemRegistros = 0
+    for r in con.execute(query):
+        if contagemRegistros>=limite:
+            break
+        if nomeMatch:
+            if not fnmatch(r.nome_socio, nomeMatch):
+                continue
+        if len(r.cnpj_cpf_socio)==14:
+            cjs.add(r.cnpj_cpf_socio)
+        elif len(r.cnpj_cpf_socio)==11:
+            cps.add((r.cnpj_cpf_socio, r.nome_socio))
+        contagemRegistros += 1
+
+    if nome=='TESTE':
+        print('##TESTE com identificador aleatorio:', cjs, cps)    
+        con = None
+        return cjs, cps
+    if nomeMatch:
+        query = f'''
+                    SELECT cnpj, razao_social
+                    FROM {tabelaEmpresas} 
+                    where razao_social match \'{nomeMatch}\'  
+                    limit {limite*10}
+                '''        
+    else:
+        # pra fazer busca por razao_social, a coluna deve estar indexada
+        query = f'''
+                    SELECT cnpj, razao_social
+                    FROM {tabelaEmpresas} 
+                    where razao_social=\'{nome}\'
+                    limit {limite}
+                '''        
+    for r in con.execute(query):
+        if contagemRegistros>=limite:
+            break
+        if nomeMatch:
+            if not fnmatch(r.razao_social, nomeMatch):
+                continue
+        cjs.add(r.cnpj)     
+        contagemRegistros +=1
+    con = None
+    return cjs, cps
+#.def buscaPorNome(
+
+def buscaPorNome01(nome): #nome tem que ser completo. Com Teste, pega item randomico
     #remove acentos
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
     nome = ''.join(x for x in unicodedata.normalize('NFKD', nome) if x in string.printable).upper()
@@ -101,7 +202,7 @@ def buscaPorNome(nome): #nome tem que ser completo. Com Teste, pega item randomi
         cjs.add(r.cnpj)     
     con = None
     return cjs, cps
-#.def buscaPorNome(
+#.def buscaPorNome01
 
 def separaEntrada(cpfcnpjIn='', listaIds=None):
     cnpjs = set()
@@ -123,13 +224,16 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
         elif len(i)>3 and i[2]=='_':
             outrosIdentificadores.add(i)
         else:
+            limite = 0
+            if kCaractereSeparadorLimite in i:
+                i, limite = kCaractereSeparadorLimite.join(i.split(kCaractereSeparadorLimite)[0:-1]).strip(), i.split(kCaractereSeparadorLimite)[-1]
             soDigitos = ''.join(re.findall('\d', str(i)))
             if len(soDigitos)==14:
                 cnpjs.add(soDigitos)
             elif len(soDigitos)==11:
                 pass #fazer verificação por CPF??
             elif not soDigitos:
-                cnpjsaux, cpfnomesaux = buscaPorNome(i)
+                cnpjsaux, cpfnomesaux = buscaPorNome(i, limite=limite)
                 cnpjs.update(cnpjsaux)
                 cpfnomes.update(cpfnomesaux)  
     return cnpjs, cpfnomes, outrosIdentificadores
