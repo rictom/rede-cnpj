@@ -170,27 +170,26 @@ def serve_form_download(): #formato='pdf'):
         </html>
     '''
     
-# @app.route('/rede/abrir_arquivo/', methods = ['POST'])
-# def serve_abrirArquivoLocal(nomeArquivo=''):
-#     #print('remote addr', request.remote_addr)
-#     #print('host url', request.host_url)
-#     #print(f'{nomeArquivo=}')
-#     return #xxx
-#     lista = request.get_json()
-#     nomeArquivo = lista[0]
-#     if not usuarioLocal():
-#         print('operação negada.', f'{request.remote_addr=}')
-#         return jsonify({'retorno':False})
-#     #arquivoParaAbrir = nomeArquivo #secure_filename(nomeArquivo) 
-#     if '/' not in nomeArquivo:
-#         nomeArquivo = os.path.join(local_file_dir, nomeArquivo)  
-#     extensao = os.path.splitext(nomeArquivo)[1].lower()
-#     if (extensao in ['.xls','xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png']) and os.path.exists(nomeArquivo):
-#         os.startfile(nomeArquivo)
-#         #return HttpResponse(json.dumps({'retorno':True}), content_type="application/json")
-#         return jsonify({'retorno':True})
-#     else:
-#         return jsonify({'retorno':False})
+@app.route('/rede/abrir_arquivo/', methods = ['POST'])
+def serve_abrirArquivoLocal(nomeArquivo=''):
+    #print('remote addr', request.remote_addr)
+    #print('host url', request.host_url)
+    #print(f'{nomeArquivo=}')
+    lista = request.get_json()
+    nomeArquivo = lista[0]
+    if not usuarioLocal():
+        print('operação negada.', f'{request.remote_addr=}')
+        return jsonify({'retorno':False})
+    #arquivoParaAbrir = nomeArquivo #secure_filename(nomeArquivo) 
+    if '/' not in nomeArquivo:
+        nomeArquivo = os.path.join(local_file_dir, nomeArquivo)  
+    extensao = os.path.splitext(nomeArquivo)[1].lower()
+    if (extensao in ['.xls','xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png']) and os.path.exists(nomeArquivo):
+        os.startfile(nomeArquivo)
+        #return HttpResponse(json.dumps({'retorno':True}), content_type="application/json")
+        return jsonify({'retorno':True})
+    else:
+        return jsonify({'retorno':False})
 
 def usuarioLocal():
     return request.remote_addr ==  '127.0.0.1'
