@@ -110,7 +110,8 @@ versão 0.3 (janeiro/2021)
 - Opções para inserir itens novos como link para sites e arquivos locais.
 - Opção para arrastar células do excel, leitura de arquivo csv;
 - Opções de leitura de entrada por linha de comando;
-- Itens selecionados ficam em destaque com linha animada.
+- Itens selecionados ficam em destaque com linha animada;
+- Alteração no formato do arquivo de configuração rede.ini.
 
 versão 0.2 (dezembro/2020)
 - Suporte para busca por parte do nome na base de empresas;
