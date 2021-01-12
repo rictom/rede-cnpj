@@ -18,6 +18,7 @@ def runParser():
     parser.add_argument('-k', '--conf_file', action='store', default='',help="defina arquivo de configuração", metavar="FILE")
     parser.add_argument('-j', '--json', action='store', dest='idArquivoServidor', default='', type=str, help='nome json no servidor')
     parser.add_argument('-a', '--lista', action='store', dest='arquivoEntrada', default='',help="inserir itens de arquivo em gráfico", metavar="FILE")
+    parser.add_argument('-e', '--encoding', action='store', dest='encodingArquivo', default='utf8',help="codificação do arquivo", metavar="FILE")
 
     parser.add_argument('-m', '--n-mensagem', action='store_false', dest='bExibeMensagemInicial', default=config['INICIO'].getboolean('exibe_mensagem_advertencia',True),  help='não exibe mensagem inicial' )
     parser.add_argument('-M',  '--mensagem',action='store_true', dest='bExibeMensagemInicial', default=config['INICIO'].getboolean('exibe_mensagem_advertencia',True), help='exibe mensagem inicial')
@@ -42,6 +43,7 @@ if par.arquivoEntrada:
 referenciaBD = config['BASE'].get('referencia_bd','')
 if referenciaBD:
     referenciaBD = 'Referência - ' + referenciaBD + '.'
+    
 #dic = vars(pr) #converte para dicionario 
 # cpfcnpjInicial = par.cpfcnpjInicial
 # camadaInicial = par.camadaInicial

@@ -40,7 +40,7 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
         #if os.path.exists(config.par.listaEntrada): checado em config
         extensao = os.path.splitext(config.par.arquivoEntrada)[1].lower()
         if extensao=='.csv' or extensao=='.txt':
-            listaEntrada = open(config.par.arquivoEntrada).read()
+            listaEntrada = open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read()
         elif extensao=='.json':
             listaJson = json.loads(open(config.par.arquivoEntrada).read())
         else:
