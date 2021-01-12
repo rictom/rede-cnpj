@@ -18,7 +18,7 @@ http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
 Funciona parcialmente em celular, com menu errático.
 
-## Versão online com base de testes:
+## Versão online com base de testes (desatualizada):
 http://rtomi.pythonanywhere.com/rede/ <br>
 Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
 
@@ -28,8 +28,9 @@ Para iniciar esse script, em um console DOS digite<br>
 python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
+As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 
-## Versão executável:
+## Versão executável (desatualizada):
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 
@@ -52,15 +53,19 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 ## Tecla – Descrição do comando.
 - TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
 - I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
-- SHIFT+I - Criar item novo e ligar aos selecionados;
+- U - Criar item novo (que não seja PF ou PJ) e ligar aos itens selecionados;
+- E - Editar dados do item (que não seja PF ou PJ) selecionado;
 - CRTL+Z – Desfaz Inserção;
-- L - Ligar itens selecionados;
+- L - Ligar itens selecionados, ligação tipo estrela (o primeiro ligado aos demais);
 - SHIFT+L - Remover ligação entre os itens selecionados;
+- K - Ligar itens selecionados, ligação tipo fila (o primeiro ligado ao segundo, o segundo ao terceiro, etc);
 - D – Abre um popup com dados de CNPJ;
 - SHIFT+D – Abre numa nova aba com Dados;
 - Exportar dados em Excel (somente itens selecionados ou toda a rede);
 - Exportar imagem em formato SVG;
 - Exportar/Importar dados do gráfico em formato JSON;
+- Exportar json para o servidor;
+- Importar json do servidor;
 - F – Localizar na Tela Nome, CNPJ ou CPF;
 - G – Abre o nó numa aba do site Google;
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
@@ -71,12 +76,12 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - C - Colorir os nós selecionados;
 - P - Fixar o nó na posição;
 - Escala Inicial - Coloca a exibição sem zoom, na escala inicial.
-- Q - Parar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
-- SHIFT-Q- reiniciar leiaute;
+- Q - Parar/reiniciar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
 - DEL – Excluir itens selecionados.
-
+- SHIFT+DEL – Excluir todos os itens.
 Os comandos valem para o último nó Selecionado, que fica com um retângulo preto em volta do ícone. 
-Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão.
+Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão ou para Expansão de vínculos.
+Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrastar arquivos csv ou json.
 
 ## Fonte dos dados:
 
@@ -97,3 +102,14 @@ https://github.com/anvaka/VivaGraphJS<br>
 
 Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
+
+## Histórico de versões
+
+versão 0.3 (janeiro/2021)
+- Opção para inserção de novos itens para elaboração de mapas mentais;
+- Opções para inserir itens novos como link para sites e arquivos locais.
+- Opção para arrastar células do excel, leitura de arquivo csv;
+- Opções de leitura de entrada por linha de comando.
+
+
+versão 0.1 (setembro/2020)

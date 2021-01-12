@@ -7,39 +7,39 @@ json a partir da tabela sqlite
 2020-11-25 - Se uma tabela já existir, parece causar lentidão para o pandas pd.to_sql. 
 Não fazer Create table ou criar índice para uma tabela a ser criada ou modificada pelo pandas
 """
-
-#import pymysql as mysqllib #tem que definir autocommit=True
+import os, sys, glob
 import time, copy, re, string, unicodedata, collections
-
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
-#import sqlite3, 
-import sys, configparser
-config = configparser.ConfigParser()
-config.read('rede.ini')
+
+import config
 
 try:
-    camDbSqlite = config['rede']['caminhoDBSqlite']
+    camDbSqlite = config.config['BASE']['base_receita']
 except:
     sys.exit('o arquivo sqlite não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto.')
-camDBSqliteFTS = config['rede'].get('caminhoDBSqliteFTS','')
-caminhoDBLinks = config['rede'].get('caminhoDBLinks', '')
-caminhoDBEnderecoNormalizado = config['rede'].get('caminhoDBEnderecoNormalizado', '')
+camDBSqliteFTS = config.config['BASE'].get('base_receita_fulltext','')
+caminhoDBLinks = config.config['BASE'].get('base_links', '')
+caminhoDBEnderecoNormalizado = config.config['BASE'].get('base_endereco_normalizado', '')
 #logAtivo = True if config['rede']['logAtivo']=='1' else False #registra cnpjs consultados
-logAtivo = True if config['rede'].get('logAtivo')=='1' else False #registra cnpjs consultados
+logAtivo = config.config['ETC'].getboolean('logativo',False) #registra cnpjs consultados
 #    ligacaoSocioFilial = True if config['rede']['ligacaoSocioFilial']=='1' else False #registra cnpjs consultados
-ligacaoSocioFilial = True if config['rede'].get('ligacaoSocioFilial')=='1' else False #registra cnpjs consultados
+ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
 
-dfaux = pd.read_csv(r"tabelas/tabela-de-qualificacao-do-socio-representante.csv", sep=';')
-dicQualificacao_socio = pd.Series(dfaux.descricao.values,index=dfaux.codigo).to_dict()
-dfaux = pd.read_csv(r"tabelas/DominiosMotivoSituaoCadastral.csv", sep=';', encoding='latin1')
-dicMotivoSituacao = pd.Series(dfaux['Descrição'].values, index=dfaux['Código']).to_dict()
-dfaux = pd.read_excel(r"tabelas/cnae.xlsx", sheet_name='codigo-grupo-classe-descr')
-dicCnae = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
-dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
-dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
-dfaux = pd.read_csv(r"tabelas/natureza_juridica.csv", sep=';', encoding='utf8', dtype=str)
-dicNaturezaJuridica = pd.Series(dfaux['natureza_juridica'].values, index=dfaux['codigo']).to_dict()
+class DicionariosCodigos():
+    def __init__(self):
+        dfaux = pd.read_csv(r"tabelas/tabela-de-qualificacao-do-socio-representante.csv", sep=';')
+        self.dicQualificacao_socio = pd.Series(dfaux.descricao.values,index=dfaux.codigo).to_dict()
+        dfaux = pd.read_csv(r"tabelas/DominiosMotivoSituaoCadastral.csv", sep=';', encoding='latin1')
+        self.dicMotivoSituacao = pd.Series(dfaux['Descrição'].values, index=dfaux['Código']).to_dict()
+        dfaux = pd.read_excel(r"tabelas/cnae.xlsx", sheet_name='codigo-grupo-classe-descr')
+        self.dicCnae = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
+        self.dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
+        self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
+        dfaux = pd.read_csv(r"tabelas/natureza_juridica.csv", sep=';', encoding='utf8', dtype=str)
+        self.dicNaturezaJuridica = pd.Series(dfaux['natureza_juridica'].values, index=dfaux['codigo']).to_dict()
+
+gdic = DicionariosCodigos()
 
 dfaux=None
 
@@ -364,13 +364,13 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
                 
     for cam in range(camada):  
-        query_indices = '''
-            CREATE unique INDEX ix_tmp_cnpjs ON tmp_cnpjs (cnpj);
-            CREATE unique INDEX ix_tmp_cpfnomes ON tmp_cpfnomes (cpf, nome);           
-			CREATE  INDEX ix_tmp_cpfnomes_cpf ON tmp_cpfnomes (cpf);
-			CREATE  INDEX ix_tmp_cpfnomes_nome ON tmp_cpfnomes (nome);
-            CREATE unique INDEX ix_tmp_ids ON tmp_ids (identificador);
-            '''
+#         query_indices = '''
+#             CREATE unique INDEX ix_tmp_cnpjs ON tmp_cnpjs (cnpj);
+#             CREATE unique INDEX ix_tmp_cpfnomes ON tmp_cpfnomes (cpf, nome);           
+# 			CREATE  INDEX ix_tmp_cpfnomes_cpf ON tmp_cpfnomes (cpf);
+# 			CREATE  INDEX ix_tmp_cpfnomes_nome ON tmp_cpfnomes (nome);
+#             CREATE unique INDEX ix_tmp_ids ON tmp_ids (identificador);
+#             '''
         whereMatriz = ''
         if bjson and not ligacaoSocioFilial:
             if cam==-1:
@@ -482,7 +482,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
                    "cor": "silver", #"cor":"gray", 
                    "camada":0,
                    "tipoDescricao":'sócio',
-                   "label":dicQualificacao_socio.get(int(k['cod_qualificacao']),'').strip()}
+                   "label":gdic.dicQualificacao_socio.get(int(k['cod_qualificacao']),'').strip()}
         ligacoes.append(copy.deepcopy(ligacao))
     if logAtivo or not bjson:
         conlog = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
@@ -777,7 +777,6 @@ def jsonDados(cpfcnpjIn):
                 FROM empresas t
                 INNER JOIN tmp_cnpjs1 tp on tp.cnpj=t.cnpj
             '''
-    dados = ""
     for k in con.execute(query):
         d = dict(k)  
         capital = d['capital_social']/100 #capital social vem multiplicado por 100
@@ -786,12 +785,12 @@ def jsonDados(cpfcnpjIn):
         logradouro = ', '.join(listalogradouro)
         d['cnpj'] = f"{d['cnpj']} - {'Matriz' if d['matriz_filial']=='1' else 'Filial'}"
         d['data_inicio_ativ'] = ajustaData(d['data_inicio_ativ'])
-        d['situacao'] = f"{d['situacao']} - {dicSituacaoCadastral.get(d['situacao'],'')}"
+        d['situacao'] = f"{d['situacao']} - {gdic.dicSituacaoCadastral.get(d['situacao'],'')}"
         d['data_situacao'] = ajustaData(d['data_situacao']) 
-        d['motivo_situacao'] = f"{d['motivo_situacao']}-{dicMotivoSituacao.get(int(d['motivo_situacao']),'')}"
-        d['cod_nat_juridica'] = f"{d['cod_nat_juridica']}-{dicNaturezaJuridica.get(d['cod_nat_juridica'],'')}"
-        d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{dicCnae.get(int(d['cnae_fiscal']),'')}"
-        d['porte'] = f"{d['porte']}-{dicPorteEmpresa.get(d['porte'],'')}"
+        d['motivo_situacao'] = f"{d['motivo_situacao']}-{gdic.dicMotivoSituacao.get(int(d['motivo_situacao']),'')}"
+        d['cod_nat_juridica'] = f"{d['cod_nat_juridica']}-{gdic.dicNaturezaJuridica.get(d['cod_nat_juridica'],'')}"
+        d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(int(d['cnae_fiscal']),'')}"
+        d['porte'] = f"{d['porte']}-{gdic.dicPorteEmpresa.get(d['porte'],'')}"
         d['endereco'] = f"{d['tipo_logradouro']} {logradouro}"
         d['capital_social'] = capital 
         break #só pega primeiro
@@ -823,9 +822,13 @@ def ajustaValor(valor, tipoInteiro=False):
 def ajustaData(d): #aaaammdd
     return d[-2:]+'/' + d[4:6] + '/' + d[:4]
 
-def dadosParaExportar(listaCpfCnpjs):    
+def dadosParaExportar(dados):    
     #print('dadosParaExportar-inicio: ' + time.ctime())
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    sids = set()
+    for item in dados['no']:
+        sids.add(item['id'])
+    listaCpfCnpjs = list(sids)
     criaTabelasTmpParaCamadas(con, listaIds=listaCpfCnpjs, grupo='')
     querysocios = '''
                 SELECT * from
@@ -855,28 +858,36 @@ def dadosParaExportar(listaCpfCnpjs):
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     #workbook = writer.book
-    dfin = pd.DataFrame(listaCpfCnpjs, columns=['cpfcnpj'])
-    dfin.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "lista", index=False)
     dfe=pd.read_sql_query(queryempresas, con)
     dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.'))
     
     dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
     dfe['data_inicio_ativ'] = dfe['data_inicio_ativ'].apply(ajustaData)
-    dfe['situacao'] = dfe['situacao'].apply(lambda x: dicSituacaoCadastral.get(x,''))
+    dfe['situacao'] = dfe['situacao'].apply(lambda x: gdic.dicSituacaoCadastral.get(x,''))
                                             
     dfe['data_situacao'] =  dfe['data_situacao'].apply(ajustaData)
-    dfe['motivo_situacao'] = dfe['motivo_situacao'].apply(lambda x: x + '-' + dicMotivoSituacao.get(int(x),''))
-    dfe['cod_nat_juridica'] = dfe['cod_nat_juridica'].apply(lambda x: x + '-' + dicNaturezaJuridica.get(x,''))
-    dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x+'-'+dicCnae.get(int(x),''))
+    dfe['motivo_situacao'] = dfe['motivo_situacao'].apply(lambda x: x + '-' + gdic.dicMotivoSituacao.get(int(x),''))
+    dfe['cod_nat_juridica'] = dfe['cod_nat_juridica'].apply(lambda x: x + '-' + gdic.dicNaturezaJuridica.get(x,''))
+    dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x+'-'+ gdic.dicCnae.get(int(x),''))
     
-    dfe['porte'] = dfe['porte'].apply(lambda x: x+'-'+dicPorteEmpresa.get(x,''))
+    dfe['porte'] = dfe['porte'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,''))
     
     dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False)
 
     dfs=pd.read_sql_query(querysocios, con)
-    dfs['cod_qualificacao'] =  dfs['cod_qualificacao'].apply(lambda x:x + '-' + dicQualificacao_socio.get(int(x),''))
+    dfs['cod_qualificacao'] =  dfs['cod_qualificacao'].apply(lambda x:x + '-' + gdic.dicQualificacao_socio.get(int(x),''))
     dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False)
 
+    #dfin = pd.DataFrame(listaCpfCnpjs, columns=['cpfcnpj'])    
+    dfin = pd.DataFrame.from_dict(dados['no']) #,orient='index',  columns=['id', 'descricao', 'nota', 'camada', 'cor', 'posicao', 'pinado', 'imagem', 'logradouro', 'municipio', 'uf', 'cod_nat_juridica', 'situacao_ativa', 'tipo', 'sexo'])
+    dfin.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "identificadores", index=False)
+
+    ligacoes = []
+    for lig in dados['ligacao']:
+        ligacoes.append([lig['origem'], lig['destino'], lig['label'], lig['tipoDescricao']])
+    dflig = pd.DataFrame(ligacoes, columns=['origem','destino','ligacao','tipo_ligacao'])
+    dflig.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "ligacoes", index=False)
+     
     writer.close()
     output.seek(0)
     con = None
@@ -961,3 +972,14 @@ def numeroDeEmpresasNaBase(): #nome tem que ser completo. Com Teste, pega item r
     r = con.execute('select count(*) as contagem from empresas;')
     return r.fetchone()[0]
 
+def imagensNaPastaF(bRetornaLista=False):
+    dic = {}
+    for item in glob.glob('static/imagem/**/*.png', recursive=True):
+        if '/nao_usado/' not in item.replace("\\","/"):
+            dic[os.path.split(item)[1]] = item.replace("\\","/")
+    if bRetornaLista:
+        return sorted(list(dic.keys()))
+    else:
+        return dic
+        
+gdicImagens = imagensNaPastaF()

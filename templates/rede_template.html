@@ -1,9 +1,4 @@
 <!DOCTYPE html>
-<html>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta charset="utf-8">
-<head>
-<title>Rede</title>
 <!-- 
 projeto disponível em https://github.com/rictom/rede-cnpj' 
 
@@ -12,8 +7,13 @@ https://github.com/anvaka/VivaGraphJS
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 https://fabien-d.github.io/alertify.js/
 https://fontawesome.com/v4.7.0/
+https://github.com/encharm/Font-Awesome-SVG-PNG
 -->
-
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<title>Rede</title>
 <link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
 <link rel="icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
 <script type="text/javascript" src="/static/vivagraph/vivagraph.js"></script>
@@ -27,7 +27,13 @@ https://fontawesome.com/v4.7.0/
 // adaptado de http://jsfiddle.net/ibigd/z7ymfpmm/
 var graph = Viva.Graph.graph();
 var graphics = Viva.Graph.View.svgGraphics();
+
 var gparam = {};
+
+	gparam.inicio = {{parametros|tojson}};
+	gparam.inserirDefault = gparam.inicio.inserirDefault;
+	gparam.listaImagens = gparam.inicio.listaImagens;
+	
 	gparam.nodeSize = 20; //24
 	gparam.tamanhoFonte = 10;
 	gparam.corLigacaoLink = 'seagreen',
@@ -35,37 +41,31 @@ var gparam = {};
 	//gparam.idLigacoes = {};
 	gparam.idnoSelecionado = null;
 	gparam.idNosSelecionados = new Set();
-	//gparam.idNosInseridos = new Set();
 	gparam.listaIdNosInseridos = [];
-	gparam.cpfcnpjInicial="{{cpfcnpjInicial}}";
-	gparam.camadaInicial={{camadaInicial}};
-	gparam.idArquivoServidorInicial = "{{idArquivoServidor}}";
-	gparam.mensagemInicial="{{mensagemInicial}}".replace(/\.\./g,'.\n');
-	gparam.inserirDefault="{{inserirDefault}}";
 	gparam.confirmaAntesDeInserirNNos = 100;
 	gparam.renderer = null;
 	gparam.layout = null;
 	gparam.geom = null;
-    gparam.ultimoToque = 0;
-    gparam.inicioToque = 0;
+	gparam.ultimoToque = 0;
+	gparam.inicioToque = 0;
 	gparam.mobile = false;
 	gparam.safari = false;
 	gparam.eventclick = 'click'; //no safari ='touchend'
 	gparam.numeroInsercoes = 0;
-	gparam.bRotulosCompletos = true;
+	//gparam.bRotulosCompletos = true;
+	gparam.kTipoRotulo = 0; //rotulo completo,
 	gparam.AreaSelecaoRetangular = {};
 	gparam.springLength=200;
-	gparam.bBaseFullTextSearch={{bBaseFullTextSearch}};
 	gparam.bRenderAtivado = true;
 
 // variáveis globais
 var gdebug = null,
-	createMarker = null,
+	//createMarker = null,
 	markerSeta = null,
 	defs = null,
 	menu = null;
 	
-// cria a triangulo da seta.
+/*
 createMarker = function(id) {
 	return Viva.Graph.svg('marker')
 	.attr('id', id)
@@ -78,11 +78,23 @@ createMarker = function(id) {
 	.attr('orient', 'auto')
 	.attr('stroke', 'gray')
 	.attr('fill', 'gray');
-};
+};*/
 
-markerSeta = createMarker('Triangle');
+// cria a triangulo da seta.
+markerSeta = Viva.Graph.svg('marker')
+	.attr('id', 'Triangle')
+	.attr('viewBox', '0 0 10 10')
+	.attr('refX', '10')
+	.attr('refY', '5')
+	.attr('markerUnits', 'strokeWidth')
+	.attr('markerWidth', '10')
+	.attr('markerHeight', '5')
+	.attr('orient', 'auto')
+	.attr('stroke', 'gray')
+	.attr('fill', 'gray');
 markerSeta.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
 
+graphics.getSvgRoot().id = 'principal_svg'; //seta id para ser reconhecido pelo drop_handler
 defs = graphics.getSvgRoot().append('defs');
 //insere filtro PB
 defs.innerHTML = ' \
@@ -97,10 +109,11 @@ defs.innerHTML = ' \
 	<filter id="filtroNegativo"> \
 	<feColorMatrix type="matrix" \
 	values="-1  0  0 0 0  0 -1  0 0 0 0 0 -1 0 0 1 1 1 0 0"/>\
-	</filter>';
-defs.append(markerSeta);
-
-function labelsNo(node) {
+	</filter> \
+	';
+defs.append(markerSeta);	
+	
+function labelsNo(node, tipoResumido) {
 	//antes se passava node.data.label, mas era redundante com id e descricao
 	var idno = node.data.id;
 	var descricao = node.data.descricao;
@@ -111,98 +124,122 @@ function labelsNo(node) {
 		var partes = idno.substr(3).split('-');
 		idno = partes[0];
 		descricao = partes[1] + '/' + partes[2];
+	} else if (idno.startsWith('LI_') || idno.startsWith('AR_')) {
+		idno = idno.substr(3);
+		if (idno.length>30) {
+			idno = idno.substr(0,29) + '...';
+			//descricao = idno.substr(-29);
+		}
 	} else {
 		idno = idno.substr(3);
 	}
-	return [idno, descricao]
-}
+	if (!tipoResumido) {
+		return [idno, descricao]
+	} else if (tipoResumido==1) {
+		return [descricao, '']
+	} else if (tipoResumido==2) {
+		return [descricao.split(' ')[0],'']
+	} else {
+		return ['', '']
+	}
+}//.function labelsNo
+
+function iconeF(idno) {
+	var tipo = idno.substr(0,3);
+	var imagem = 'icone-grafo-id.png';
+	if (tipo=='PF') {
+		imagem = 'icone-grafo-desconhecido.png';
+	//} else if (tipo=='PJ_') {
+	//	imagem =
+	} else if (tipo=='LI_') {
+		imagem = 'link.png';
+	} else if (tipo=='AR_') {
+		imagem = 'external-link.png';
+	} 
+	return imagem;
+}//function iconeF
 
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
-	var ui = Viva.Graph.svg('g');
-	var img = Viva.Graph.svg('image');
-	if (!node.data.situacao_ativa) {
-		img.attr('filter','url(#filtroPB)');
-	};
+	let ui = Viva.Graph.svg('g');
 	let urlImagem = node.data.imagem;
 	if (urlImagem.indexOf('/rede/')==-1) {
 		urlImagem = '/rede/static/imagem/' + urlImagem;
 	}
+	let img = Viva.Graph.svg('image');
+	//ui.posXRel = - gparam.nodeSize/2;
+	//ui.posYRel = - gparam.nodeSize/2;
 	img.attr('width', gparam.nodeSize)
 		.attr('height', gparam.nodeSize)
 		.link(urlImagem); 
-	var corFundo = node.data.cor ? node.data.cor:'transparent';
-	var	rectCor = Viva.Graph.svg('rect')
-			.attr('stroke', 'black')
-			.attr('stroke-width', 0)		
+	if (!node.data.situacao_ativa) {
+		img.attr('filter','url(#filtroPB)');
+	};	
+	let corFundo = node.data.cor ? node.data.cor:'transparent';
+	let	rectCor = Viva.Graph.svg('rect')
+			//.attr('stroke', 'black')
+			//.attr('stroke-width', 0)		
 			.attr('fill', corFundo) //corFundoImagemF(node)) 
 			.attr('width', gparam.nodeSize)
 			.attr('height', gparam.nodeSize)
 			.attr('visibility', 'visible');  //hidden or visible
-	var	rect = Viva.Graph.svg('rect') //destacar se está selecionado
+	
+	let	rect = Viva.Graph.svg('rect') //destacar se está selecionado
 			.attr('visibility', 'hidden') //hidden or visible	
-			.attr('stroke', 'black')
-			.attr('stroke-width', 1)	
+			.attr('stroke', 'black') //'crimson'
+			.attr('stroke-width', 1.5)	
 			.attr('fill', 'transparent') 
 			.attr('width', gparam.nodeSize)
 			.attr('height', gparam.nodeSize)
-			.attr('stroke-dasharray', '4, 3');
-	//https://developer.mozilla.org/pt-BR/docs/Web/SVG/Element/animate
-	var animateRect = Viva.Graph.svg('animate');
-	animateRect.attr('attributeName','stroke-dashoffset').attr('values','0;60;0').attr('dur', '30s').attr('repeatCount','indefinite');
-	rect.appendChild(animateRect);
-
-	var svgText = Viva.Graph.svg('text').attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
-		.attr('x', gparam.nodeSize/2).attr('text-anchor','middle').attr('font-size',gparam.tamanhoFonte+'px'); 
-	var labels = labelsNo(node); //node.data.label.split('\n');
-	var identificador = labels[0];
-	var nome = '';
-	if (labels.length>1) {
-		nome = labels[1];
+			.attr('stroke-dasharray', '6, 6');
+			
+	/*
+	if (!urlImagem) {
+		rectCor.attr('x', 0).attr('y', gparam.nodeSize);
+		rect.attr('x', 0).attr('y', gparam.nodeSize);
 	}
+	*/
+	//https://developer.mozilla.org/pt-BR/docs/Web/SVG/Element/animate
+	/*
+	var animateRect = Viva.Graph.svg('animate');
+	animateRect.attr('attributeName','stroke-dashoffset').attr('values','0;180;0').attr('dur', '60s').attr('repeatCount','indefinite');
+	rect.appendChild(animateRect);
+	*/
+	let svgText = Viva.Graph.svg('text').attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
+		.attr('x', gparam.nodeSize/2).attr('text-anchor','middle').attr('font-size',gparam.tamanhoFonte+'px'); 
+	var [identificador, nome] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
 	var nota = node.data.nota? node.data.nota: '';
 	node.data.nota = nota;
-	if (gparam.bRotulosCompletos) {
-		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
-		svgText.append(textspan);
-		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);
-		svgText.append(textspan2);		
-		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
-			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
-		svgText.append(textspan3);		
-	} else {
-		nome = nome.split(' ')[0];
-		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(nome);
-		svgText.append(textspan);
-		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text('');
-		svgText.append(textspan2);	
-		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
-			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
-		svgText.append(textspan3);	
-	}
+
+	var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
+	svgText.append(textspan);
+	var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);
+	svgText.append(textspan2);			
+	var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
+		.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
+	svgText.append(textspan3);	
 	ui.insertAdjacentHTML('beforeEnd','<title>' + textoTooltip(node, true) + '</title>'); //title deve ser a primeira coisa apos g para funcionar no firefox 48
-	ui.append(svgText);
 	ui.append(rectCor);
 	ui.append(img);
 	ui.append(rect);
-
- 
-	ui.onclick = function(event) { //pra que servia isso??
+	ui.append(svgText);
+	//eventos com os nós:
+	/*
+	ui.onclick = function(event) { 
 		event.preventDefault();
 		return;
-		if ( event.shiftKey || event.controlKey) {
-			event.preventDefault();
-			//event.stopPropagation();
-			//return true;
-			return;
-		} 
-		
-	}; 
-
+	}; */
 	ui.onmouseup = function(event) { 
 		if (event.which == 1) {
-			event.preventDefault();	
-			selecionaNoid(node.id, event.shiftKey);
+			if (event.altKey) {
+				event.preventDefault();	
+				menu_abrirNovaAba(gparam.idnoSelecionado);			
+				return;
+			}
+			if (!event.ctrlKey) {
+				event.preventDefault();	
+				selecionaNoid(node.id, event.shiftKey);
+			}
 		} else if (event.which == 2) {
 			//botão central abre edição de nota
 			event.preventDefault();
@@ -213,8 +250,14 @@ graphics.node(function(node) {
 	ui.ondblclick = function(event) {
 		if (event.which == 1) {
 			event.preventDefault();
-			selecionaNoid(node.id, false);
-			menu_incluirCamada(node.id, 1);
+			if (node.id.startsWith('AR_') || node.id.startsWith('LI_')) {
+				menu_abrirNovaAba(node.id);
+			} else if (node.id.startsWith('ID_')) {
+			
+			} else {
+				selecionaNoid(node.id, false);
+				menu_incluirCamada(node.id, 1);
+			}
 		};
 		return;
 	}; 
@@ -257,6 +300,7 @@ graphics.node(function(node) {
 	// 'g' element doesn't have convenient (x,y) attributes, instead
 	// we have to deal with transforms: http://www.w3.org/TR/SVG/coords.html#SVGGlobalTransformAttribute
 	nodeUI.attr('transform', 'translate(' + (pos.x - gparam.nodeSize/2) + ',' + (pos.y - gparam.nodeSize/2) + ')');
+	//nodeUI.attr('transform', 'translate(' + (pos.x + nodeUI.posXRel) + ',' + (pos.y + nodeUI.posYRel) + ')');
 }); //.graphics.node(function(node) 
 
 graphics.link(function(link){
@@ -287,7 +331,7 @@ graphics.link(function(link){
 			fromPos.x - fromNodeSize / 2, // left
 			fromPos.y - fromNodeSize / 2, // top
 			fromPos.x + fromNodeSize / 2, // right
-			fromPos.y + fromNodeSize / 2, // bottom
+			fromPos.y + fromNodeSize / 2 + gparam.tamanhoFonte*2, // bottom
 			fromPos.x, fromPos.y, toPos.x, toPos.y)
 		|| fromPos;
 
@@ -295,7 +339,7 @@ graphics.link(function(link){
 			toPos.x - toNodeSize / 2, // left
 			toPos.y - toNodeSize / 2, // top
 			toPos.x + toNodeSize / 2, // right
-			toPos.y + toNodeSize / 2, // bottom
+			toPos.y + toNodeSize / 2 + gparam.tamanhoFonte*2, // bottom
 			// segment:
 			toPos.x, toPos.y, fromPos.x, fromPos.y)
 			|| toPos;
@@ -303,11 +347,9 @@ graphics.link(function(link){
 		var data = 'M' + from.x + ',' + from.y + 'L' + to.x + ',' + to.y;
 		linkUI.attr("d", data);
 		var elemento = document.getElementById('link_label_'+linkUI.attr('id'));
+		elemento.attr("x", (from.x + to.x) / 2).attr("y", (from.y + to.y) / 2);
 		// se for grande, deixa o texto do link na horizontal, se for menor alinha com a ligacao.
-		if  (elemento.textContent.length> 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
-			elemento.attr("x", (from.x + to.x) / 2)
-				.attr("y", (from.y + to.y) / 2);
-		} else {
+		if  (elemento.textContent.length <= 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
 			// calcula o angulo para exibir o rótulo inclinado
 			var angulo = 180.0/Math.PI* Math.atan2(toPos.y-fromPos.y,toPos.x - fromPos.x);
 			var baseline = '-1';
@@ -320,20 +362,79 @@ graphics.link(function(link){
 			}
 			elemento.attr("transform","rotate(" + parseFloat(angulo) + " " + parseInt((from.x + to.x) / 2) + "," 
 				+ parseInt((from.y + to.y) / 2) + ") translate(0," + baseline + ")")
-			.attr('text-anchor','middle')
-			.attr("x", (from.x + to.x) / 2)
-			.attr("y", (from.y + to.y) / 2);
+			.attr('text-anchor','middle');
 		}
-	}); //.graphics.link(function(link)
+})//.graphics.link(function(link)
 
 function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dados dos marcadores
 	var LF = String.fromCharCode(10);
 	var texto = node.id;
 	if (node.id.startsWith('PJ_')) {
 		texto += LF + node.data.descricao + LF + node.data.logradouro + LF + node.data.municipio + '/' + node.data.uf;
-	} else if (node.id.startsWith('PF_')) {	}
+	} else if (node.id.startsWith('PF_')) {	
+	
+	} else if (node.id.startsWith('LI_')) {
+		texto = node.data.descricao + LF + LF + node.id.substr(3) + LF +  LF + 'Clique duplo para abrir o link';
+	} else if (node.id.startsWith('AR_')) {
+		texto = node.data.descricao + LF + LF + node.id.substr(3);
+		if (String(window.location).startsWith('http://127.0.0.1')) {
+			texto += LF +  LF + 'Clique duplo para abrir o link.';
+		} else {
+			if (node.id.search('/')==-1) {
+				texto += LF +  LF + 'Clique duplo para abrir o link.';
+			} else {
+				texto +=  'O arquivo não está disponível.';
+			}
+		}
+	}
 	return texto;
-}
+}//.function textoTooltip
+
+function ajustaRetanguloAnimado(nodeid, bSeleciona) {
+	//ajusta posicao do retangulo para envolver o texto
+	let nodeUI = graphics.getNodeUI(nodeid)
+	let uirect = nodeUI.getElementsByTagName('rect')[1];
+	if (bSeleciona) {
+		
+		//console.log(textBox);
+		
+		/* //criar o retangulo depois faz com que o item não aceite duplo clique
+		var	uirect = Viva.Graph.svg('rect') //destacar se está selecionado
+		//.attr('visibility', 'hidden') //hidden or visible	
+		.attr('stroke', 'black') //'crimson'
+		.attr('stroke-width', 1.5)	
+		.attr('fill', 'transparent') 
+		.attr('width', gparam.nodeSize)
+		.attr('height', gparam.nodeSize)
+		.attr('stroke-dasharray', '6, 6')
+		.attr('visibility', 'visible');
+		if (false) {
+			let textBox = nodeUI.getElementsByTagName('text')[0].getBBox();
+			//altera retangulo da seleção para envolver o texto
+			uirect.attr('x', textBox.x).attr('y', textBox.y).attr('width', textBox.width).attr('height', textBox.height);
+		}
+		*/
+		uirect.setAttribute('visibility', 'visible');
+		var animateRect = Viva.Graph.svg('animate');
+		animateRect.attr('attributeName','stroke-dashoffset').attr('values','0;180;0').attr('dur', '60s').attr('repeatCount','indefinite');
+		uirect.appendChild(animateRect);
+		
+		//uirect.setAttribute('class', 'disabled');
+		//var uitexto = nodeUI.getElementsByTagName('text')[0];
+		//nodeUI.appendBefore(uirect, uitexto);
+		//nodeUI.append(uirect);
+		//nodeUI.getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');
+	} else {
+		uirect.setAttribute('visibility', 'hidden');
+		var animateRectList = uirect.getElementsByTagName('animate');
+		//gparam.debug = uirect;
+		if (animateRectList.length) {
+			uirect.removeChild(animateRectList[0]);
+		}
+		//var uirect = nodeUI.getElementsByTagName('rect')[1];
+		//nodeUI.removeChild(uirect);
+	}
+}//.function ajustaRetanguloAnimado
 
 function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	// ativa retângulo em torno do ícone do nó.
@@ -343,12 +444,16 @@ function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	var nodeEstavaSelecionado = false;
 	if (nodeid) {
 		nodeEstavaSelecionado = gparam.idNosSelecionados.has(nodeid);
-		if (selecionaRetangular) {
-			nodeEstavaSelecionado=false;
+		if (nodeEstavaSelecionado) {
+			if (selecionaRetangular) { //se o nó já estava selecionado e com selecao retangular, não há o que fazer.
+				return;
+				//nodeEstavaSelecionado=false; //fazer isso pode ignorar que o objeto animação já exista e criar outro.
+			}
 		}
 	} else {
 		for (let n of gparam.idNosSelecionados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');  //hidden or visible)		
+			ajustaRetanguloAnimado(n, false);
+			//graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');  //hidden or visible)		
 		}
 		gparam.idNosSelecionados = new Set(); 
 		gparam.idnoSelecionado = null;
@@ -358,20 +463,24 @@ function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 		if (nodeEstavaSelecionado) {
 			gparam.idnoSelecionado = null;
 			gparam.idNosSelecionados.delete(nodeid);
-			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');
+			ajustaRetanguloAnimado(nodeid, false);
+			//graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');
 		} else {
 			gparam.idnoSelecionado = nodeid;
 			gparam.idNosSelecionados.add(nodeid);
-			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');
+			ajustaRetanguloAnimado(nodeid, true);
+			//graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');
 		}
 	} else {
 		for (let n of gparam.idNosSelecionados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');  //hidden or visible)		
+			ajustaRetanguloAnimado(n, false);
+			//graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'hidden');  //hidden or visible)		
 		}
 		gparam.idNosSelecionados = new Set(); 
 		gparam.idnoSelecionado = nodeid;
 		if (nodeid) {
-			graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');  //hidden or visible)
+			ajustaRetanguloAnimado(nodeid, true);
+			//graphics.getNodeUI(nodeid).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible');  //hidden or visible)
 			gparam.idNosSelecionados.add(nodeid);
 			gparam.idnoSelecionado = nodeid;
 		}
@@ -379,11 +488,10 @@ function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	//ajusta menu contextual
 	//ajustaMenuContextual(nodeid);
 	return;
-}
+}//.function selecionaNoid
 
 /*
 function ajustaMenuContextual(nodeid) {
-	gdebug = nodeid;
 	if (nodeid) {
 		if (nodeid.startsWith('PJ_')) {
 			var descricao = graph.getNode(nodeid).data.descricao;
@@ -573,8 +681,7 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 	if (idNosLocalizados.size) {
 		selecionaNoid(null, false); //apaga seleção primeiro
 		for (let n of idNosLocalizados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible'); 
-			gparam.idNosSelecionados.add(n);
+			selecionaNoid(n, true);
 		}
 		gparam.idnoSelecionado = primeiroNoid;
 		//ajustaMenuContextual(gparam.idnoSelecionado);
@@ -632,17 +739,17 @@ function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 	} else {
 		return 0;
 	}
-}//.function menu_localiza
+}//.function menu_localiza_adjacentes
 
 function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 	if (!bAtivar) {
 		gparam.renderer.pause();
-		if (bMostraMensagem) {
+		if (bMostraMensagem && gparam.bRenderAtivado) {
 			alertify.success('O leiaute foi pausado. Para ativar, pressione SHIFT+Q.');
 		}
 	} else {
 		gparam.renderer.resume();
-		if (bMostraMensagem) {
+		if (bMostraMensagem && !gparam.bRenderAtivado) {
 			alertify.success('O leiaute foi reiniciado. Para parar, pressione Q.');
 		}
 	}
@@ -771,7 +878,7 @@ function menu_dados(bNovaJanela, idNo) {
 		return;
 	}
 	var url = "/rede/dadosjson/" + idin ;
-	fetch(url, {method: 'get'}) //, mode: 'cors',})
+	fetch(url, {method: 'get', cache: "no-store"}) //, mode: 'cors',})
 	  .then(
 		function(response) {
 		  if (response.status !== 200) {
@@ -806,31 +913,51 @@ function menu_dados(bNovaJanela, idNo) {
 	  });
 }//.function menu_dados
 
-function menu_importaJsonArquivo(evt, tipo) {
+function menu_importarJsonArquivo(evt, tipo) {
 	menuOnClick();
 	if (tipo=='drop') {
 		var files = evt.dataTransfer.files;
 	} else {
 		var files = evt.target.files; // FileList object
 	}
-	var f=files[0];
-	var reader = new FileReader();
-	reader.onload = (function(f) {
-		return function(e) {
-			var contents = e.target.result;
-			//alert( "Got the file.n"  +"name: " + f.name + "n"  +"type: " + f.type + "n"  +"size: " + f.size + " bytesn"  + "starts with: " + contents.substr(1, contents.indexOf("n"))); 
-			if (f.name.endsWith('.csv')) {
-				inserir_lista(contents);
-			} else if (f.name.endsWith('.json')){
-				//importaJSON(contents);
-				insereJson(JSON.parse(contents), 'Leitura de arquivo. ');
-			} else {
-				alertify.error('O arquivo a ser importado deve ter extensão .json ou .csv');
-			}
-		};
-	})(f);
-	reader.readAsText(f);
-}//.function menu_importaJsonArquivo
+	for (var i = 0; i < files.length; i++) {
+		//console.log(files[i].name);
+		var f=files[i];
+		var reader = new FileReader();
+		reader.onload = (function(f) {
+			return function(e) {
+				var contents = e.target.result;
+				//alert( "Got the file.n"  +"name: " + f.name + "n"  +"type: " + f.type + "n"  +"size: " + f.size + " bytesn"  + "starts with: " + contents.substr(1, contents.indexOf("n"))); 
+				if (f.name.endsWith('.csv')) {
+					inserir_lista(contents);
+				} else if (f.name.endsWith('.json')){
+					//importaJSON(contents);
+					inserirJson(JSON.parse(contents), 'Leitura de arquivo. ');
+				} else {
+					var idNovo = 'AR_' + f.name;
+					menu_ligar_novo(idNovo,'');
+					/*
+					var descricao = prompt('Digite uma descrição para o arquivo ' + f.name, '');
+					if (graph.hasNode(idNovo)) {
+						alert('Já existe um arquivo com o nome ' + f.name);
+						
+					} else {
+						var no = {'id': idNovo,
+						   'descricao': descricao,
+						   'camada': 0,
+						   'situacao_ativa': true,
+						   'imagem': iconeF(idNovo), //'icone-grafo-id.png',
+						   'cor': 'yellow'};					
+						};
+						graph.addNode(idNovo, JSON.parse(JSON.stringify(no)));
+					}
+					*/
+				}
+			};
+		})(f);
+		reader.readAsText(f);
+	}
+}//.function menu_importarJsonArquivo
 
 function menu_exportaJSONServidor(idArquivoServidor) {
 	if (!idArquivoServidor) {
@@ -839,12 +966,12 @@ function menu_exportaJSONServidor(idArquivoServidor) {
 	if (!idArquivoServidor) {
 		return;
 	}
-	var jsonDados = redeNosLigacoes();
+	var jsonDados = getRedeNosLigacoes();
 	var url = '/rede/arquivos_json_upload/' + idArquivoServidor;
 	fazFetch(url, jsonDados); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
-		fetch(url, {method: 'post', body:JSON.stringify(jsonDados), headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		fetch(url, {method: 'post', body:JSON.stringify(jsonDados), headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
@@ -874,7 +1001,7 @@ function menu_exportaJSONServidor(idArquivoServidor) {
 	}
 }//.function menu_exportaJSONServidor
 
-function menu_importaJSONServidor(idArquivoServidor) {
+function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 	if (!idArquivoServidor) {
 		idArquivoServidor =  prompt('Digite o nome do arquivo no JSON no servidor:');
 	}
@@ -886,7 +1013,7 @@ function menu_importaJSONServidor(idArquivoServidor) {
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
 		//fetch(url, {method: 'get'}) // mode: 'cors',
-		fetch(url, {method: 'get', headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		fetch(url, {method: 'get', headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
@@ -899,7 +1026,7 @@ function menu_importaJSONServidor(idArquivoServidor) {
 			  response.json().then(function(data) {
 				//console.log(data);
 				document.body.style.cursor = 'default';
-				insereJson(data, ' Arquivo do Servidor: ' + idArquivoServidor);
+				inserirJson(data, ' Arquivo do Servidor: ' + idArquivoServidor, bNaoConfirma);
 			  });
 			}
 		  )
@@ -911,7 +1038,7 @@ function menu_importaJSONServidor(idArquivoServidor) {
 	}
 }//.function menu_importaJSONServidor
 
-function insereJson(jsonIn, texto) {
+function inserirJson(jsonIn, texto, bNaoConfirma) {
 	var no = jsonIn.no;
 	var ligacao = jsonIn.ligacao;
 	gparam.json = JSON.parse(JSON.stringify(jsonIn));
@@ -924,14 +1051,16 @@ function insereJson(jsonIn, texto) {
 			kNosAInserir += 1;
 		}
 	}
-	if (kNosAInserir > gparam.confirmaAntesDeInserirNNos) {
-		let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?';
-		if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.';
-		var resp = confirm(mensagem);
-		if (!resp) {
-			return;
+	if (!bNaoConfirma) {
+		if (kNosAInserir > gparam.confirmaAntesDeInserirNNos) {
+			let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?';
+			if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.';
+			var resp = confirm(mensagem);
+			if (!resp) {
+				return;
+			}
+			gparam.confirmaAntesDeInserirNNos = kNosAInserir;
 		}
-		gparam.confirmaAntesDeInserirNNos = kNosAInserir;
 	}
 	pinarNoSegundos(Math.sqrt(kNosAInserir)*4000); //fixa temporariamente o nó selecionado
 	for (let noaux of Object.values(no)) {
@@ -946,11 +1075,14 @@ function insereJson(jsonIn, texto) {
 				let posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
 				gparam.layout.setNodePosition(noaux.id, posicaoReferencia.x + Math.random()*gparam.springLength-gparam.springLength/2, posicaoReferencia.y + Math.random()*gparam.springLength-gparam.springLength/2);
 			}
+			gparam.layout.pinNode(noaux, noaux.pinado); 
 			kn += 1;
 			idNosInseridos.add(noaux.id);
 			if (!noaux.camada) {
 				idNosCamadaZero.add(noaux.id);
 			}
+		} else { //nó já existe TODO: verificar se precisa atualizar .data xxx
+		
 		}
 	}
 	if (idNosInseridos.size) {
@@ -1023,13 +1155,14 @@ function insereJson(jsonIn, texto) {
 	if (jsonIn.mensagem.lateral) {
 		alertify.success(jsonIn.mensagem.lateral);
 	}
-}//.function insereJson
+}//.function inserirJson
 
-function menu_incluirCamada(idin, camada, tipo) {
+function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	//if idin='', manda dados dos nós selecionados
 	var url = "";
 	idin = idin.replace(/\//g, '');
 	if ((!idin) && (!gparam.idnoSelecionado)) return; //se idin vazio, manda lista de ids selecionados
+
 	if (tipo=='links') {
 		dialogoParametrosLink();
 	} else {
@@ -1042,7 +1175,7 @@ function menu_incluirCamada(idin, camada, tipo) {
 		//fetch(url, {method: 'get'}) // mode: 'cors',
 		let bodyjson = idin ?  JSON.stringify([]) :  JSON.stringify([...gparam.idNosSelecionados]);
 		url += idin ? idin : gparam.idnoSelecionado;
-		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
@@ -1055,7 +1188,7 @@ function menu_incluirCamada(idin, camada, tipo) {
 			  response.json().then(function(data) {
 				//console.log(data);
 				document.body.style.cursor = 'default';
-				insereJson(data, idin + ' em camada ' + camada +'. ');
+				inserirJson(data, idin + ' em camada ' + camada +'. ', bNaoConfirma);
 			  });
 			}
 		  )
@@ -1074,8 +1207,15 @@ function menu_incluirCamada(idin, camada, tipo) {
 		var dlgLink = document.getElementById('dlgLink').cloneNode(true); //clone para não mexer no original, soluciona problema de instabilidade (parava de funcionar depois de misturar tipos de consulta, cnpj e link)
 		//document.getElementById('dlgLink_camadas').value = camada;
 		//var dlLinkhtml = dlgLink.outerHTML;
-		var dlLinkhtml = dlgLink.outerHTML;
-		dlgLink.outerHTML = ''; 
+		//var dlLinkhtml = dlgLink.outerHTML;
+		dlgLinkOriginal.parentNode.appendChild(dlgLink); 
+		dlgLink.outerHTML = ''; //isso funciona no firefox mas no chrome dá erro no chrome sem a linha de cima
+		/*
+		try {
+			dlgLink.outerHTML = ''; //isso funciona no firefox mas no chrome dá erro.
+		} catch (e) {
+			console.log(e);
+		}*/
 		ativaAtalhos(false);
 		alertify.confirm(dlgLink).set('onok', function(closeevent, value) { 
 			/*
@@ -1134,7 +1274,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 		itensDefault = textoDefault;
 	}
 	var textoPrompt = 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). A Razão Social ou Nome devem ser completos.';
-	if (gparam.bBaseFullTextSearch) {
+	if (gparam.inicio.bBaseFullTextSearch) {
 		textoPrompt += ' Para realizar busca por parte do nome, utilize *, ? ou aspas.';
 	} else {
 		textoPrompt += ' Não foi implementada busca parcial.';
@@ -1164,7 +1304,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 					ativaAtalhos(true);
 				}, function() { ativaAtalhos(true);}
 	);
-}//.function menu_inserir(
+}//.function menu_inserir
 
 function menu_buscaEmSite(siteUrl){
 	var strUrl = siteUrl + '"' + graph.getNode(gparam.idnoSelecionado).data.descricao + '"';		
@@ -1182,21 +1322,54 @@ function menu_GoogleMaps() {
 	}
 }//.function menu_GoogleMaps
 
-function menu_abrirNovaAba(bAbreVazio) {
+function menu_abrirNovaAba(idno) {
 	var novaJanela=null;
-	if (bAbreVazio) {
+	if (!idno) {
 		novaJanela=window.open("/rede/?pula_mensagem=sim");
 		novaJanela.focus(); 
 		return;
 	}
+	if (idno.startsWith('LI_')) {
+		novaJanela=window.open(idno.substr(3));
+		novaJanela.focus();
+		return;
+	} else if (idno.startsWith('AR_')) {
+		var url = "/rede/abrir_arquivo/" ; //+ idno.substr(3);
+		//novaJanela=window.open(strUrl);
+		let bodyjson = JSON.stringify([idno.substr(3)]); //JSON.stringify([...gparam.idNosSelecionados]);
+		fetch(url, {method: 'post', body: bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+			.then( 
+			function(response) {
+			  if (response.status !== 200) {
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+			  }
+			  // Examine the text in the response
+			  response.json().then(function(data) {
+				if (data['retorno']) {
+					alertify.success('O arrquivo ' + idno.substr(3) + ' foi aberto.');
+				} else {
+					alertify.error('O arrquivo ' + idno.substr(3) + ' não foi encontrado.');
+				}
+			  });
+			}
+			)
+			.catch(function(err) {
+				alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+			});
+
+		return;
+	}
 	ativaAtalhos(false);
-	alertify.prompt( 'Abrir ' + gparam.idnoSelecionado+  ' em nova aba', 'Selecione camadas', '1', 
+	alertify.prompt( 'Abrir ' + idno+  ' em nova aba', 'Selecione camadas', '1', 
 		function(evt, cam) { 	
 			ativaAtalhos(true);
-			let strUrl = "/rede/grafico/" + cam + "/" + gparam.idnoSelecionado;
+			var strUrl = "/rede/grafico/" + cam + "/" + idno;
 			novaJanela=window.open(strUrl);
 			novaJanela.focus();} , 
-		function() { ativaAtalhos(true);}	) ;
+		function() { ativaAtalhos(true);}	
+	) ;
 }//.function menu_abrirNovaAba
 
 function menu_selecionarTudo() {
@@ -1213,7 +1386,7 @@ function menu_pinarNo(bfixar){
 	var layout = gparam.layout;
 	for (let n of gparam.idNosSelecionados) {
 		let no = graph.getNode(n);
-		if (bfixar==null) { //inverte
+		if (bfixar===null) { //inverte
 			layout.pinNode(no, !layout.isNodePinned(no));
 		} else if (bfixar==1) {
 			layout.pinNode(no, true);
@@ -1241,24 +1414,19 @@ function pinarNoSegundos(segundos) {
 	);
 }//.function pinarNoSegundos
 
-function menu_rotulosCompletos(bCompleto) { 
-	gparam.bRotulosCompletos = bCompleto;
+function menu_rotulosCompletos(bTipo) { 
+	if (bTipo===null) {
+		gparam.kTipoRotulo = (gparam.kTipoRotulo + 1) % 4;
+	} else if (bTipo) {
+		gparam.kTipoRotulo=0;
+	} else {
+		gparam.kTipoRotulo=2;
+	}
 	graph.forEachNode( function(node) {
 		var ui=graphics.getNodeUI(node.id); 
-		var labels = labelsNo(node); //node.data.label.split('\n');
-		var identificador = labels[0];
-		var nome = '';
-		if (labels.length>1) {
-			nome = labels[1];
-		}
-		if (gparam.bRotulosCompletos) {
-			ui.getElementsByTagName('tspan')[0].text(identificador);
-			ui.getElementsByTagName('tspan')[1].text(nome);
-		} else {
-			nome = nome.split(' ')[0];
-			ui.getElementsByTagName('tspan')[0].text(nome);
-			ui.getElementsByTagName('tspan')[1].text('');
-		}			
+		var [identificador, nome] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
+		ui.getElementsByTagName('tspan')[0].text(identificador);
+		ui.getElementsByTagName('tspan')[1].text(nome);
 	});
 }//.function menu_rotulosCompletos
 
@@ -1290,14 +1458,25 @@ function menu_colorir(corEscolhida) {
 	alertify.success(tsucesso);
 }//.function menu_colorir
 
-function menu_ligar_selecionados(bEstrela) {
+function menu_ligar_selecionados(bEstrela, nomeLigacao) {
 	// se bEstrela, liga o primeiro selecionado com todos os outros
 	// se !bEstrela, liga linearmente do primeiro ao segundo, segundo ao terceiro e sucessivamente.
-	if (!gparam.idNosSelecionados.size) {
+	if (gparam.idNosSelecionados.size<2) {
 		alertify.alert('Ligar nós selecionados', 'Não há itens selecionados. Selecione e tente novamente.', function(){ ; });
 		return;
 	}
-	let label = prompt('Ligar itens selecionados.\n Digite o texto da ligação:','');
+	let label = nomeLigacao;
+	let primeiroNo = [...gparam.idNosSelecionados][0];
+	var mensagem = bEstrela ? 'Deseja ligar o item ' +  primeiroNo + ' aos itens ' + (gparam.idNosSelecionados.size-1) + ' selecionados?' : 'Deseja ligar os ' + gparam.idNosSelecionados.size + ' itens selecionados?';
+	if (!nomeLigacao) {
+		if (nomeLigacao==='') {
+			if (!confirm(mensagem)) {
+				label = null;
+			} 
+		} else {
+			label = prompt(mensagem, '');
+		}
+	}
 	if (label===null) {
 		return;
 	}
@@ -1322,7 +1501,8 @@ function menu_ligar_selecionados(bEstrela) {
 			} 
 		}
 	}
-	if (!bEstrela) {
+	/*
+	if (!bEstrela) { //isso fecha o círculo
 		anterior = destino;
 		ligacoes.push({'origem': anterior,
 								   'destino': inicial,
@@ -1330,53 +1510,11 @@ function menu_ligar_selecionados(bEstrela) {
 								   'camada': 1,		   
 								   'tipoDescricao': 'link',
 								   'label': label});
-	} 
+	} */ 
 	var noLigacoes = {'no':[], 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
-	insereJson(noLigacoes,' Ligações. ');
+	inserirJson(noLigacoes,' Ligações. ');
 	return true;
 }//.function menu_ligar_selecionados
-
-function menu_ligar_novo() {
-	//cria novo item (não PJ) e liga com nós selecionados.
-	let idNovo = prompt('Ligar seleção a um item novo.\nSe for adicionar PJ, utilize a rotina Inserir CNPJ (I).\nDigite nome ou identificador de novo item','');
-	if (idNovo===null) {
-		return;
-	}
-	idNovo = tipoPresumido(idNovo);
-	if (graph.hasNode(idNovo)) {
-		alert('Ligar seleção a um item novo.\n' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
-		return;
-	}
-	if (idNovo.startsWith('PJ_')) {
-		alert('Para inserir um PJ, use a opção Inserir CNPJ ou CPF (I)');
-		return;
-	}
-	let descricaoaux = idNovo.startsWith('PF_')?idNovo.substr(15):'';
-	var no = {'id': idNovo,
-			   'descricao': descricaoaux,
-			   'camada': 0,
-			   'situacao_ativa': true,
-			   'imagem': 'icone-grafo-id.png',
-			   'cor': 'yellow'};
-	graph.addNode(idNovo, JSON.parse(JSON.stringify(no)));
-	if (gparam.idnoSelecionado) {
-		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
-		position.x = position.x + Math.random()*gparam.springLength-gparam.springLength/2;
-		position.y = position.y + Math.random()*gparam.springLength-gparam.springLength/2;
-		gparam.layout.setNodePosition(idNovo, position.x, position.y);
-	}
-	let ids = [...gparam.idNosSelecionados];
-	ids.unshift(idNovo);
-	gparam.idNosSelecionados = new Set(ids);
-	gparam.idnoSelecionado = idNovo;
-	gparam.listaIdNosInseridos.push(new Set([idNovo]));
-	selecionaNoid(idNovo, true, true);
-	if (!menu_ligar_selecionados(true)) {
-		gparam.renderer.moveTo(position.x, position.y);
-		gparam.layout.pinNode(graph.getNode(idNovo),true);
-		menu_rendererAtivarParar(true, false);
-	}
-}//.function menu_ligar_novo
 
 function menu_desligar_selecionados() {
 	if (!gparam.idNosSelecionados.size) {
@@ -1385,7 +1523,7 @@ function menu_desligar_selecionados() {
 	}
 	for (let n1 of gparam.idNosSelecionados) {
 		graph.forEachLinkedNode(n1, function(n2, link){
-			console.log(n1 + '->' + n2.id);
+			//console.log(n1 + '->' + n2.id);
 			if (gparam.idNosSelecionados.has(n2.id)) {
 				var linkUIaux=null;
 				try {
@@ -1399,15 +1537,176 @@ function menu_desligar_selecionados() {
 	}
 }//.function menu_desligar_selecionados
 
+function sv(texto) {
+	return texto? texto:'';
+}
+
+function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados) {
+	/*
+	var no = {'id': idNovo,
+			   'descricao': descricaoNovo,
+			   'camada': 0,
+			   'situacao_ativa': true,
+			   'imagem': iconeF(idNovo), //'icone-grafo-id.png',
+			   'cor': 'yellow',
+			   'nota': nota}; */
+	var nodados = {};
+	if (dados) {
+		nodados = JSON.parse(JSON.stringify(dados))
+	}
+	nodados.id = idNovo;
+	nodados.descricao = descricaoNovo;
+	nodados.nota = nota;
+	nodados.camada = nodados.camada ? nodados.camada : 0;
+	nodados.situacao_ativa = nodados.situacao_ativa ? nodados.situacao_ativa : true;
+	nodados.imagem = nodados.imagem ? nodados.imagem : iconeF(idNovo);
+	nodados.cor = nodados.cor ? nodados.cor : 'yellow';
+	
+	graph.addNode(idNovo, JSON.parse(JSON.stringify(nodados)));
+	if (gparam.idnoSelecionado) {
+		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+		position.x = position.x + Math.random()*gparam.springLength-gparam.springLength/2;
+		position.y = position.y + Math.random()*gparam.springLength-gparam.springLength/2;
+		gparam.layout.setNodePosition(idNovo, position.x, position.y);
+	}
+	selecionaNoid(idNovo, true, true);
+	//trocar ordem da seleção para as setas ficarem saindo do novo item
+	let ids = [...gparam.idNosSelecionados];
+	ids.unshift(idNovo);
+	gparam.idNosSelecionados = new Set(ids);
+	gparam.idnoSelecionado = idNovo; 
+	gparam.listaIdNosInseridos.push(new Set([idNovo]));
+	if (gparam.idNosSelecionados.size==1) {
+		return;
+	}
+	if (!menu_ligar_selecionados(true, nomeLigacao)) {
+		gparam.renderer.moveTo(position.x, position.y);
+		gparam.layout.pinNode(graph.getNode(idNovo),true);
+		menu_rendererAtivarParar(true, false);
+	}
+	selecionaNoid(idNovo, false, false);
+}//.function criarNovoNo
+
+function menu_ligar_novo(idNovo, descricaoNovo) {
+	//cria novo item (não PJ) e liga com nós selecionados.
+	idNovo = idNovo ? idNovo: ''; //idNovo = idNovo ?? ''
+	descricaoNovo = descricaoNovo ? descricaoNovo: '';
+	var dlgItemOriginal = document.getElementById('dlgItem');
+	var dlgItem = document.getElementById('dlgItem').cloneNode(true); //clone para não mexer no original, soluciona problema de instabilidade (parava de funcionar depois de misturar tipos de consulta, cnpj e link)
+	var camposTexto = dlgItem.getElementsByClassName('ajs-input');
+	camposTexto[0].value= idNovo;
+	camposTexto[1].value= descricaoNovo;
+	camposTexto[2].value= '';
+	camposTexto[3].value= '';
+	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
+	dlgItem.outerHTML = ''; //receita de bolo. isso sem a linha de cima dava erro no chrome
+	ativaAtalhos(false);
+	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
+		ativaAtalhos(true); 
+		var camposTexto = dlgItem.getElementsByClassName('ajs-input');
+		idNovo = camposTexto[0].value;
+		descricaoNovo = camposTexto[1].value;
+		var tnota = camposTexto[2].value;
+		var tligacao = camposTexto[3].value;
+		if (!idNovo) {
+			alert('O Identificador não pode ser nulo. Tente novamente.');
+			return;
+		}
+		if (idNovo.startsWith('https://') || idNovo.startsWith('http://')) {
+			idNovo = 'LI_' + idNovo;
+		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) {
+			idNovo = 'AR_' + idNovo.slice(1,-1);
+		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\')) {
+			idNovo = 'AR_' + idNovo;
+		}
+		idNovo = tipoPresumido(idNovo);
+		if (graph.hasNode(idNovo)) {
+			alert('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
+			return;
+		}
+		/*
+		if (idNovo.startsWith('PJ_')) {
+			alert('Para inserir um PJ, use a opção Inserir CNPJ ou CPF (I)');
+			ativaAtalhos(true);
+			return;
+		}*/
+		descricaoNovo = idNovo.startsWith('PF_')?idNovo.substr(15):descricaoNovo;
+		criarNovoNo(idNovo, descricaoNovo, tnota, tligacao, {});
+	}, function() { 
+		ativaAtalhos(true); }
+	).set('oncancel', function() { ativaAtalhos(true);  })
+	.set('title',"Novo Item");
+}//.function menu_ligar_novo
+
+function menu_editar_no(noid) {
+	//edita dados item, se o usuário alterar o id, cria novo item.
+	if (!noid) {
+		noid = gparam.idnoSelecionado;
+	}
+	var idNovo =  noid;
+	var node = graph.getNode(noid);
+	if (!node) {
+		alert(noid + ' não foi encontrado.')
+		return;
+	}
+	var ui=graphics.getNodeUI(noid); 
+	var dlgItemOriginal = document.getElementById('dlgItemEditar');
+	var dlgItem = document.getElementById('dlgItemEditar').cloneNode(true); //clone para não mexer no original, soluciona problema de instabilidade (parava de funcionar depois de misturar tipos de consulta, cnpj e link)
+	var camposTexto = dlgItem.getElementsByClassName('ajs-input');
+	camposTexto[0].value= noid;
+	camposTexto[1].value= node.data.descricao;
+	camposTexto[2].value= node.data.nota;
+	camposTexto[2].value= '';
+	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
+	dlgItem.outerHTML = ''; //receita de bolo para usar o alertify.confirm. isso sem a linha de cima dava erro no chrome
+	ativaAtalhos(false);
+	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
+		ativaAtalhos(true); 
+		var camposTexto = dlgItem.getElementsByClassName('ajs-input');
+		//idNovo = camposTexto[0].value;
+		var idNovo = camposTexto[0].value;
+		var tligacao = camposTexto[3].value;
+		if (!idNovo) {
+			alert('O Identificador não pode ser nulo.');
+			return;
+		}
+		if (idNovo.startsWith('https://') || idNovo.startsWith('http://')) {
+			idNovo = 'LI_' + idNovo;
+		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) {
+			idNovo = 'AR_' + idNovo.slice(1,-1);
+		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\')) {
+			idNovo = 'AR_' + idNovo;
+		}
+		idNovo = tipoPresumido(idNovo);
+		if (noid==idNovo) {
+			node.data.descricao = camposTexto[1].value;
+			node.data.nota = camposTexto[2].value;
+			ui.getElementsByTagName('tspan')[1].text(node.data.descricao);
+			ui.getElementsByTagName('tspan')[2].text(node.data.nota);
+			
+		} else {
+			if (graph.hasNode(idNovo)) {
+				alert('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
+				return;
+			} else {
+				criarNovoNo(idNovo, node.data.descricao, node.data.nota, tligacao, node.data);
+			}
+		}		
+	}, function() { 
+		ativaAtalhos(true); }
+	).set('oncancel', function() { ativaAtalhos(true);  })
+	.set('title',"Editar Item");
+}//.function menu_editar_no
+
 function soDigitos(id) { 
 //usar com cautela, só deixar digitos para verificar cpf/cnpj pode dar resultado incorreto, p. ex: XX12345678901 seria considerado cpf
 	return id.replace(/\D+/g, '');
-}
+}//.function soDigitos
 
 function isNumeric(str) {
   var er = /^[0-9]+$/;
   return (er.test(str));
-}
+}//.function isNumeric
 
 function tipoPresumido(id) {
 	// supõe se tiver undercores na terceira posicao, já começa com tipo EN_, PF_ , PJ_, etc
@@ -1422,91 +1721,85 @@ function tipoPresumido(id) {
 	if (isNumeric(idlimpo) && (idlimpo.length==14)) {
 		return 'PJ_' + idlimpo;
 	} else if (isNumeric(idlimpo) && (idlimpo.length==11)) { //falta adicionar nome
-			return 'PF_' + idlimpo;
+		return 'PF_' + idlimpo;
 	} else {
-		return 'ID_'+id.trim();
+		return 'ID_' + id.trim();
 	}
 }//.function tipoPresumido
 
-function inserir_lista(entrada) {
+function alterarItens(dadosNos) {//altera dados do item a partir de lista de dados de nos, corrige elemento visível (nota, cor ou imagem) 
+	for (let no of dadosNos) {
+		var noid = no['id'];
+		var node = graph.getNode(noid);
+		var ui=graphics.getNodeUI(noid); 
+		for (const [chave, valor] of Object.entries(no)) {
+			if (chave=='id') {
+				continue;
+			}
+			node.data[chave] = valor;
+			if (chave=='nota') {
+				ui.getElementsByTagName('tspan')[2].text(valor);
+			} else if (chave=='cor') {
+				try {
+					ui.getElementsByTagName('rect')[0].setAttribute('fill',valor);
+				} catch (e){console.log(e); };		
+			} else if (chave=='imagem') {
+				try {
+					ui.getElementsByTagName('image')[0].setAttribute('xlink:href',"/rede/static/imagem/" + valor);
+				} catch (e){console.log(e); };			
+			}
+		}		
+	}
+}//.function alterarItens
+
+function inserir_lista(entrada, bNaoConfirma) {
 	//inserir três tipos de lista, dependendo se a primeira célula tiver um ou dois underscores ou sem underscore.
 	//sem underscore na primeira célula, colunas A,B,C,D,E, cria ligacoes A->B com descrição de ligação C. D e E são descrições dos identificadores A e B
 	//sem underscore, só uma coluna, insere identificadores, pfs ou pjs, só busca dados de cnpj, não adiciona camadas
 	//1 underscore na primeira célula, por dupla de colunas (fila). Colunas A,B,C,D, gera ligações A->B, B->C, C->D, considera a primeira linha nome das colunas
 	//2 underscores na primeira célula, por dupla de colunas (estrela). Colunas A,B,C,D, gera ligações A->B, A->C, C->D, considere a primeira linha como nome das colunas
+	//1 undercore + sharp (_#). Coluna _#A, B, C, altera parametro B ou C do id A
    	var itens = entrada.replace(/\n/g,';');
 	var max = 0;
 	var lista = [];
+	var dadosExtras = [];
+	var elems = null;
 	for (let linha of entrada.split('\n')){
 		elems = linha.split('\t');
 		max = Math.max(max, elems.length);
 	}
-	var kLinhas = 0;
-	var cabecalhos = entrada.split('\n')[0].split('\t');
-	if (cabecalhos[0].startsWith('__')) { //dois underscores
-		//converte tabela para ligacões, por dupla de colunas (estrela). Colunas A,B,C,D, gera ligações A->B, A->C, C->D
-		cabecalhos[0] = cabecalhos[0].substr(2);
-		for (let linha of entrada.split('\n')){
-			if (!linha.trim()) {
-				continue;
+	//var kLinhas = 0;
+	var bPrimeiraLinha = true;
+	var tipoLista = 'ligacao';
+	for (let linha of entrada.split('\n')){
+		elems = linha.split('\t');
+		if ((elems.join('').trim()=='') || (!linha.trim()) ){
+			bPrimeiraLinha=true;
+			continue
+		}
+		if (bPrimeiraLinha) {
+			cabecalhos = JSON.parse(JSON.stringify(elems));
+			if (cabecalhos[0].startsWith('_+')) {
+				tipoLista = 'linear';
+			} else if (cabecalhos[0].startsWith('_*')) {
+				tipoLista = 'estrela';
+			} else if (cabecalhos[0].startsWith('_#')) {
+				tipoLista = 'alteraDados';
+			} else {
+				tipoLista = 'ligacao';
+				cabecalhos=[];
+				bPrimeiraLinha=false;
 			}
-			kLinhas += 1;
-			if (kLinhas==1) {
-				continue;
-			}
-			elems = linha.split('\t');
-			for (let k=1; k<elems.length; k++) {
-				var idPre1 = tipoPresumido(elems[0]);
-				var idPre2 = tipoPresumido(elems[k]);
-				if (idPre1.startsWith('ID_')) {
-					idPre1 = tipoPresumido(cabecalhos[0]? cabecalhos[0] + ' ' + elems[0]:elems[0]);
-				}
-				if (idPre2.startsWith('ID_')) {
-					idPre2 = tipoPresumido(cabecalhos[k]?cabecalhos[k] + ' ' + elems[k]:elems[k]);
-				}
-				var nomeLigacao = '';
-				if (cabecalhos[k].startsWith('_')) {
-					nomeLigacao = cabecalhos[k].substr(1);
-					idPre2 = idPre2.substr(1);
-				}
-				lista.push([idPre1, idPre2, nomeLigacao, '', '']);
-			}
-		}			
-	} else if (cabecalhos[0].startsWith('_')) { //um underscore
-		//converte tabela para ligacões, por dupla de colunas (fila). Colunas A,B,C,D, gera ligações A->B, B->C, C->D
-		cabecalhos[0] = cabecalhos[0].substr(1);
-		for (let linha of entrada.split('\n')){
-			if (!linha.trim()) {
-				continue;
-			}
-			kLinhas += 1;
-			if (kLinhas==1) {
-				continue;
-			}
-			elems = linha.split('\t');
-			for (let k=0; (k+1)<elems.length; k++) {
-				var idPre1 = tipoPresumido(elems[k]);
-				var idPre2 = tipoPresumido(elems[k+1]);
-				if (idPre1.startsWith('ID_')) {
-					idPre1 = tipoPresumido(cabecalhos[k]? cabecalhos[k] + ' ' + elems[k] : elems[k]);
-				}
-				if (idPre2.startsWith('ID_')) {
-					idPre2 = tipoPresumido(cabecalhos[k+1]? cabecalhos[k+1] + ' ' + elems[k+1] : elems[k+1]);
-				}
-				var nomeLigacao = '';
-				if (cabecalhos[k].startsWith('_')) {
-					nomeLigacao = cabecalhos[k].substr(1);
-					idPre2 = idPre2.substr(1);
-				}
-				lista.push([idPre1, idPre2, nomeLigacao, '', '']);
-			}
-		}			
-	} else { //colunas A,B,C,D,E, cria ligacoes A->B com descrição de ligação C. D e E são descrições dos identificadores A e B
-		for (let linha of entrada.split('\n')){
-			if (!linha.trim()) {
-				continue;
-			}
-			elems = linha.split('\t');
+		}
+		if ((tipoLista!='ligacao') && (bPrimeiraLinha)){
+			cabecalhos[0] = cabecalhos[0].substr(2);
+			bPrimeiraLinha = false;
+			continue;
+		}
+		bPrimeiraLinha = false;		
+		var dadosExtrasNo = {};
+		if (tipoLista == 'ligacao') { 
+			//colunas A,B,C,D,E, cria ligacoes A->B com descrição de ligação C. D e E são descrições dos identificadores A e B
 			if (max==1) {
 				lista.push([tipoPresumido(elems[0]), '', '', '', '']);
 			} else if (max==2) {
@@ -1518,18 +1811,148 @@ function inserir_lista(entrada) {
 			} else if (max>=5) {
 				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), elems[3].trim(), elems[4].trim()]);
 			}
-		}	
+		} else if (tipoLista == 'estrela') { // _* undercore + estrela
+			//converte tabela para ligacões, por dupla de colunas (estrela). Colunas A,B,C,D, gera ligações A->B, A->C, C->D
+			//se algum rotulo começar com 1 underscores, adiciona o texto como ligacao, senão adiciona nos elementos
+			for (let k=1; k<elems.length; k++) {
+				if (cabecalhos[k].startsWith('_-')) { //ignora essa coluna
+					continue;
+				}
+				var idPre1 = tipoPresumido(elems[0]);
+				if (idPre1.startsWith('ID_')) {
+					idPre1 = tipoPresumido(cabecalhos[0]? cabecalhos[0] + ' ' + elems[0]:elems[0]);
+				}
+				var cabecalhok = cabecalhos[k];
+				var nomeLigacao = '';
+				if (cabecalhok.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
+					cabecalhok = cabecalhok.substr(1);
+					nomeLigacao = cabecalhok
+				}
+				var idPre2 = tipoPresumido(elems[k]);
+				if (idPre2.startsWith('ID_')) {
+					idPre2 = tipoPresumido(cabecalhok?cabecalhok + ' ' + elems[k]:elems[k]);
+				}
+				lista.push([idPre1, idPre2, nomeLigacao, '', '']);
+			}				
+		} else if (tipoLista == 'linear')  { //um underscore + _+
+			//converte tabela para ligacões, por dupla de colunas (fila). Colunas A,B,C,D, gera ligações A->B, B->C, C->D
+			//se algum rotulo começar com 1 underscores, adiciona o texto como ligacao, senão adiciona nos elementos
+			for (let k=0; (k+1)<elems.length; k++) {
+				if (cabecalhos[k+1].startsWith('_-')) { //ignora essa coluna
+					continue;
+				}
+				var idPre1 = tipoPresumido(elems[k]);
+				if (idPre1.startsWith('ID_')) {
+					idPre1 = tipoPresumido(cabecalhos[k]? cabecalhos[k] + ' ' + elems[k] : elems[k]);
+				}
+				var cabecalhok1 = cabecalhos[k+1];
+				var nomeLigacao = '';
+				if (cabecalhok1.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
+					cabecalhok1 = cabecalhok1.substr(1);
+					nomeLigacao = cabecalhok1;
+				}
+				var idPre2 = tipoPresumido(elems[k+1]);
+				if (idPre2.startsWith('ID_')) {
+					idPre2 = tipoPresumido(cabecalhok1? cabecalhok1 + ' ' + elems[k+1] : elems[k+1]);
+				}
+				lista.push([idPre1, idPre2, nomeLigacao, '', '']);
+			}
+		} else if (tipoLista == 'alteraDados') { 
+			//colunas _#A,B,C,D,E, altera parametros definidos pelos rótulos B,C,D,E nos elementos da coluna A	
+			var idPre = tipoPresumido(elems[0]);
+			idPre = tipoPresumido(cabecalhos[0]? cabecalhos[0] + ' ' + elems[0] : elems[0]);	
+			dadosExtrasNo['id'] = idPre;
+			for (let k=1; k<=elems.length; k++) {
+				if (cabecalhos[k]) {
+					dadosExtrasNo[cabecalhos[k]] = elems[k];
+					lista.push([idPre, '', '', '', '']);
+				}
+			}
+			dadosExtras.push( JSON.parse(JSON.stringify(dadosExtrasNo)) );
+		} else {
+			console.log('erro...');
+		}
+
 	}
 	
 	if (!lista.length) {
-		alertify.error('Precisa de 3 ou 5 colunas, formato id1, id2, nome_ligacao, nome id1, nome id2');
+		alertify.error('Formato não reconhecio. Precisa de 3 ou 5 colunas, formato id1, id2, nome_ligacao, nome id1, nome id2, ou outras opções.');
 		return;
 	}
+	
+	var tamanhoGrupo=0;
+	if (ajustarArvore(lista, true, 10)>0){
+		tamanhoGrupo = prompt('A lista tem identificadores que não são PJ ou PF repetidos diversas vezes.\nPara facilitar a visualização, pode-se dividir esses identificadores em ramos.\nDigite uma quantidade de itens por ramos ou Cancele para inserir sem ramos.', 10);
+	}
+	if (tamanhoGrupo) {
+		lista = ajustarArvore(lista, false, tamanhoGrupo);
+	}
+	var nos = [];
+	var ligacoes = [];
+	var nosid = new Set();
+	var cnpjsids = new Set();
+	var cnpjDescricao = {};
+    for (let linha of lista) {
+		var id1 = linha[0]; 
+		var id2 = linha[1]; 
+		//var id1limpo = id1.replace(/[\.\-\//]/g, '');
+		//var id2limpo = id2.replace(/[\.\-\//]/g, '');
+		//TODO verificar se sem pontos e virgulas tem 14 dígitos
+		if ((!id1) && (!id2)) {
+			continue;
+		}	
+		if (id1.startsWith('PJ_')) {
+			cnpjsids.add(id1);
+			cnpjDescricao[id1] = linha[3];			
+		} else if (id1) {
+			let descricaoaux = id1.startsWith('PF_')?id1.substr(15):linha[3];
+			if (!nosid.has(id1)) {
+				nosid.add(id1);
+				nos.push({'id': id1,
+			   'descricao': descricaoaux, //linha[3],
+			   'camada': 0,
+			   'situacao_ativa': true,
+			   'imagem': iconeF(id1), //'icone-grafo-id.png',
+			   'cor': 'yellow'});
+			}
+		}
+		if (id2.startsWith('PJ_')) {
+			cnpjsids.add(id2);
+			cnpjDescricao[id2] = linha[4];
+		} else if (id2) {
+			let descricaoaux = id2.startsWith('PF_')?id2.substr(15):linha[4];
+			if (!nosid.has(id2)) {
+				nosid.add(id2);
+				nos.push({'id': id2,
+			   'descricao': descricaoaux, //linha[4],
+			   'camada': 0,
+			   'situacao_ativa': true,
+			   'imagem': iconeF(id2), //'icone-grafo-id.png',
+			   'cor': 'yellow'});
+			}
+		}
+	    if ((id1) && (id2)) {
+		   ligacoes.push({'origem': id1,
+			   'destino': id2,
+			   'cor': gparam.corLigacaoLink, //'green',
+			   'camada': 1,
+			   'tipoDescricao': 'link',
+			   'label': linha[2]});
+		}
+	}
+	if (cnpjsids.size) {
+		fazFetchCnpjs(cnpjsids, nos, ligacoes);
+	} else {
+		var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+		inserirJson(noLigacoes,' drop lista ', bNaoConfirma);
+		alterarItens(dadosExtras);
+	}
+	return;
 	/*
     var entradaExemplo = [['ID_a1','ID_a2','l1','nome 1','nome 2'], 
 					['ID_a1','ID_a3','l2', 'nome 1', 'nome 3'],
 					['ID_a3','ID_a4','l3', 'nome 3', 'nome 4'] ]; */
-	function ajustaArvore(lista, bSoConta, kGrupo) {
+	function ajustarArvore(lista, bSoConta, kGrupo) {
 		//se um ID tiver mais de kGrupo ligacoes, vai quebrando em subarvores de no máximo kGrupo elementos.
 		//const kGrupo=10;
 		if (!kGrupo) {
@@ -1576,74 +1999,8 @@ function inserir_lista(entrada) {
 			listaSaida.push(JSON.parse(JSON.stringify(linhaSaida)));
 		}
 		return listaSaida;
-	}//.function ajustaArvore
-	var tamanhoGrupo=0;
-	if (ajustaArvore(lista, true, 10)>0){
-		tamanhoGrupo = prompt('A lista tem identificadores que não são PJ ou PF repetidos diversas vezes.\nPara facilitar a visualização, pode-se dividir esses identificadores em ramos.\nDigite uma quantidade de itens por ramos ou Cancele para inserir sem ramos.', 10);
-	}
-	if (tamanhoGrupo) {
-		lista = ajustaArvore(lista, false, tamanhoGrupo);
-	}
-	var nos = [];
-	var ligacoes = [];
-	var nosid = new Set();
-	var cnpjsids = new Set();
-	var cnpjDescricao = {};
-    for (let linha of lista) {
-		var id1 = linha[0]; 
-		var id2 = linha[1]; 
-		//var id1limpo = id1.replace(/[\.\-\//]/g, '');
-		//var id2limpo = id2.replace(/[\.\-\//]/g, '');
-		//TODO verificar se sem pontos e virgulas tem 14 dígitos
-		if ((!id1) && (!id2)) {
-			continue;
-		}	
-		if (id1.startsWith('PJ_')) {
-			cnpjsids.add(id1);
-			cnpjDescricao[id1] = linha[3];			
-		} else if (id1) {
-			let descricaoaux = id1.startsWith('PF_')?id1.substr(15):linha[3];
-			if (!nosid.has(id1)) {
-				nosid.add(id1);
-				nos.push({'id': id1,
-			   'descricao': descricaoaux, //linha[3],
-			   'camada': 0,
-			   'situacao_ativa': true,
-			   'imagem': 'icone-grafo-id.png',
-			   'cor': 'yellow'});
-			}
-		}
-		if (id2.startsWith('PJ_')) {
-			cnpjsids.add(id2);
-			cnpjDescricao[id2] = linha[4];
-		} else if (id2) {
-			let descricaoaux = id2.startsWith('PF_')?id2.substr(15):linha[4];
-			if (!nosid.has(id2)) {
-				nosid.add(id2);
-				nos.push({'id': id2,
-			   'descricao': descricaoaux, //linha[4],
-			   'camada': 0,
-			   'situacao_ativa': true,
-			   'imagem': 'icone-grafo-id.png',
-			   'cor': 'yellow'});
-			}
-		}
-	    if ((id1) && (id2)) {
-		   ligacoes.push({'origem': id1,
-			   'destino': id2,
-			   'cor': gparam.corLigacaoLink, //'green',
-			   'camada': 1,		   
-			   'tipoDescricao': 'link',
-			   'label': linha[2]});
-		}
-	}
-	if (cnpjsids.size) {
-		fazFetchCnpjs(cnpjsids, nos, ligacoes);
-	} else {
-		var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
-		insereJson(noLigacoes,' drop lista ');
-	}
-	
+	}//.function ajustarArvore
+
 	function fazFetchCnpjs(cnpjsids, nos, ligacoes) {
 		//var idin = [...cnpjsids].join(';');		
 		var idinlista = [...cnpjsids];
@@ -1651,7 +2008,7 @@ function inserir_lista(entrada) {
 		let bodyjson = JSON.stringify(idinlista);
 		var url =  "/rede/grafojson/cnpj/0/" + idinlista[0];
 		//fetch(url, {method: 'get'}) // mode: 'cors',pos
-		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}}) // mode: 'cors',
+		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
@@ -1672,9 +2029,8 @@ function inserir_lista(entrada) {
 					ligacoes.push(JSON.parse(JSON.stringify(li)));
 				}
 				var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
-				insereJson(noLigacoes,' drop lista ');
-
-				//insereJson(data, idin + ' em camada ' + camada +'. ');
+				inserirJson(noLigacoes,' drop lista ', bNaoConfirma);
+				alterarItens(dadosExtras);
 			  });
 			}
 		  )
@@ -1683,7 +2039,7 @@ function inserir_lista(entrada) {
 			console.log('Fetch Error :-S', err);
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
-	}
+	}//.function fazFetchCnpjs
 }//.function inserir_lista
 
 function menu_editarNota(noid){
@@ -1706,6 +2062,22 @@ function menu_editarNota(noid){
 	});
 }//.function menu_editarNota
 
+function menu_alterarIcone(bparam) { 
+	var menuIconeOptions = document.getElementById('menu_selecao_icone_options');
+	if (bparam) { 
+		var nomeIcone = menuIconeOptions.value;
+		for (let noid of gparam.idNosSelecionados) {
+			let no = graph.getNode(noid);
+			no.data.imagem = nomeIcone;
+			var node = graphics.getNodeUI(noid);
+			try {
+				node.getElementsByTagName('image')[0].setAttribute('xlink:href',"/rede/static/imagem/" + nomeIcone);
+			} catch (e){; };
+		}		
+	} 
+	menuIconeOptions.value=0; 
+}//.function menu_alterarIcone
+
 function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto sem precisar mandar para o servidor.
 	var textToSaveAsBlob = new Blob([textToSave], mime); //{type:"text/plain"});
 	var textToSaveAsURL = window.URL.createObjectURL(textToSaveAsBlob);
@@ -1720,13 +2092,16 @@ function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto
 	downloadLink.click();
 }//.function saveTextAsFile
 
+/*
 function destroyClickedElement(event){
 	document.body.removeChild(event.target);
-}
+}//.function destroyClickedElement
+*/
 
 function exportaIdsParaDownloadExcel() {
 	//var dadosJSON = JSON.stringify({'no':['1','2'], 'ligacao':[]});;
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
+	/*
 	var idArray = [];
 	if (iframeAuxiliar.exportaSoSelecionados) {
 		idArray = [...gparam.idNosSelecionados];
@@ -1735,7 +2110,8 @@ function exportaIdsParaDownloadExcel() {
 				idArray.push(node.id);
 			}
 		);
-	}
+	} */
+	var idArray = getRedeNosLigacoes();
 	var dadosJSON = JSON.stringify(idArray); //não aceita stringify de set
 	var mime={type:"application/json"};
 	var formato = 'xlsx';
@@ -1753,10 +2129,10 @@ function menu_exportaExcel(bSoSelecionados) {
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
 	iframeAuxiliar.onload = exportaIdsParaDownloadExcel;
 	iframeAuxiliar.src = '/rede/formdownload.html';
-	iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
+	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
 }//.function menu_exportaExcel
 
-function redeNosLigacoes() {	
+function getRedeNosLigacoes() {	
 	//return dojo.toJson({'no':listaNoInicial, 'ligacao':listaLigacaoInicial});
 	//return JSON.stringify({'no':listaNoInicial, 'ligacao':listaLigacaoInicial}, filtroDeMembros);
 	var nosAux=[], ligacoesAux=[];
@@ -1765,6 +2141,7 @@ function redeNosLigacoes() {
 		function(node) {
 			var nodedata = JSON.parse(JSON.stringify(node.data));
 			nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
+			nodedata['pinado'] = gparam.layout.isNodePinned(node);
 			nosAux.push(nodedata);						
 		}
 	);
@@ -1781,19 +2158,23 @@ function redeNosLigacoes() {
 		ligacoesAux.push(JSON.parse(JSON.stringify(link.data)));		
 	}); 
 	return {'no':nosAux, 'ligacao':ligacoesAux};
-}//.function redeNosLigacoes
+}//.function getRedeNosLigacoes
 
 function menu_exportaJsonArquivo(bSoSelecionados) {
-	var rede = redeNosLigacoes();
+	var rede = getRedeNosLigacoes();
 	saveTextAsFile(JSON.stringify(rede), 'rede.json', {type:"application/json"});
 }//.function menu_exportaJsonArquivo
 
 function replaceAll(texto, textoAProcurar, textoASubstituir) {
 	//return texto.split(textoAProcurar).join(textoASubstituir);
 	return texto.replace(new RegExp(textoAProcurar,'g'), textoASubstituir); 
-}
+}//.function replaceAll
 
 function getXMLdeSVG() {
+	var svg_xml = (new XMLSerializer).serializeToString(document.getElementsByTagName('svg')[0]); 
+	svg_xml = replaceAll(svg_xml,'xmlns:xlink="http://www.w3.org/1999/xlink"',''); //esse link é acrescentado em campo de texto, causando erro no svg
+	svg_xml = svg_xml.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" '); //define namespace para link
+	/*
 	var listaImagens= [
 			'icone-grafo-masculino.png',
 			'icone-grafo-feminino.png',
@@ -1806,7 +2187,19 @@ function getXMLdeSVG() {
 			'icone-grafo-empresa.png',
 			'icone-grafo-empresa-fundacao.png',
 			'icone-grafo-empresa-estrangeira.png',
-			'icone-grafo-id.png' ];
+			'icone-grafo-id.png' ]; */
+	var sImagens = new Set(); //gparam.listaImagens;
+	//verifica quais imagens estão sendo usadas.
+	var pedacos = svg_xml.split('xlink:href="/rede/static/imagem/');
+	for (let p of pedacos) {
+		if (p.indexOf('.png') != -1) {
+			var nome = p.split('.png')[0];
+			if (nome) {
+				sImagens.add(nome+'.png');
+			}
+		}
+	}
+	var listaImagens = [...sImagens];
 	function converteImagens2Base64() {
 		var dicionarioBase64 = {};
 		var c = document.createElement('canvas');
@@ -1826,9 +2219,6 @@ function getXMLdeSVG() {
 		return dicionarioBase64;
 	} //.function converteImagens2Base64() 
 	//ver http://d3export.housegordon.org/ exemplo para exportação svg		
-	var svg_xml = (new XMLSerializer).serializeToString(document.getElementsByTagName('svg')[0]); 
-	svg_xml = replaceAll(svg_xml,'xmlns:xlink="http://www.w3.org/1999/xlink"',''); //esse link é acrescentado em campo de texto, causando erro no svg
-	svg_xml = svg_xml.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" '); //define namespace para link
 	var dicionario = converteImagens2Base64();
 	for (let key of listaImagens) {
 		var baseStr=dicionario[key];
@@ -1843,7 +2233,7 @@ function menu_exportaSVG() {
 	var mime={type:"image/svg"};
 	alertify.success("SVG (Scalable Vector Graphics)");
 	saveTextAsFile(getXMLdeSVG(), 'rede.svg', mime);
-}
+}//.function menu_exportaSVG
 
 function menu_zoomin(teclaShift, teclaCtrl) {
 	menuOnClick(); //firefox no android, não está fechando o menu
@@ -1924,7 +2314,7 @@ function balanca() {
 	}
 	var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
 	gparam.layout.setNodePosition(noaux.id, position.x+10, position.y+10);
-}
+}//.function balanca
 
 function menu_configurar_springCoeff() {
 	var parametro = prompt('Digite o coeficiente da "mola" da ligação (valor padrão 0.0002)', gparam.layout.simulator.springCoeff());
@@ -1938,46 +2328,45 @@ function menu_configurar_gravity() {
 	if (parametro) {
 		gparam.layout.simulator.gravity(parametro);
 	}
-}
+}//.function menu_configurar_gravity
 
 function menu_configurar_dragCoeff() {
 	var parametro = prompt('Digite o coeficiente de arrasto (valor padrão 0.02)', gparam.layout.simulator.dragCoeff());
 	if (parametro) {
 		gparam.layout.simulator.dragCoeff(parametro);
 	}
-}
+}//.function menu_configurar_dragCoeff
 
 function menu_configurar_theta() {
 	var parametro = prompt('Digite do coeficiente theta (valor padrão 0.8)', gparam.layout.simulator.theta());
 	if (parametro) {
 		gparam.layout.simulator.theta(parametro);
 	}
-}
-
+}//.function menu_configurar_theta(
 
 //menu contextual
 function showMenu(x, y){
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
     menu.classList.add('show-menu');
-}
+}//.function showMenu
 
 function hideMenu(){
 	//menu.classList.contains('show-menu') //para verificar
     menu.classList.remove('show-menu');
-}
+}//.function hideMenu
 
 function onContextMenu(e){
 	e.preventDefault();
     showMenu(e.pageX, e.pageY);
     document.addEventListener(gparam.eventclick, menuOnClick, false);
-}
+}//.function onContextMenu
 
 function menuOnClick(e){
 	//devido a inconsistência no firefox e chrome no android, foi colocado menuOnClick(); antes de todos os comandos do menu
     hideMenu();
     document.removeEventListener(gparam.eventclick, menuOnClick);
-}
+}//.function menuOnClick
 
 function menu_botao(event) {
 	event.preventDefault();
@@ -1988,7 +2377,7 @@ function menu_botao(event) {
 	},1000);
 	event.preventDefault();
 	return false;
-}
+}//.function menu_botao
 //.menu contextual
 
 //resposta a evento drop no div do menu, para abrir opção de inserção. Por exemplo, arrastar do word ou excel uma lista de cnpjs.
@@ -1996,48 +2385,59 @@ function dragover_handler(ev) {
 	ev.preventDefault();
 	// Define o dropEffect para ser do tipo move
 	ev.dataTransfer.dropEffect = "copy"
-}
+}//.function dragover_handler
 
 function drop_handler(ev) {
 	ev.preventDefault();
 	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
 	var tipos = ev.dataTransfer.types;
-	if (tipos.includes("text/plain")) {
+	if (tipos.includes("text/x-moz-url")) { //funciona no firefox, mas no chrome não aparece esse flavor
+		//var data = ev.dataTransfer.getData("text");
+		var lista = ev.dataTransfer.getData("text/x-moz-url").split('\n'); //url separado do titulo por linha
+		menu_ligar_novo('LI_' + lista[0], lista[1]);
+	} else if (tipos.includes( "text/uri-list")) { //no chrome
+		var item = ev.dataTransfer.getData("text/uri-list"); //aqui só tem url, não tem título da página como no firefox
+		menu_ligar_novo('LI_' + item, '');
+	} else if (tipos.includes("text/plain")) {
 		var data = ev.dataTransfer.getData("text");
 		inserir_lista(data);
-		return;
 	} else if (tipos.includes("Files")) {
-		menu_importaJsonArquivo(ev, 'drop');
+		menu_importarJsonArquivo(ev, 'drop');
 	} else {
-		alertify.error('tipo não reconhecido');
+		alertify.error('Drop. Tipo não reconhecido');
+		console.log(tipos);
 	}
 }//.function drop_handler
 
 function ajustaRegiaoDrop() {
-	var dropzoneId = "drop_area"; //"div_botoes"; //só esta região vai aceitar drop
-
+	//var dropzoneId = "drop_area"; //"div_botoes"; //só esta região vai aceitar drop
+	var dropzones = ['drop_area', 'principal_svg'];
 	window.addEventListener("dragenter", function(e) {
-	  if (e.target.id != dropzoneId) {
-		e.preventDefault();
-		e.dataTransfer.effectAllowed = "none";
-		e.dataTransfer.dropEffect = "none";
-	  }
+		//console.log(e.target.id);
+		//if (e.target.id != dropzoneId) {
+		if (!dropzones.includes(e.target.id)) {
+			e.preventDefault();
+			e.dataTransfer.effectAllowed = "none";
+			e.dataTransfer.dropEffect = "none";
+		}
 	}, false);
 
 	window.addEventListener("dragover", function(e) {
-	  if (e.target.id != dropzoneId) {
-		e.preventDefault();
-		e.dataTransfer.effectAllowed = "none";
-		e.dataTransfer.dropEffect = "none";
-	  }
+		//if (e.target.id != dropzoneId) {
+		if (!dropzones.includes(e.target.id)) {
+			e.preventDefault();
+			e.dataTransfer.effectAllowed = "none";
+			e.dataTransfer.dropEffect = "none";
+		}
 	});
 
 	window.addEventListener("drop", function(e) {
-	  if (e.target.id != dropzoneId) {
-		e.preventDefault();
-		e.dataTransfer.effectAllowed = "none";
-		e.dataTransfer.dropEffect = "none";
-	  }
+		//if (e.target.id != dropzoneId) {
+		if (!dropzones.includes(e.target.id)) {
+			e.preventDefault();
+			e.dataTransfer.effectAllowed = "none";
+			e.dataTransfer.dropEffect = "none";
+		}
 	});
 }//.function ajustaRegiaoDrop
 
@@ -2065,6 +2465,12 @@ function evento_teclasDown(e) {
 		return true;
 	}
 	if (e.code.startsWith('Digit') && (e.code.length==6)) {
+		if (gparam.idnoSelecionado) {
+			if (['ID_', 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) {
+				menu_abrirNovaAba(gparam.idnoSelecionado);
+				return;
+			}
+		}
 		var ns = e.code.substr(-1);
 		var tipo = 'cnpj';
 		if (e.shiftKey) {
@@ -2079,34 +2485,36 @@ function evento_teclasDown(e) {
 			e.preventDefault();
 			return;
 		}
-	} else if (testa('KeyZ', false, true)) { //if (e.ctrlKey && (e.code=='KeyZ')) {
+	} else if (testa('KeyZ', false, true)) { 
 		menu_inserirDesfazer();
-	} else if (testa('KeyF', false, false)) { // if (e.code=='KeyF') {
+	} else if (testa('KeyF', false, false)) { 
 		menu_localiza();
-	} else if (testa('KeyJ', false, false)) { // if (e.code=='KeyF') {
+	} else if (testa('KeyJ', false, false)) { 
 		menu_localiza_adjacentes();
 	} else if (testa('KeyI', false, false)) { 
 		menu_inserir();
-	} else if (testa('KeyI', true, false)) { 
+	} else if (testa('KeyU', false, false)) { 
 		menu_ligar_novo();
-	} else if (testa('KeyD', false, false)) { // if ((!e.shiftKey) && (e.code=='KeyD')) {
+	} else if (testa('KeyD', false, false)) { 
 		menu_dados(false, gparam.idNoOnHover);
-	} else if (testa('KeyD', true, false)) { // if ((e.shiftKey) && (e.code=='KeyD')) {
+	} else if (testa('KeyD', true, false)) { 
 		menu_dados(true, gparam.idNoOnHover);
-	} else if (testa('KeyA', false, false)) { // if ((!e.ctrlKey) && (!e.shiftKey) && (e.code=='KeyA')) {
-		menu_abrirNovaAba(false);
-	} else if (testa('KeyA', true, false)) { // if ((!e.ctrlKey) && (e.shiftKey) && (e.code=='KeyA')) {
-		menu_abrirNovaAba(true);
-	} else if (testa('KeyA', false, true)) { // if ((e.ctrlKey) && (!e.shiftKey) && (e.code=='KeyA')) {
+	} else if (testa('KeyA', false, false)) { 
+		menu_abrirNovaAba(gparam.idnoSelecionado);
+	} else if (testa('KeyA', true, false)) { 
+		menu_abrirNovaAba(null);
+	} else if (testa('KeyA', false, true)) { 
 		menu_selecionarTudo();
-	} else if (testa('KeyG', false, false)) { // if ((!e.shiftKey) && (e.code=='KeyG')) {
+	} else if (testa('KeyE', false, false)) { 
+		menu_editar_no();
+	} else if (testa('KeyG', false, false)) { 
 		menu_buscaEmSite('https://www.google.com/?#q=');;
-	} else if (testa('KeyG', true, false)) { // if ((e.shiftKey) &&(e.code=='KeyG')) {
+	} else if (testa('KeyG', true, false)) { 
 		menu_GoogleMaps('https://www.google.com/?#q=');;
-	} else if (testa('KeyJ', false, false)) { // if (e.code=='KeyJ') {
+	} else if (testa('KeyJ', false, false)) { 
 		menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
-	} else if (testa('KeyN', false, false)) { // if (e.code=='KeyN') {
-		menu_rotulosCompletos(!gparam.bRotulosCompletos);
+	} else if (testa('KeyN', false, false)) { 
+		menu_rotulosCompletos(null);
 	} else if (testa('KeyF', false, false)) { 
 		menu_localiza();
 	} else if (testa('KeyF', true, false)) { 
@@ -2115,19 +2523,21 @@ function evento_teclasDown(e) {
 		menu_ligar_selecionados(true);
 	} else if (testa('KeyL', true, false)) { 
 		menu_desligar_selecionados();
-	} else if (testa('Delete', false, false)) { // 	if ((!e.shiftKey) && (e.code=='Delete')){
+	} else if (testa('KeyK', false, false)) { 
+		menu_ligar_selecionados(false);
+	} else if (testa('Delete', false, false)) { 
 		menu_excluirNosSelecionados();
-	} else if (testa('Delete', true, false)) { // 	if ((e.shiftKey) && (e.code=='Delete')){
+	} else if (testa('Delete', true, false)) { 
 		menu_excluirTudo();
-	} else if (testa('KeyP', false, false)) { // 	if (e.code=='KeyP') {
-		menu_pinarNo();
-	} else if (testa('KeyC', false, false)) { // 	if ((!e.shiftKey) && (e.code=='KeyC')) {
+	} else if (testa('KeyP', false, false)) { 
+		menu_pinarNo(null);
+	} else if (testa('KeyC', false, false)) { 
 		menu_colorir();
-	} else if (testa('KeyC', true, false)) { // if ((e.shiftKey) && (e.code=='KeyC')) {
+	} else if (testa('KeyC', true, false)) { 
 		menu_colorir('transparent');
-	} else if (testa('KeyQ', false, false)) { // 	if ((!e.shiftKey) && (e.code=='KeyQ')) {
-		menu_rendererAtivarParar(false, true);
-	} else if (testa('KeyQ', true, false)) { // 	if ((e.shiftKey) && (e.code=='KeyQ')) {
+	} else if (testa('KeyQ', false, false)) { 
+		menu_rendererAtivarParar(!gparam.bRenderAtivado, true);
+	} else if (testa('KeyQ', true, false)) { 
 		menu_rendererAtivarParar(true, true);
 	} else {
 		return;
@@ -2168,6 +2578,25 @@ alertifyfake = {
 		setTimeout(function(){ alert('ERRO!!! ' + texto); }, 500);
 	}
 }//.alertifyfake
+
+function ajustaAmbiente_adicionarListaIconesAoMenu() {
+	//var menuIcone = document.getElementById('menu_selecao_icone');
+	var menuIconeOptions = document.getElementById('menu_selecao_icone_options');
+	for (item of gparam.listaImagens) {
+		/*
+		var itemMenu = document.createElement('li');
+		itemMenu.innerHTML = '\
+			<button type="button" class="menu-btn" onclick="menu_alteraIcone('+item+');"> \
+			<i class="fa fa-tags"></i><span class="menu-text">' + item + '</span> \
+			</button>	'	
+		itemMenu.setAttribute('class', "menu-item"); */
+		var itemOption = document.createElement('option');
+        //itemOption.onchange = 'menu_alteraIcone("' + item + '");';
+		itemOption.text = item;
+		itemOption.value = item;
+		menuIconeOptions.appendChild(itemOption);
+	}
+}//.function ajustaAmbiente_adicionarListaIconesAoMenu
 
 function ajustaAmbiente() {
 	if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ //mobile
@@ -2214,16 +2643,11 @@ function ajustaAmbiente() {
 		document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";	
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
+		ajustaAmbiente_adicionarListaIconesAoMenu();
 	}
 }//.function ajustaAmbiente
 
 function main() {
-	const urlParams = new URLSearchParams(window.location.search);
-	if (urlParams.get('pula_mensagem')!='sim') {
-		if (gparam.mensagemInicial) {
-			alert(gparam.mensagemInicial);
-		}
-	}
 	ajustaAmbiente();
 	gparam.layout = Viva.Graph.Layout.forceDirected(graph, {
 		   springLength : gparam.springLength, //170, //140, //80,
@@ -2243,18 +2667,29 @@ function main() {
 		menu_zoomin(false, false);
 		menu_zoomin(false, false);
 	} else {
-		//desabilita drop nos botoes
+		//Ajusta região para drag and drop de arquivo ou do excel
 		ajustaRegiaoDrop();
 		gparam.AreaSelecaoRetangular.Setup();
+		ativaAtalhos(true);
 	}
-	if (gparam.cpfcnpjInicial) {
-		menu_incluirCamada(gparam.cpfcnpjInicial, gparam.camadaInicial);
-		ativaAtalhos(true);
-	} else if (gparam.idArquivoServidorInicial ) {
-		menu_importaJSONServidor(gparam.idArquivoServidorInicial);
-		ativaAtalhos(true);
+	if (gparam.inicio.cpfcnpj) {
+		menu_incluirCamada(gparam.inicio.cpfcnpj, gparam.inicio.camada, null, true);
+	} else if (gparam.inicio.idArquivoServidor ) {
+		menu_importaJSONServidor(gparam.inicio.idArquivoServidor, true);
+	} else if (gparam.inicio.lista) {
+		inserir_lista(gparam.inicio.lista, true);
+	} else if (gparam.inicio.json) {
+		inserirJson(gparam.inicio.json, 'Json informado. ', true);
 	} else {
-		menu_inserir();
+		const urlParams = new URLSearchParams(window.location.search);
+		if (urlParams.get('pula_mensagem')!='sim') {
+			if (gparam.inicio.mensagem) {
+				alert(gparam.inicio.mensagem);
+			}
+		}
+		if (gparam.inicio.bMenuInserirInicial) {
+			menu_inserir();
+		}
 	}
 
 }//.main()
@@ -2315,16 +2750,16 @@ function main() {
 		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj/')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Abre o projeto no Github'>Rede</button>	&nbsp;&nbsp;
 	</div>
-	<div id="drop_area" ondrop="drop_handler(event);" ondragover="dragover_handler(event);" title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
+	<div id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
 		<i class="fa fa-hand-holding-water"></i>&nbsp;DROP (json ou lista de identificadores)
 	</div>
 </div>
  <!-- 
 <div id="principal" style="width: 100%; height: 100%; position: absolute;  left: 0; top: 30;" charset="utf-8">
 -->
-<div id="principal" style="width: 100%; height: 100%; position: absolute;" charset="utf-8"> 
+<div id="principal" style="width: 100%; height: 100%; position: absolute;" charset="utf-8" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  > 
 <!-- top=0 desativa botoes-->
-	<div class="graph-overlay" style="cursor:crosshair;"></div>
+	<div id="principal_overlay" class="graph-overlay" style="cursor:crosshair;" ></div>
 </div>
 
 <menu id='menu_contexto' class="menu">
@@ -2382,8 +2817,8 @@ function main() {
 	<button type="button" class="menu-btn" title="Inserir Ligações que não constam do Banco de Dados"><i class="fa fa-link"></i><span class="menu-text">Ligar</span> </button>
 	<menu class="menu">
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo(true);" title="Liga itens selecionados para um Item a ser criado. O item a ser criado não pode ser CNPJ."> 
-		<span class="menu-text">Para Novo Item (SHIFT+I)...</span> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo();" title="Liga itens selecionados para um Item a ser criado. O item a ser criado não pode ser CNPJ."> 
+		<span class="menu-text">Para Novo Item (U)...</span> 
 		</button>
 		</li>      
 		<li class="menu-item">
@@ -2393,7 +2828,7 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(false);" title="Liga os itens selecionados em fila indiana"> 
-		<span class="menu-text">Em Fila</span> 
+		<span class="menu-text">Em Fila (K)</span> 
 		</button>
 		</li>
 		<li class="menu-item">
@@ -2407,16 +2842,26 @@ function main() {
 	<button type="button" class="menu-btn" title="Opções diversas para exibição: colorir, exibição de rótulos..."><i class="fa fa-eye"></i><span class="menu-text">Visualização</span> </button>
 	<menu class="menu">
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(false)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(gparam.idnoSelecionado)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo();"> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo(null);"> 
 		<i class="fa fa-thumbtack"></i> <span class="menu-text" alt="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós">Fixar o Nó (P)</span> 
 		</button>
 		</li>
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn"><i class="fa fa-tags"></i><span class="menu-text">Rótulos</span> </button>
 		<menu class="menu">
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_editar_no();"> 
+			<i class="fa fa-sticky-note"></i><span class="menu-text">Editar Rótulos (E)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_editarNota(gparam.idnoSelecionado);"> 
+			<i class="fa fa-sticky-note"></i><span class="menu-text">Editar Nota</span> 
+			</button>
+			</li>
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosCompletos(true);"> 
 			<i class="fa fa-tags"></i><span class="menu-text">Nome Completo</span> 
@@ -2427,12 +2872,15 @@ function main() {
 			<i class="fa fa-tag"></i><span class="menu-text">Só Primeiro Nome</span> 
 			</button>
 			</li>
-			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_editarNota(gparam.idnoSelecionado);"> 
-			<i class="fa fa-sticky-note"></i><span class="menu-text">Editar Nota</span> 
-			</button>
-			</li>
 		</menu>
+		</li>
+		<li class="menu-item">
+			<button type="button" class="menu-btn"
+			  onchange="javascript:menu_alterarIcone('icone');"><i class="fa fa-tags"></i><span class="menu-text">Alterar Ícone &nbsp;&nbsp;</span>
+			<select id="menu_selecao_icone_options" class="dropdown" style='max-width:100px'>
+                <option value="0">Selecione</option>
+			</select>
+			</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_colorir();"> 
@@ -2444,6 +2892,7 @@ function main() {
 		<i class="fa fa-palette"></i><span class="menu-text">Escolher Cor:</span> <input type="color" id="palheta" title="Selecione uma cor" value="#FF0000" />
 		</button>
 		</li>
+
 		<li class="menu-item">
 		<button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(false)" title="Exibe dados em popup">
 		<i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
@@ -2515,11 +2964,12 @@ function main() {
 	<li class="menu-item submenu">
 	<button type="button" class="menu-btn" title="Exporta dados para o Excel, JSON, SVG ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Exportar/Importar</span> </button>
 	<menu class="menu">
+		<!--
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(true)"> 
 		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel-Selecão</span> 
 		</button>
-		</li>
+		</li> -->
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)"> 
 		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel</span> 
@@ -2527,7 +2977,7 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaSVG()" title="Salva imagem escalável em formato SVG" >
-		<i class="fa fa-save"></i> </i><span class="menu-text" >Exportar Imagem SVG</span>
+		<i class="fa fa-save"></i><span class="menu-text" >Exportar Imagem SVG</span>
 		</button>
 		</li>
 		<li class="menu-item">
@@ -2541,7 +2991,7 @@ function main() {
 		<input value="Importar" type="file" id="fileImportJSON" title="Adiciona grafico no formato JSON" />
 		</button>
 		<script>
-			document.getElementById('fileImportJSON').addEventListener('change', menu_importaJsonArquivo, false);
+			document.getElementById('fileImportJSON').addEventListener('change', menu_importarJsonArquivo, false);
 		</script>
 		</li>
 		<li class="menu-item">
@@ -2632,6 +3082,37 @@ function main() {
 		<input class="ajs-input" id="dlgLink_camadas" type="number" value="1" /> 
 	</div>
 </div>
+
+<div style="display:none;">
+	<div id="dlgItem">
+		<p><b>Digite parâmetros para inserir novo item</b></p>
+		<p><b>ID (IDENTIFICADOR)</b></p>
+		<p>Digite nome ou identificador de novo item (deve ser único no gráfico)</p>
+		<input class="ajs-input" id="dlgItem_id" type="text" value="" /> 
+		<p>Descrição (texto aparece na segunda linha)</p>
+		<input class="ajs-input" id="dlgItem_descricao" type="text" value="" /> 
+		<p>Nota (texto na terceira linha - opcional)</p>
+		<input class="ajs-input" id="dlgItem_nota" type="text" value="" /> 
+		<p>Nome da Ligação com item(s) selecionado(s) (pode ficar vazio)</p>
+		<input class="ajs-input" id="dlgItem_ligacao" type="text" value=""/> 
+	</div>
+</div>
+
+<div style="display:none;">
+	<div id="dlgItemEditar">
+		<p><b>Altere os parâmetros do Item</b></p>
+		<p><b>ID (IDENTIFICADOR)</b></p>
+		<input class="ajs-input" id="dlgItemEditar_id" type="text" value="" title="alterar esse campo irá criar um novo item, deve ser único no gráfico"/> 
+		<p>Descrição (texto aparece na segunda linha)</p>
+		<input class="ajs-input" id="dlgItemEditar_descricao" type="text" value="" /> 
+		<p>Nota (texto na terceira linha - opcional)</p>
+		<input class="ajs-input" id="dlgItemEditar_nota" type="text" value="" /> 
+		<p>Nome da Ligação com item(s) selecionado(s) (pode ficar vazio)</p>
+		<input class="ajs-input" id="dlgItemEditar_ligacao" type="text" value=""/> 
+	</div>
+</div>
+
+
 <div id="img_home" style="display:none;"></div>
 
 </body>
