@@ -109,7 +109,12 @@ versão 0.3 (janeiro/2021)
 - Opção para inserção de novos itens para elaboração de mapas mentais;
 - Opções para inserir itens novos como link para sites e arquivos locais.
 - Opção para arrastar células do excel, leitura de arquivo csv;
-- Opções de leitura de entrada por linha de comando.
+- Opções de leitura de entrada por linha de comando;
+- Itens selecionados ficam em destaque com linha animada.
 
+versão 0.2 (dezembro/2020)
+- Suporte para busca por parte do nome na base de empresas;
+- Exportação/importação de gráfico no formato json para o servidor.
 
 versão 0.1 (setembro/2020)
+- Primeira versão
