@@ -42,7 +42,7 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
         if extensao=='.csv' or extensao=='.txt':
             listaEntrada = open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read()
         elif extensao=='.json':
-            listaJson = json.loads(open(config.par.arquivoEntrada).read())
+            listaJson = json.loads(open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read())
         else:
             print('arquivo em extensão não reconhecida, deve ser csv, txt ou json:' + config.par.arquivoEntrada)
             sys.exit(0)
