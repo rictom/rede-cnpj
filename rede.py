@@ -171,25 +171,34 @@ def serve_form_download(): #formato='pdf'):
     '''
     
 @app.route('/rede/abrir_arquivo/', methods = ['POST'])
-def serve_abrirArquivoLocal(nomeArquivo=''):
-    #print('remote addr', request.remote_addr)
+#def serve_abrirArquivoLocal(nomeArquivo=''):
+def serve_abrirArquivoLocal():
+   # print('remote addr', request.remote_addr)
     #print('host url', request.host_url)
-    #print(f'{nomeArquivo=}')
     lista = request.get_json()
+    #print(lista)
     nomeArquivo = lista[0]
+    #print(f'{nomeArquivo=}')
     if not usuarioLocal():
         print('operação negada.', f'{request.remote_addr=}')
-        return jsonify({'retorno':False})
+        return jsonify({'retorno':False, 'mensagem':'Operação não autorizada,'})
     #arquivoParaAbrir = nomeArquivo #secure_filename(nomeArquivo) 
-    if '/' not in nomeArquivo:
-        nomeArquivo = os.path.join(local_file_dir, nomeArquivo)  
+    #if '/' not in nomeArquivo: #windows usa \
+    nomeSplit = os.path.split(nomeArquivo)
+    if not nomeSplit[0]: #sem caminho inteiro
+        nomeArquivo = os.path.join(local_file_dir, nomeArquivo)
     extensao = os.path.splitext(nomeArquivo)[1].lower()
-    if (extensao in ['.xls','xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png']) and os.path.exists(nomeArquivo):
+    if not os.path.exists(nomeArquivo):
+        if nomeSplit[0]:
+            return jsonify({'retorno':False, 'mensagem':'Arquivo não localizado,'})
+        else:
+            return jsonify({'retorno':False, 'mensagem':'Não foi localizado na pasta arquivos do projeto.'})
+    if (extensao in ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg']) and os.path.exists(nomeArquivo):
         os.startfile(nomeArquivo)
         #return HttpResponse(json.dumps({'retorno':True}), content_type="application/json")
-        return jsonify({'retorno':True})
+        return jsonify({'retorno':True, 'mensagem':'Arquivo aberto,'})
     else:
-        return jsonify({'retorno':False})
+        return jsonify({'retorno':False, 'mensagem':'Extensão de arquivo não autorizada,'})
 
 def usuarioLocal():
     return request.remote_addr ==  '127.0.0.1'
