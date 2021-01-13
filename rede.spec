@@ -10,7 +10,7 @@ a = Analysis(['rede.py'],
              datas=[
 			 ('static','static'), 
 			 ('templates','templates'),			 
-			 ('arquivos_json','arquivos_json'),
+			 ('arquivos','arquivos'),
 			 ('rede.ini','.'),
 			 ('tabelas/*.csv','tabelas'),
 			 ('tabelas/*.xlsx', 'tabelas'),
