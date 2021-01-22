@@ -76,7 +76,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - C - Colorir os nós selecionados;
 - P - Fixar o nó na posição;
 - Escala Inicial - Coloca a exibição sem zoom, na escala inicial.
-- Q - Parar/reiniciar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
+- Barra de Espaço - Parar/reiniciar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
 - DEL – Excluir itens selecionados.
 - SHIFT+DEL – Excluir todos os itens.
 Os comandos valem para o último nó Selecionado, que fica com um retângulo preto em volta do ícone. 
@@ -104,6 +104,12 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+
+versão 0.3.4 (janeiro/2021)
+- Possibilita ver o texto do lado direito do ícone;
+- diagramas de tabela hierárquica;
+- ver diagramas de arquivo com código em python;
+- mais opções por linha de comando.
 
 versão 0.3 (janeiro/2021)
 - Opção para inserção de novos itens para elaboração de mapas mentais;
