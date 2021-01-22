@@ -39,8 +39,12 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     if config.par.arquivoEntrada:
         #if os.path.exists(config.par.listaEntrada): checado em config
         extensao = os.path.splitext(config.par.arquivoEntrada)[1].lower()
-        if extensao=='.csv' or extensao=='.txt':
+        if extensao in ['.csv','.txt','.py','.js']:
             listaEntrada = open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read()
+            if extensao=='.py': #configura para lista hierarquica
+                listaEntrada = '_>p\n' + listaEntrada
+            elif extensao=='.js':
+                listaEntrada = '_>j\n' + listaEntrada
         elif extensao=='.json':
             listaJson = json.loads(open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read())
         else:
@@ -67,7 +71,8 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'lista':listaEntrada,
                      'json':listaJson,
                      'listaImagens':listaImagens,
-                      'bBaseFullTextSearch': bBaseFullTextSearch }
+                      'bBaseFullTextSearch': bBaseFullTextSearch,
+                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone}
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
     config.par.cpfcnpjInicial=''
@@ -139,17 +144,19 @@ def serve_arquivos_json_upload(nomeArquivo):
         json.dump(nosLigacoes, outfile)
     return jsonify({'nomeArquivoServidor':filename})
 
-@app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
-def serve_arquivos_download(arquivopath):
-    pedacos = os.path.split(arquivopath)  
-    #print(f'{arquivopath=}')
-    #print(f'{pedacos=}')
-    if not pedacos[0]:
-        return send_from_directory(local_file_dir, pedacos[1]) #, as_attachment=True)
-    if not usuarioLocal():
-        return Response("Solicitação não autorizada", status=400)
-    else:
-        return send_file(arquivopath) #, as_attachment=True)
+# @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
+# def serve_arquivos_download(arquivopath):
+#     if not config.par.bArquivosDownload:
+#         return Response("Solicitação não autorizada", status=400)
+#     pedacos = os.path.split(arquivopath)  
+#     #print(f'{arquivopath=}')
+#     #print(f'{pedacos=}')
+#     if not pedacos[0]:
+#         return send_from_directory(local_file_dir, pedacos[1]) #, as_attachment=True)
+#     if not usuarioLocal():
+#         return Response("Solicitação não autorizada", status=400)
+#     else:
+#         return send_file(arquivopath) #, as_attachment=True)
 
       
 @app.route('/rede/dadosemarquivo/<formato>', methods = ['GET', 'POST'])
@@ -173,6 +180,8 @@ def serve_form_download(): #formato='pdf'):
 @app.route('/rede/abrir_arquivo/', methods = ['POST'])
 #def serve_abrirArquivoLocal(nomeArquivo=''):
 def serve_abrirArquivoLocal():
+    if not config.par.bArquivosDownload:
+        return Response("Solicitação não autorizada", status=400)
    # print('remote addr', request.remote_addr)
     #print('host url', request.host_url)
     lista = request.get_json()
@@ -180,7 +189,8 @@ def serve_abrirArquivoLocal():
     nomeArquivo = lista[0]
     #print(f'{nomeArquivo=}')
     if not usuarioLocal():
-        print('operação negada.', f'{request.remote_addr=}')
+        print(f'serve_abrirArquivoLocal: {nomeArquivo}')
+        print('operação negada.', f'{request.remote_addr}')
         return jsonify({'retorno':False, 'mensagem':'Operação não autorizada,'})
     #arquivoParaAbrir = nomeArquivo #secure_filename(nomeArquivo) 
     #if '/' not in nomeArquivo: #windows usa \
@@ -188,6 +198,7 @@ def serve_abrirArquivoLocal():
     if not nomeSplit[0]: #sem caminho inteiro
         nomeArquivo = os.path.join(local_file_dir, nomeArquivo)
     extensao = os.path.splitext(nomeArquivo)[1].lower()
+    print(f'serve_abrirArquivoLocal: {nomeArquivo}')
     if not os.path.exists(nomeArquivo):
         if nomeSplit[0]:
             return jsonify({'retorno':False, 'mensagem':'Arquivo não localizado,'})

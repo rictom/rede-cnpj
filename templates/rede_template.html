@@ -8,6 +8,7 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 https://fabien-d.github.io/alertify.js/
 https://fontawesome.com/v4.7.0/
 https://github.com/encharm/Font-Awesome-SVG-PNG
+https://www.freepik.com/
 -->
 <html>
 <head>
@@ -38,6 +39,7 @@ var gparam = {};
 	gparam.tamanhoFonte = 10;
 	gparam.corLigacaoLink = 'seagreen',
 	gparam.kligacoes = 0;
+	gparam.btextoEmbaixoIcone = gparam.inicio.btextoEmbaixoIcone; 
 	//gparam.idLigacoes = {};
 	gparam.idnoSelecionado = null;
 	gparam.idNosSelecionados = new Set();
@@ -55,12 +57,12 @@ var gparam = {};
 	//gparam.bRotulosCompletos = true;
 	gparam.kTipoRotulo = 0; //rotulo completo,
 	gparam.AreaSelecaoRetangular = {};
-	gparam.springLength=200;
+	gparam.springLength=150;
 	gparam.bRenderAtivado = true;
 
 // variáveis globais
-var gdebug = null,
-	//createMarker = null,
+var base = '/rede/',
+	gdebug = null,
 	markerSeta = null,
 	defs = null,
 	menu = null;
@@ -130,6 +132,11 @@ function labelsNo(node, tipoResumido) {
 			idno = idno.substr(0,29) + '...';
 			//descricao = idno.substr(-29);
 		}
+	} else if (idno.startsWith('ID_')) {
+		idno = idno.substr(3);
+		if (idno.includes('__')) {
+			idno = idno.substr(idno.indexOf('__')+2); 
+		}
 	} else {
 		idno = idno.substr(3);
 	}
@@ -144,6 +151,38 @@ function labelsNo(node, tipoResumido) {
 	}
 }//.function labelsNo
 
+function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dados dos marcadores
+	var LF = String.fromCharCode(10);
+	var texto = node.id;
+	if (node.id.startsWith('PJ_')) {
+		texto += LF + node.data.descricao + LF + node.data.logradouro + LF + node.data.municipio + '/' + node.data.uf;
+	} else if (node.id.startsWith('PF_')) {	
+	
+	} else if (node.id.startsWith('LI_')) {
+		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao :  '')
+		texto += LF + LF + 'Clique duplo para abrir o link';
+	} else if (node.id.startsWith('AR_')) {
+		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao: '')
+		if (window.location.href.startsWith('http://127.0.0.1')) {
+			texto += LF +  LF + 'Clique duplo para abrir o documento.';
+			if ((node.id.indexOf('\\')==-1) && (node.id.indexOf('/')==-1)) {
+				texto += ' Para ser aberto, isso deve estar na pasta arquivos do projeto.';
+			}
+		} else { //execução não local
+			if ((node.id.indexOf('\\')==-1) && (node.id.indexOf('/')==-1)) {
+				texto += LF + + LF +'Para ser aberto, isso deve estar na pasta arquivos do projeto no servidor.';
+			} else {
+				texto +=  LF + LF + 'O arquivo não está disponível.';
+			}
+		}
+	} else if (node.id.startsWith('ID_')) {
+		if (node.id.includes('__')) {
+			texto = node.id.split('__')[0] + '...' + LF + LF + node.id.substr(node.id.indexOf('__')+2);
+		} 
+	}
+	return texto;
+}//.function textoTooltip
+
 function iconeF(idno) {
 	var tipo = idno.substr(0,3);
 	var imagem = 'icone-grafo-id.png';
@@ -155,7 +194,29 @@ function iconeF(idno) {
 		imagem = 'link.png';
 	} else if (tipo=='AR_') {
 		imagem = 'external-link.png';
-	} 
+	} else if (idno.startsWith('ID_')) {
+		var idnox = idno.substr(3);
+		if (idnox.includes('__')) { //dois undercores depois da numeração de id
+			imagem = 'binary.png';
+			idnox = idnox.substr(idnox.indexOf('__')+2);
+			var palavra = idnox.split(' ')[0];
+			if (['def','class'].includes(palavra)) {
+				imagem = 'python.png';
+			} else if (['return','break','continue'].includes(palavra)) {
+				imagem = 'reply.png';
+			} else if (['if','else:','elif:','try:', 'except:','finally','with'].includes(palavra)) {
+				imagem = 'random.png';
+			} else if (['for','while'].includes(palavra)) {
+				imagem = 'repeat.png';
+			} else if (['@'].includes(palavra)) {
+				imagem = 'at.png';
+			} else if (palavra.startsWith('#') || palavra.startsWith('//')) {
+				imagem = 'sticky-note-o.png';
+			} else if (palavra == 'function') {
+				imagem = 'code.png';
+			}
+		}
+	}
 	return imagem;
 }//function iconeF
 
@@ -163,8 +224,8 @@ graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	let ui = Viva.Graph.svg('g');
 	let urlImagem = node.data.imagem;
-	if (urlImagem.indexOf('/rede/')==-1) {
-		urlImagem = '/rede/static/imagem/' + urlImagem;
+	if (!urlImagem.includes(base)) {
+		urlImagem = base + 'static/imagem/' + urlImagem;
 	}
 	let img = Viva.Graph.svg('image');
 	//ui.posXRel = - gparam.nodeSize/2;
@@ -205,18 +266,32 @@ graphics.node(function(node) {
 	animateRect.attr('attributeName','stroke-dashoffset').attr('values','0;180;0').attr('dur', '60s').attr('repeatCount','indefinite');
 	rect.appendChild(animateRect);
 	*/
-	let svgText = Viva.Graph.svg('text').attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
-		.attr('x', gparam.nodeSize/2).attr('text-anchor','middle').attr('font-size',gparam.tamanhoFonte+'px'); 
 	var [identificador, nome] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
 	var nota = node.data.nota? node.data.nota: '';
 	node.data.nota = nota;
+	
+	if (gparam.btextoEmbaixoIcone) { //textp embaixo do ícone
+		var svgText = Viva.Graph.svg('text').attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
+			.attr('x', gparam.nodeSize/2).attr('text-anchor','middle')  
+			.attr('font-size',gparam.tamanhoFonte+'px'); 
+		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
+		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);		
+		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
+			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
+	} else { //texto à direita do ícone
+		var svgText = Viva.Graph.svg('text').attr('y',  gparam.nodeSize*0.5+gparam.tamanhoFonte*0.5) 
+			.attr('x', gparam.nodeSize).attr('text-anchor','left')  
+			.attr('font-size',gparam.tamanhoFonte+'px')
+			.attr('style','font-family:Comic Sans MS;') ; 	
+		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', 0).text(identificador);
+		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);	
+		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.5)
+			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
+	}
 
-	var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
+
 	svgText.append(textspan);
-	var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);
 	svgText.append(textspan2);			
-	var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
-		.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
 	svgText.append(textspan3);	
 	ui.insertAdjacentHTML('beforeEnd','<title>' + textoTooltip(node, true) + '</title>'); //title deve ser a primeira coisa apos g para funcionar no firefox 48
 	ui.append(rectCor);
@@ -300,7 +375,6 @@ graphics.node(function(node) {
 	// 'g' element doesn't have convenient (x,y) attributes, instead
 	// we have to deal with transforms: http://www.w3.org/TR/SVG/coords.html#SVGGlobalTransformAttribute
 	nodeUI.attr('transform', 'translate(' + (pos.x - gparam.nodeSize/2) + ',' + (pos.y - gparam.nodeSize/2) + ')');
-	//nodeUI.attr('transform', 'translate(' + (pos.x + nodeUI.posXRel) + ',' + (pos.y + nodeUI.posYRel) + ')');
 }); //.graphics.node(function(node) 
 
 graphics.link(function(link){
@@ -331,7 +405,7 @@ graphics.link(function(link){
 			fromPos.x - fromNodeSize / 2, // left
 			fromPos.y - fromNodeSize / 2, // top
 			fromPos.x + fromNodeSize / 2, // right
-			fromPos.y + fromNodeSize / 2 + gparam.tamanhoFonte*2, // bottom
+			fromPos.y + fromNodeSize / 2 + (gparam.btextoEmbaixoIcone? gparam.tamanhoFonte*2 : 0), // bottom
 			fromPos.x, fromPos.y, toPos.x, toPos.y)
 		|| fromPos;
 
@@ -339,7 +413,7 @@ graphics.link(function(link){
 			toPos.x - toNodeSize / 2, // left
 			toPos.y - toNodeSize / 2, // top
 			toPos.x + toNodeSize / 2, // right
-			toPos.y + toNodeSize / 2 + gparam.tamanhoFonte*2, // bottom
+			toPos.y + toNodeSize / 2 + (gparam.btextoEmbaixoIcone? gparam.tamanhoFonte*2 : 0), // bottom
 			// segment:
 			toPos.x, toPos.y, fromPos.x, fromPos.y)
 			|| toPos;
@@ -365,30 +439,6 @@ graphics.link(function(link){
 			.attr('text-anchor','middle');
 		}
 })//.graphics.link(function(link)
-
-function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dados dos marcadores
-	var LF = String.fromCharCode(10);
-	var texto = node.id;
-	if (node.id.startsWith('PJ_')) {
-		texto += LF + node.data.descricao + LF + node.data.logradouro + LF + node.data.municipio + '/' + node.data.uf;
-	} else if (node.id.startsWith('PF_')) {	
-	
-	} else if (node.id.startsWith('LI_')) {
-		texto = node.data.descricao + LF + LF + node.id.substr(3) + LF +  LF + 'Clique duplo para abrir o link';
-	} else if (node.id.startsWith('AR_')) {
-		texto = node.data.descricao + LF + LF + node.id.substr(3);
-		if (String(window.location).startsWith('http://127.0.0.1')) {
-			texto += LF +  LF + 'Clique duplo para abrir o link.';
-		} else {
-			if (node.id.search('/')==-1) {
-				texto += LF +  LF + 'Clique duplo para abrir o link.';
-			} else {
-				texto +=  'O arquivo não está disponível.';
-			}
-		}
-	}
-	return texto;
-}//.function textoTooltip
 
 function ajustaRetanguloAnimado(nodeid, bSeleciona) {
 	//ajusta posicao do retangulo para envolver o texto
@@ -745,12 +795,12 @@ function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 	if (!bAtivar) {
 		gparam.renderer.pause();
 		if (bMostraMensagem && gparam.bRenderAtivado) {
-			alertify.success('O leiaute foi pausado. Para ativar, pressione SHIFT+Q.');
+			alertify.success('O leiaute foi pausado. Para ativar, pressione a Barra de Espaço.');
 		}
 	} else {
 		gparam.renderer.resume();
 		if (bMostraMensagem && !gparam.bRenderAtivado) {
-			alertify.success('O leiaute foi reiniciado. Para parar, pressione Q.');
+			alertify.success('O leiaute foi reiniciado. Para parar, pressione a Barra de Espaço.');
 		}
 	}
 	gparam.bRenderAtivado = bAtivar;
@@ -776,21 +826,28 @@ function removeIdNo(noId) {
 	}
 }//.function removeIdNo
 
-function menu_excluirNosSelecionados() {
+function menu_excluirNosSelecionados(bSemConfirmar) {
 	if (!gparam.idNosSelecionados.size) {
-		alertify.alert('Exclusão', 'Não há itens selecionados para exclusão. Selecione e tente novamente.', function(){ ; });
+		if (!bSemConfirmar) {
+			alertify.alert('Exclusão', 'Não há itens selecionados para exclusão. Selecione e tente novamente.', function(){ ; });
+		}
 		return;
 	}
 	var tmensagem = (gparam.idNosSelecionados.size==1) ? 'Excluir 1 nó.' : ('Excluir '+ gparam.idNosSelecionados.size + ' nós selecionados.');
 	var tsucesso = (gparam.idNosSelecionados.size==1) ? '1 nó foi excluído.' : (gparam.idNosSelecionados.size + ' nós foram excluídos.');
+	var fExcluir = function(){ 
+		for (let n of gparam.idNosSelecionados) {
+			removeIdNo(n);
+		}			
+		gparam.idnoSelecionado=null;
+		alertify.success(tsucesso);
+	};
+	if (bSemConfirmar) {
+		fExcluir();
+		return;
+	}
 	alertify.confirm(tmensagem, 'Deseja prosseguir? Não será possível reverter a exclusão.', 
-			function(){ 
-				for (let n of gparam.idNosSelecionados) {
-					removeIdNo(n);
-				}			
-				gparam.idnoSelecionado=null;
-				alertify.success(tsucesso);
-			}
+			fExcluir
             , function(){ ;}
 	);
 }//.function menu_excluirNosSelecionados
@@ -810,6 +867,36 @@ function menu_excluirTudo() {
             , function(){ ;}
 	);
 }//.function menu_excluirTudo
+
+function excluirNoMantendoLinks() { 
+	let noid = gparam.idnoSelecionado;
+	let node = graph.getNode(noid);
+	var links = graph.getLinks(noid);
+	var nodeTo = null;
+	if (links.length!=2) {
+		if (links.lenght==1) {
+			alertify.error('O nó tem apenas uma ligação');
+		} else {
+			alertify.error('O nó tem mais de duas ligações');
+		}
+		return;
+	}
+	if (links[0].toId==noid) {
+		//graph.addLink(links[0].fromId, links[1].toId, {});
+		selecionaNoid(links[0].fromId, false, false);
+		selecionaNoid(links[1].toId, true, false);
+		nodeTo = links[1].toId;
+	} else {
+		//graph.addLink(links[1].fromId, links[0].toId, {});
+		selecionaNoid(links[1].fromId, false, false);
+		selecionaNoid(links[0].toId, true, false);
+		nodeTo = links[0].toId;
+	}
+	menu_ligar_selecionados(false, '', true);
+	selecionaNoid(noid, false, false);
+	menu_excluirNosSelecionados(true);
+	selecionaNoid(nodeTo, false, false);
+}//.function excluirNoMantendoLinks
 
 function menu_inserirDesfazer() {
 	var idNosInseridos = gparam.listaIdNosInseridos.pop();
@@ -877,7 +964,7 @@ function menu_dados(bNovaJanela, idNo) {
 		
 		return;
 	}
-	var url = "/rede/dadosjson/" + idin ;
+	var url = base + 'dadosjson/' + idin ;
 	fetch(url, {method: 'get', cache: "no-store"}) //, mode: 'cors',})
 	  .then(
 		function(response) {
@@ -930,9 +1017,16 @@ function menu_importarJsonArquivo(evt, tipo) {
 				//alert( "Got the file.n"  +"name: " + f.name + "n"  +"type: " + f.type + "n"  +"size: " + f.size + " bytesn"  + "starts with: " + contents.substr(1, contents.indexOf("n"))); 
 				if (f.name.endsWith('.csv')) {
 					inserir_lista(contents);
+					console.log(contents);
 				} else if (f.name.endsWith('.json')){
 					//importaJSON(contents);
 					inserirJson(JSON.parse(contents), 'Leitura de arquivo. ');
+				} else if (f.name.endsWith('.py')){
+					//importaJSON(contents);
+					inserir_lista('_>p\n' + contents);
+				} else if (f.name.endsWith('.js')){
+					//importaJSON(contents);
+					inserir_lista('_>j\n' + contents);
 				} else {
 					var idNovo = 'AR_' + f.name;
 					menu_ligar_novo(idNovo,'');
@@ -967,7 +1061,7 @@ function menu_exportaJSONServidor(idArquivoServidor) {
 		return;
 	}
 	var jsonDados = getRedeNosLigacoes();
-	var url = '/rede/arquivos_json_upload/' + idArquivoServidor;
+	var url = base + 'arquivos_json_upload/' + idArquivoServidor;
 	fazFetch(url, jsonDados); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
@@ -986,7 +1080,7 @@ function menu_exportaJSONServidor(idArquivoServidor) {
 				document.body.style.cursor = 'default';
 				if (data.nomeArquivoServidor) {
 					alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.');
-					var novaJanela=window.open("/rede/grafico_no_servidor/" + data.nomeArquivoServidor);
+					var novaJanela=window.open(base + "grafico_no_servidor/" + data.nomeArquivoServidor);
 				} else {
 					alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
 				}
@@ -1008,7 +1102,7 @@ function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 	if (!idArquivoServidor) {
 		return;
 	}
-	var url = "/rede/arquivos_json/" + idArquivoServidor ;
+	var url = base + 'arquivos_json/' + idArquivoServidor ;
 	fazFetch(url, idArquivoServidor); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
@@ -1081,7 +1175,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			if (!noaux.camada) {
 				idNosCamadaZero.add(noaux.id);
 			}
-		} else { //nó já existe TODO: verificar se precisa atualizar .data xxx
+		} else { //nó já existe TODO: verificar se precisa atualizar .data 
 		
 		}
 	}
@@ -1089,7 +1183,6 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		gparam.listaIdNosInseridos.push(idNosInseridos);
 	}
 	for (let ligaux of Object.values(ligacao)) {
-		//console.log(ligaux.origem);
 		var nosExistem = ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino)));
 		if (!nosExistem) {
 			console.log('erro. Um dados de um dos nós da ligação não foi definido');
@@ -1106,6 +1199,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			var conjLabel = new Set(labelLigacao.split(';')); //; é separador dos tipos de ligação
 			var conjNovo = new Set(ligaux.label.split(';'));
 			let uniao = new Set([...conjLabel, ...conjNovo]);
+			uniao.delete('');
 			ligExistente.data.label = [...uniao].join(';')
 			document.getElementById('link_label_'+ligExistente.data.id).text(ligExistente.data.label);
 		} else { //if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
@@ -1135,12 +1229,12 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		}
 	} 
 	var textoMensagem = texto;
-	if (kn)	textoMensagem += '. Foram inseridos ' + kn + ' itens';
+	if (kn)	textoMensagem += ' Foram inseridos ' + kn + ' itens';
 	if (kl) {
 		if (kn) {
 			textoMensagem += ' e ' + kn + ' ligações.';
 		} else {
-			textoMensagem += '. Foram inseridos ' + kl + ' ligações.'
+			textoMensagem += ' Foram inseridos ' + kl + ' ligações.'
 		}
 	}
 	if ((!kn) && (!kl)) textoMensagem += 'Não encontrou novos itens';
@@ -1166,7 +1260,7 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	if (tipo=='links') {
 		dialogoParametrosLink();
 	} else {
-		url = '/rede/grafojson/cnpj/' + camada + '/';
+		url = base + 'grafojson/cnpj/' + camada + '/';
 		fazFetch(url, idin);
 	}
 	return;
@@ -1245,7 +1339,7 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 			ativaAtalhos(true);
 			//dlgLink.outerHTML = dlLinkhtml;
 			//url = "/rede/grafojson/links/"  + camada + "/" + idin  + "/" + numeroItens + '/' + valorMinimo + '/' + valorMaximo;
-			url = "/rede/grafojson/links/"  + camada +  "/" + numeroItens + '/' + valorMinimo + '/' + valorMaximo  + "/" ;
+			url = base + 'grafojson/links/'  + camada +  '/' + numeroItens + '/' + valorMinimo + '/' + valorMaximo  + '/' ;
 			fazFetch(url, idin);
 			//dlgLink.outerHTML = dlLinkhtml; 
 			ativaAtalhos(true); 
@@ -1325,7 +1419,7 @@ function menu_GoogleMaps() {
 function menu_abrirNovaAba(idno) {
 	var novaJanela=null;
 	if (!idno) {
-		novaJanela=window.open("/rede/?pula_mensagem=sim");
+		novaJanela=window.open(base + '?pula_mensagem=sim');
 		novaJanela.focus(); 
 		return;
 	}
@@ -1334,8 +1428,14 @@ function menu_abrirNovaAba(idno) {
 		novaJanela.focus();
 		return;
 	} else if (idno.startsWith('AR_')) {
-		var url = "/rede/abrir_arquivo/" ; //+ idno.substr(3);
+		var url = base + 'abrir_arquivo/' ; //+ idno.substr(3);
 		//novaJanela=window.open(strUrl);
+		if (!window.location.href.startsWith('http://127.0.0.1')) {
+			if (idno.includes('/') || idno.includes('\\') ) {
+				alert('Essa rotina somente abre arquivos se a execução do projeto for local.');
+				return;
+			}
+		}
 		let bodyjson = JSON.stringify([idno.substr(3)]); //JSON.stringify([...gparam.idNosSelecionados]);
 		fetch(url, {method: 'post', body: bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 			.then( 
@@ -1348,9 +1448,9 @@ function menu_abrirNovaAba(idno) {
 			  // Examine the text in the response
 			  response.json().then(function(data) {
 				if (data['retorno']) {
-					alertify.success('O arrquivo ' + idno.substr(3) + ' foi aberto.');
+					alertify.success('O arquivo ' + idno.substr(3) + ' foi aberto.');
 				} else {
-					alertify.error('O arrquivo ' + idno.substr(3) + ' não foi encontrado.');
+					alertify.error('O arquivo ' + idno.substr(3) + ' não foi aberto. ' + data['mensagem']);
 				}
 			  });
 			}
@@ -1365,7 +1465,7 @@ function menu_abrirNovaAba(idno) {
 	alertify.prompt( 'Abrir ' + idno+  ' em nova aba', 'Selecione camadas', '1', 
 		function(evt, cam) { 	
 			ativaAtalhos(true);
-			var strUrl = "/rede/grafico/" + cam + "/" + idno;
+			var strUrl = base + 'grafico/' + cam + '/' + idno;
 			novaJanela=window.open(strUrl);
 			novaJanela.focus();} , 
 		function() { ativaAtalhos(true);}	
@@ -1430,6 +1530,16 @@ function menu_rotulosCompletos(bTipo) {
 	});
 }//.function menu_rotulosCompletos
 
+function menu_rotulosPosicao(bTipo) { 
+	if (bTipo===null) {
+		
+	} else if (bTipo) {
+		gparam.btextoEmbaixoIcone=true;
+	} else {
+		gparam.btextoEmbaixoIcone=false;
+	}
+}//.function menu_rotulosPosicao
+
 function menu_colorir(corEscolhida) {
 	function colorir(n, cor) {
 		var node = graphics.getNodeUI(n);
@@ -1458,27 +1568,33 @@ function menu_colorir(corEscolhida) {
 	alertify.success(tsucesso);
 }//.function menu_colorir
 
-function menu_ligar_selecionados(bEstrela, nomeLigacao) {
+function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 	// se bEstrela, liga o primeiro selecionado com todos os outros
-	// se !bEstrela, liga linearmente do primeiro ao segundo, segundo ao terceiro e sucessivamente.
+	// se !bEstrela, tipo fila, liga linearmente do primeiro ao segundo, segundo ao terceiro e sucessivamente.
 	if (gparam.idNosSelecionados.size<2) {
-		alertify.alert('Ligar nós selecionados', 'Não há itens selecionados. Selecione e tente novamente.', function(){ ; });
-		return;
-	}
-	let label = nomeLigacao;
-	let primeiroNo = [...gparam.idNosSelecionados][0];
-	var mensagem = bEstrela ? 'Deseja ligar o item ' +  primeiroNo + ' aos itens ' + (gparam.idNosSelecionados.size-1) + ' selecionados?' : 'Deseja ligar os ' + gparam.idNosSelecionados.size + ' itens selecionados?';
-	if (!nomeLigacao) {
-		if (nomeLigacao==='') {
-			if (!confirm(mensagem)) {
-				label = null;
-			} 
-		} else {
-			label = prompt(mensagem, '');
+		if (!bSemMensagem) {
+			alertify.alert('Ligar nós selecionados', 'Não há itens selecionados. Selecione e tente novamente.', function(){ ; });
 		}
-	}
-	if (label===null) {
 		return;
+	}
+	let label = nomeLigacao?nomeLigacao:'';
+	let primeiroNo = [...gparam.idNosSelecionados][0];
+	
+	if (!bSemMensagem) {
+		var mensagem = bEstrela ? 'Deseja ligar o item ' +  primeiroNo + ' aos itens ' + (gparam.idNosSelecionados.size-1) + ' selecionados?' : 'Deseja ligar os ' + gparam.idNosSelecionados.size + ' itens selecionados?';
+		mensagem += '\nDigite o texto da ligaçao (opcional):';
+		if (!nomeLigacao) {
+			if (nomeLigacao==='') {
+				if (!confirm(mensagem)) {
+					label = null;
+				} 
+			} else {
+				label = prompt(mensagem, '');
+			}
+		}
+		if (label===null) {
+			return;
+		}
 	}
 	var ligacoes = [];
 	var anterior = null;
@@ -1599,7 +1715,7 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 	camposTexto[2].value= '';
 	camposTexto[3].value= '';
 	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
-	dlgItem.outerHTML = ''; //receita de bolo. isso sem a linha de cima dava erro no chrome
+	dlgItem.outerHTML = ''; //receita de bolo. sem isso  a linha de cima dava erro no chrome
 	ativaAtalhos(false);
 	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
 		ativaAtalhos(true); 
@@ -1614,9 +1730,9 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 		}
 		if (idNovo.startsWith('https://') || idNovo.startsWith('http://')) {
 			idNovo = 'LI_' + idNovo;
-		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) {
+		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) { //aspas quando se copia o caminho completo pelo menu contextual no windows. não sei como fica em outros sistemas
 			idNovo = 'AR_' + idNovo.slice(1,-1);
-		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\')) {
+		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\') || (idNovo.substr(1,2)==':\\')) { //isso só vai funcionar no windows
 			idNovo = 'AR_' + idNovo;
 		}
 		idNovo = tipoPresumido(idNovo);
@@ -1658,7 +1774,7 @@ function menu_editar_no(noid) {
 	camposTexto[2].value= node.data.nota;
 	camposTexto[2].value= '';
 	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
-	dlgItem.outerHTML = ''; //receita de bolo para usar o alertify.confirm. isso sem a linha de cima dava erro no chrome
+	dlgItem.outerHTML = ''; //receita de bolo para usar o alertify.confirm. sem isso  a linha de cima dava erro no chrome
 	ativaAtalhos(false);
 	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
 		ativaAtalhos(true); 
@@ -1674,7 +1790,7 @@ function menu_editar_no(noid) {
 			idNovo = 'LI_' + idNovo;
 		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) {
 			idNovo = 'AR_' + idNovo.slice(1,-1);
-		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\')) {
+		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\') || (idNovo.substr(1,2)==':\\')) {
 			idNovo = 'AR_' + idNovo;
 		}
 		idNovo = tipoPresumido(idNovo);
@@ -1745,12 +1861,84 @@ function alterarItens(dadosNos) {//altera dados do item a partir de lista de dad
 				} catch (e){console.log(e); };		
 			} else if (chave=='imagem') {
 				try {
-					ui.getElementsByTagName('image')[0].setAttribute('xlink:href',"/rede/static/imagem/" + valor);
+					ui.getElementsByTagName('image')[0].setAttribute('xlink:href', base + 'static/imagem/' + valor);
 				} catch (e){console.log(e); };			
 			}
 		}		
 	}
 }//.function alterarItens
+
+function entrada_hierarquico_pyjs(entrada) {
+	var entradaTabs = [];
+	var kl = 0;
+	var cab = entrada.split('\n')[0];
+	//var identadorTabs = true; //trim remove espaços ou tabulação
+	var kidentadores = 1;
+	var insereNumeroNoId = false; //por default, insere número no id se for código python ou javascript
+	var mostraNumero = false;
+
+	if (!cab.startsWith('_>')) {
+		console.log('erro.')
+		return;
+	}
+	 //TODO ver se hierarquico vai adicionar nome da coluna
+
+	insereNumeroNoId =  cab.includes('n') || cab.includes('N');
+	mostraNumero = cab.includes('n');
+	if (cab.includes('j')) {
+		//identadorTabs = true;
+		insereNumeroNoId = true;
+	}
+	if (cab.includes('p')) { //python, tabulação com 4 espaços
+		//identadorTabs = false;
+		kidentadores = 4;
+		insereNumeroNoId = true;
+	}
+	/*
+	if (cab.includes('e')) {
+		identadorTabs = false;
+	}*/
+	if (cab.includes('n')) {
+		mostraNumero = true;
+	}		
+	if (cab.search(/\d/g)!=-1) {
+		kidentadores = parseInt(cab.match(/\d/g)[0]);
+		kidentadores = kidentadores ? kidentadores : 1;
+	}
+
+	for (let linha of entrada.split('\n')) {
+		if (!entradaTabs.length) {
+			entradaTabs.push('_>'); //tabela hierarquica
+		} else if (linha.trim()) {
+			/*
+			if (identadorTabs) {
+				//linha = replaceAll(linha, '\t', '    ');
+				var recuo = linha.length - linha.trimStart().length;
+				var linhax = '\t'.repeat(recuo);
+			} else {
+				var recuo = Math.floor((linha.length - linha.trimStart().length)/kidentadores); //supõe PEP, quatro espaços de tabulação
+				var linhax = '\t'.repeat(recuo);
+			} */
+			var recuo = Math.floor((linha.length - linha.trimStart().length)/kidentadores); //supõe PEP, quatro espaços de tabulação
+			var linhax = '\t'.repeat(recuo);
+
+			if (insereNumeroNoId) {
+				linhax += kl.toString().padStart(4,0);
+				if (mostraNumero) {
+					linhax += ' ';
+				} else {
+					linhax += '__';
+				}
+				linhax += linha.trim();
+			} else {
+				linhax = linha.trimEnd();
+			}
+			entradaTabs.push(linhax);
+		}
+		kl += 1;
+	}
+	return  entradaTabs.join('\n');	
+}
 
 function inserir_lista(entrada, bNaoConfirma) {
 	//inserir três tipos de lista, dependendo se a primeira célula tiver um ou dois underscores ou sem underscore.
@@ -1759,30 +1947,52 @@ function inserir_lista(entrada, bNaoConfirma) {
 	//1 underscore na primeira célula, por dupla de colunas (fila). Colunas A,B,C,D, gera ligações A->B, B->C, C->D, considera a primeira linha nome das colunas
 	//2 underscores na primeira célula, por dupla de colunas (estrela). Colunas A,B,C,D, gera ligações A->B, A->C, C->D, considere a primeira linha como nome das colunas
 	//1 undercore + sharp (_#). Coluna _#A, B, C, altera parametro B ou C do id A
-   	var itens = entrada.replace(/\n/g,';');
+   	
+	//var itens = entrada.replace(/\n/g,';');
 	var max = 0;
 	var lista = [];
 	var dadosExtras = [];
 	var elems = null;
+	entrada = entrada.replaceAll('\r\n', '\n');
+	var primeiraLinhaEntrada = entrada.split('\n')[0];
+	if (primeiraLinhaEntrada.startsWith('_~') || primeiraLinhaEntrada.startsWith('_>')) { //tipo python, troca espaços por tabs para tipoLista hierarquica
+		entrada = entrada_hierarquico_pyjs(entrada);
+	}
 	for (let linha of entrada.split('\n')){
 		elems = linha.split('\t');
 		max = Math.max(max, elems.length);
 	}
+
 	//var kLinhas = 0;
 	var bPrimeiraLinha = true;
 	var tipoLista = 'ligacao';
+	var itensLinhaAnterior = [];
+	var linhaHierarquica = new Array(max);
+	var itensLinha = [];
+	var cabecalhos;
+	
 	for (let linha of entrada.split('\n')){
 		elems = linha.split('\t');
+		elems.map(s => s.trim()); //trim elementos
 		if ((elems.join('').trim()=='') || (!linha.trim()) ){
 			bPrimeiraLinha=true;
+			itensLinhaAnterior = [];
+			itensLinha = new Array(elems.length).fill(''); //iniciado só para copiar em itensLInhaAnterior
+			linhaHierarquica = new Array(elems.length).fill('');
 			continue
 		}
 		if (bPrimeiraLinha) {
 			cabecalhos = JSON.parse(JSON.stringify(elems));
+			if (max > cabecalhos.length) {
+				var aux = Array(max - cabecalhos.length).fill('');
+				cabecalhos = cabecalhos.concat(aux);
+			}
 			if (cabecalhos[0].startsWith('_+')) {
-				tipoLista = 'linear';
+				tipoLista = 'fila';
 			} else if (cabecalhos[0].startsWith('_*')) {
 				tipoLista = 'estrela';
+			} else if (cabecalhos[0].startsWith('_>')) {
+				tipoLista = 'hierarquica';
 			} else if (cabecalhos[0].startsWith('_#')) {
 				tipoLista = 'alteraDados';
 			} else {
@@ -1791,6 +2001,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 				bPrimeiraLinha=false;
 			}
 		}
+
 		if ((tipoLista!='ligacao') && (bPrimeiraLinha)){
 			cabecalhos[0] = cabecalhos[0].substr(2);
 			bPrimeiraLinha = false;
@@ -1800,62 +2011,23 @@ function inserir_lista(entrada, bNaoConfirma) {
 		var dadosExtrasNo = {};
 		if (tipoLista == 'ligacao') { 
 			//colunas A,B,C,D,E, cria ligacoes A->B com descrição de ligação C. D e E são descrições dos identificadores A e B
-			if (max==1) {
-				lista.push([tipoPresumido(elems[0]), '', '', '', '']);
-			} else if (max==2) {
-				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), '', '', '']);
-			} else if (max==3) {
-				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), '', '']);
-			} else if (max==4) {
-				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), elems[3].trim(), '']);
-			} else if (max>=5) {
-				lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2].trim(), elems[3].trim(), elems[4].trim()]);
-			}
-		} else if (tipoLista == 'estrela') { // _* undercore + estrela
-			//converte tabela para ligacões, por dupla de colunas (estrela). Colunas A,B,C,D, gera ligações A->B, A->C, C->D
-			//se algum rotulo começar com 1 underscores, adiciona o texto como ligacao, senão adiciona nos elementos
-			for (let k=1; k<elems.length; k++) {
-				if (cabecalhos[k].startsWith('_-')) { //ignora essa coluna
-					continue;
-				}
-				var idPre1 = tipoPresumido(elems[0]);
-				if (idPre1.startsWith('ID_')) {
-					idPre1 = tipoPresumido(cabecalhos[0]? cabecalhos[0] + ' ' + elems[0]:elems[0]);
-				}
-				var cabecalhok = cabecalhos[k];
-				var nomeLigacao = '';
-				if (cabecalhok.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
-					cabecalhok = cabecalhok.substr(1);
-					nomeLigacao = cabecalhok
-				}
-				var idPre2 = tipoPresumido(elems[k]);
-				if (idPre2.startsWith('ID_')) {
-					idPre2 = tipoPresumido(cabecalhok?cabecalhok + ' ' + elems[k]:elems[k]);
-				}
-				lista.push([idPre1, idPre2, nomeLigacao, '', '']);
-			}				
-		} else if (tipoLista == 'linear')  { //um underscore + _+
-			//converte tabela para ligacões, por dupla de colunas (fila). Colunas A,B,C,D, gera ligações A->B, B->C, C->D
-			//se algum rotulo começar com 1 underscores, adiciona o texto como ligacao, senão adiciona nos elementos
-			for (let k=0; (k+1)<elems.length; k++) {
-				if (cabecalhos[k+1].startsWith('_-')) { //ignora essa coluna
-					continue;
-				}
-				var idPre1 = tipoPresumido(elems[k]);
-				if (idPre1.startsWith('ID_')) {
-					idPre1 = tipoPresumido(cabecalhos[k]? cabecalhos[k] + ' ' + elems[k] : elems[k]);
-				}
-				var cabecalhok1 = cabecalhos[k+1];
-				var nomeLigacao = '';
-				if (cabecalhok1.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
-					cabecalhok1 = cabecalhok1.substr(1);
-					nomeLigacao = cabecalhok1;
-				}
-				var idPre2 = tipoPresumido(elems[k+1]);
-				if (idPre2.startsWith('ID_')) {
-					idPre2 = tipoPresumido(cabecalhok1? cabecalhok1 + ' ' + elems[k+1] : elems[k+1]);
-				}
-				lista.push([idPre1, idPre2, nomeLigacao, '', '']);
+			switch(elems.length) {
+				case 0:
+					break;
+				case 1:
+					lista.push([tipoPresumido(elems[0]), '', '', '', '']);
+					break;
+				case 2:
+					lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), '', '', '']);
+					break;
+				case 3:
+					lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2], '', '']);
+					break;
+			    case 4: 
+					lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2], elems[3], '']);
+					break;
+				default:
+					lista.push([tipoPresumido(elems[0]), tipoPresumido(elems[1]), elems[2], elems[3], elems[4]]);
 			}
 		} else if (tipoLista == 'alteraDados') { 
 			//colunas _#A,B,C,D,E, altera parametros definidos pelos rótulos B,C,D,E nos elementos da coluna A	
@@ -1870,22 +2042,168 @@ function inserir_lista(entrada, bNaoConfirma) {
 			}
 			dadosExtras.push( JSON.parse(JSON.stringify(dadosExtrasNo)) );
 		} else {
-			console.log('erro...');
-		}
+			//console.log(itensLinha);
+			itensLinhaAnterior = JSON.parse(JSON.stringify(itensLinha)); //usado em hierarquica e |
+
+			itensLinha = [];
+			
+			for (let k=0; k<elems.length; k++) {
+				if (cabecalhos[k].startsWith('_-') || !elems[k])  { //ignora essa coluna
+					itensLinha.push('');
+					continue;
+				}
+				var cabecalhok = cabecalhos[k];
+				if (cabecalhok.startsWith('|')) { //vinculo vertical
+					cabecalhok = cabecalhok.substr(1);
+					bLigacaoVertical = true;
+				} else {
+					bLigacaoVertical = false;
+				}
+				if (cabecalhok.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
+					cabecalhok = cabecalhok.substr(1);
+					//nomeLigacao = cabecalhok;
+				}
+
+				var idPre = tipoPresumido(elems[k]);
+				if (idPre.startsWith('ID_')) {
+					idPre = tipoPresumido(cabecalhok? cabecalhok + ' ' + elems[k]:elems[k]);
+				}
+				itensLinha.push(idPre);
+				if (bLigacaoVertical && itensLinhaAnterior[k]) {
+					if (itensLinhaAnterior[k]) {
+						lista.push([itensLinhaAnterior[k], idPre, '', '', '']);
+					}
+				}
+			}
+			//itensLinhaAnterior = JSON.parse(JSON.stringify(itensLinha)); //usado em hierarquica e |
+					
+			if (tipoLista == 'estrela') { // _* undercore + estrela
+				//converte tabela para ligacões, por dupla de colunas (estrela). Colunas A,B,C,D, gera ligações A->B, A->C, C->D
+				//se algum rotulo começar com 1 underscores, adiciona o texto como ligacao, senão adiciona nos elementos
+				for (let k=1; k<itensLinha.length; k++) {
+					var idPre1 = itensLinha[0]; 
+					var idPre2 = itensLinha[k];
+					if (!idPre1 ||  !idPre2) {
+						continue;
+					}
+					var cabecalhok = cabecalhos[k];
+					var nomeLigacao = '';
+					if (cabecalhok.startsWith('|')) { //vinculo vertical
+						cabecalhok = cabecalhok.substr(1);
+					} 
+					if (cabecalhok.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
+						cabecalhok = cabecalhok.substr(1);
+						nomeLigacao = cabecalhok
+					}
+					lista.push([idPre1, idPre2, nomeLigacao, '', '']);
+
+				}				
+			} else if (tipoLista == 'fila')  { //um underscore + _+
+				//converte tabela para ligacões, por dupla de colunas (fila). Colunas A,B,C,D, gera ligações A->B, B->C, C->D
+				//se algum rotulo começar com 1 underscores, adiciona o texto como ligacao, senão adiciona nos elementos
+				for (let k=0; (k+1)<elems.length; k++) {
+					var idPre1 = itensLinha[k]; 
+					var idPre2 = itensLinha[k+1];
+					if (!idPre1 ||  !idPre2) {
+						if (idPre1) {
+							lista.push([idPre1, '', '', '', '']);
+						}
+						if (idPre2) {
+							lista.push([idPre2, '', '', '', '']);
+						}
+						continue;
+					}
+					var cabecalhok1 = cabecalhos[k+1];
+					var nomeLigacao = '';
+					if (cabecalhok1.startsWith('|')) { //vinculo vertical
+						cabecalhok1 = cabecalhok1.substr(1);
+					} 
+					if (cabecalhok1.startsWith('$')) { //se $ no nome da coluna, coloca o texto também na ligação
+						cabecalhok1 = cabecalhok1.substr(1);
+						nomeLigacao = cabecalhok1;
+					}
+					lista.push([idPre1, idPre2, nomeLigacao, '', '']);
+				}
+			} else if (tipoLista == 'hierarquica')  { //um underscore >  (_/)
+
+				for (let k=0; k<itensLinha.length; k++) { 
+					if (!itensLinha[k]) {
+						continue;
+					}
+					if (k==0) {
+						if (linhaHierarquica[0]) {
+							lista.push([linhaHierarquica[0], itensLinha[0] , '', '', '']);
+						} else if (itensLinhaAnterior[0]) {
+							lista.push([itensLinhaAnterior[0], itensLinha[0] , '', '', '']);
+						} else {
+							lista.push([itensLinha[0],'' , '', '', '']);
+						}	
+						linhaHierarquica = new Array(max).fill('');
+						linhaHierarquica[0] = itensLinha[0];
+						/*
+						if (itensLinha.length>1) { 
+							if (itensLinha[k+1]) {
+								lista.push([itensLinha[k], itensLinha[k+1], '>>>', '', '']);
+								linhaHierarquica[k+1] = itensLinha[k+1];
+							}
+						}*/
+					} else if (itensLinha[k-1]) {
+						lista.push([itensLinha[k-1], itensLinha[k], '<<>>', '', '']);
+						for (let m=k; m<linhaHierarquica.length; m++) {
+							linhaHierarquica[m] = '';
+						}		
+						linhaHierarquica[k] = itensLinha[k];				
+					} else if (!itensLinha[k-1]) {
+						if (itensLinhaAnterior[k]) {
+							lista.push([itensLinhaAnterior[k], itensLinha[k], '', '', '']);
+							linhaHierarquica[k] = itensLinha[k];
+						} else if (itensLinhaAnterior[k-1]) {
+							lista.push([itensLinhaAnterior[k-1], itensLinha[k], '<<>>', '', '']);
+							linhaHierarquica[k] = itensLinha[k];								
+						}  
+						else if (linhaHierarquica[k]) {
+							lista.push([linhaHierarquica[k], itensLinha[k], '', '', '']);
+							linhaHierarquica[k] = itensLinha[k];
+						} else { 
+							console.log('Algo errado - hierarquica');
+							
+						
+						}
+					} else {
+						alertify.error('Algo errado...');
+						console.log('erro:' + itensLinha);
+					}
+					if (false) {
+						for (let m=k+1; m<linhaHierarquica.length; m++) {
+								linhaHierarquica[m] = '';
+						}
+					}
+							
+					
+					/*
+					if (itensLinha[k]) {
+						linhaHierarquica[k] = itensLinha[k];
+					}*/
+				}
+			} else {
+				console.log('erro...');
+			}
+		} 
 
 	}
 	
 	if (!lista.length) {
-		alertify.error('Formato não reconhecio. Precisa de 3 ou 5 colunas, formato id1, id2, nome_ligacao, nome id1, nome id2, ou outras opções.');
+		alertify.error('Formato não reconhecido.');
 		return;
 	}
-	
 	var tamanhoGrupo=0;
-	if (ajustarArvore(lista, true, 10)>0){
-		tamanhoGrupo = prompt('A lista tem identificadores que não são PJ ou PF repetidos diversas vezes.\nPara facilitar a visualização, pode-se dividir esses identificadores em ramos.\nDigite uma quantidade de itens por ramos ou Cancele para inserir sem ramos.', 10);
-	}
-	if (tamanhoGrupo) {
-		lista = ajustarArvore(lista, false, tamanhoGrupo);
+	if (tipoLista != 'hierarquica') {
+		if (ajustarArvore(lista, true, 10)>0){
+			tamanhoGrupo = prompt('A lista tem identificadores que não são PJ ou PF repetidos diversas vezes.\nPara facilitar a visualização, pode-se dividir esses identificadores em ramos.\nDigite uma quantidade de itens por ramos ou Cancele para inserir sem ramos.', 10);
+		}
+		if (tamanhoGrupo) {
+			lista = ajustarArvore(lista, false, tamanhoGrupo);
+		}
 	}
 	var nos = [];
 	var ligacoes = [];
@@ -2006,7 +2324,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 		var idinlista = [...cnpjsids];
 		document.body.style.cursor = 'wait';
 		let bodyjson = JSON.stringify(idinlista);
-		var url =  "/rede/grafojson/cnpj/0/" + idinlista[0];
+		var url =  base + 'grafojson/cnpj/0/' + idinlista[0];
 		//fetch(url, {method: 'get'}) // mode: 'cors',pos
 		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
@@ -2071,7 +2389,7 @@ function menu_alterarIcone(bparam) {
 			no.data.imagem = nomeIcone;
 			var node = graphics.getNodeUI(noid);
 			try {
-				node.getElementsByTagName('image')[0].setAttribute('xlink:href',"/rede/static/imagem/" + nomeIcone);
+				node.getElementsByTagName('image')[0].setAttribute('xlink:href', base + 'static/imagem/' + nomeIcone);
 			} catch (e){; };
 		}		
 	} 
@@ -2120,7 +2438,7 @@ function exportaIdsParaDownloadExcel() {
 	var iframeDocumento = iframeAuxiliar.contentDocument || iframeAuxiliar.contentWindow.document;
 	var form = iframeDocumento.getElementById('formDownload');
 	form.dadosJSON.value = dadosJSON;
-	form.action = "/rede/dadosemarquivo/xlsx" ;
+	form.action = base + 'dadosemarquivo/xlsx' ;
 	form.submit();
 }//.function exportaIdsParaDownloadExcel
 
@@ -2128,7 +2446,7 @@ function menu_exportaExcel(bSoSelecionados) {
 	var formato='xlsx';
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
 	iframeAuxiliar.onload = exportaIdsParaDownloadExcel;
-	iframeAuxiliar.src = '/rede/formdownload.html';
+	iframeAuxiliar.src = base + 'formdownload.html';
 	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
 }//.function menu_exportaExcel
 
@@ -2190,7 +2508,7 @@ function getXMLdeSVG() {
 			'icone-grafo-id.png' ]; */
 	var sImagens = new Set(); //gparam.listaImagens;
 	//verifica quais imagens estão sendo usadas.
-	var pedacos = svg_xml.split('xlink:href="/rede/static/imagem/');
+	var pedacos = svg_xml.split('xlink:href="' + base + 'static/imagem/');
 	for (let p of pedacos) {
 		if (p.indexOf('.png') != -1) {
 			var nome = p.split('.png')[0];
@@ -2205,7 +2523,7 @@ function getXMLdeSVG() {
 		var c = document.createElement('canvas');
 		for (let nomeImagem of listaImagens) {
 			var img = new Image();
-			img.src = '/rede/static/imagem/' + nomeImagem;
+			img.src = base + 'static/imagem/' + nomeImagem;
 			img_home.appendChild(img);
 			if (1) {
 				c.height = img.naturalHeight;
@@ -2222,7 +2540,7 @@ function getXMLdeSVG() {
 	var dicionario = converteImagens2Base64();
 	for (let key of listaImagens) {
 		var baseStr=dicionario[key];
-		var strProcurar = 'xlink:href="/rede/static/imagem/' + key + '"';
+		var strProcurar = 'xlink:href="' + base + 'static/imagem/' + key + '"';
 		var strSubstituicao = 'xlink:href="'+baseStr + '"';
 		svg_xml = replaceAll(svg_xml, strProcurar, strSubstituicao);
 	}
@@ -2270,22 +2588,164 @@ function menu_zoomout(teclaShift, teclaCtrl) {
 	}
 }//.function menu_zoomout
 
+//teclas Up, down, left e right servem somente para navegar árvore hierárquica
+function menu_teclaUp(bSemMensagem) { //segue direção da seta
+	var proximoNo = null;
+	if (gparam.idNosSelecionados.size>1) {
+		proximoNo = [...gparam.idNosSelecionados][0];
+		selecionaNoid(proximoNo, false, false);
+		return;
+	}
+
+	graph.forEachLinkedNode(gparam.idnoSelecionado, function(nodeaux, link){
+		if (link.toId==gparam.idnoSelecionado) {
+			proximoNo = link.fromId;
+			return;
+		}
+	});	
+	
+	if (proximoNo) {
+		selecionaNoid(proximoNo, false, false);
+	} else if (!bSemMensagem) {
+			alertify.error('Não encontrou item anterior');
+	}
+}
+
+function menu_teclaRight(bSemMensagem) { //segue direção contrária da seta?
+	var proximoNo = null;
+	if (gparam.idNosSelecionados.size>1) {
+		//var setIter = gparam.idNosSelecionados.values();
+		//proximoNo = setIter.next().value;
+		proximoNo = [...gparam.idNosSelecionados][0];
+		selecionaNoid(proximoNo, false, false);
+		return;
+	}
+	var k = 0;
+
+	graph.forEachLinkedNode(gparam.idnoSelecionado, function(nodeaux, link){
+		if (!proximoNo) {
+			if (link.fromId==gparam.idnoSelecionado) {
+				proximoNo = link.toId;
+				k += 1;
+				if (k>1) {
+					return;
+				}
+			}
+		}
+	});	
+	
+	if (proximoNo) {
+		selecionaNoid(proximoNo, false, false);
+	} else if (!bSemMensagem) {
+		alertify.error('Não encontrou item.');
+	}
+}//function menu_teclaRight
+
+function menu_teclaLeft(bSemMensagem) { //segue direção da seta
+	var proximoNo = null;
+	if (gparam.idNosSelecionados.size>1) {
+		proximoNo = [...gparam.idNosSelecionados][0];
+		selecionaNoid(proximoNo, false, false);
+		return;
+	}
+
+	graph.forEachLinkedNode(gparam.idnoSelecionado, function(nodeaux, link){
+		if (link.fromId==gparam.idnoSelecionado) {
+			proximoNo = link.toId;
+			return;
+		}		
+	});	
+	
+	if (proximoNo) {
+		selecionaNoid(proximoNo, false, false);
+	} else if (!bSemMensagem) {
+		alertify.error('Não encontrou item.');
+	}
+}//menu_teclaLeft
+
+function menu_teclaDown(bSemMensagem) { //segue direção da seta, se chega no final do ramo, volta e entra no ramo pela esquerda
+	if (gparam.idNosSelecionados.size>1) {
+		const lastValue = Array.from(gparam.idNosSelecionados).pop();
+		selecionaNoid(lastValue, false, false);
+		return;
+	}
+	var noInicial = gparam.idnoSelecionado;
+	var noid = gparam.idnoSelecionado;
+	menu_teclaRight(true);
+	if (noid != gparam.idnoSelecionado) {
+		return;
+	}
+	var nosCaminho = new Set(noid);
+	var passos = 0;
+	while (true) {
+		//console.log(gparam.idnoSelecionado);
+		passos += 1;
+		if (passos>graph.getNodesCount()*10) { //para evitar loop infinito
+			selecionaNoid(noInicial, false, false);
+			if (!bSemMensagem)  {
+				alertify.error('Não encontrou item seguinte.');
+			}
+		}
+		nosCaminho.add(noid);
+		//console.log('up');
+		menu_teclaUp(true);
+		if (noid == gparam.idnoSelecionado) { //não saiu do lugar, sair da rotina
+			selecionaNoid(noInicial, false, false);
+			if (!bSemMensagem)  {
+				alertify.error('Não encontrou item seguinte.');
+			}
+				break;			
+		}		
+		var knos = 0;
+		var proximoNo = null;
+		graph.forEachLinkedNode(gparam.idnoSelecionado, function(nodeaux, link){
+			if (link.fromId==gparam.idnoSelecionado) { 
+				knos += 1;
+				if (knos==2) {
+					proximoNo = link.toId;
+					return;
+				}
+			}		
+		});	
+		if (knos>1) {
+			selecionaNoid(proximoNo, false, false);
+			if (!nosCaminho.has(gparam.idnoSelecionado)) {
+				//console.log('saiu x1');
+				break; 
+			} else {
+				menu_teclaUp(true);
+			}
+		}	
+		noid =  gparam.idnoSelecionado;
+	}
+}//function menu_teclaDown
+
 function menu_configurar_nodeSize() {
 	var parametro = prompt('Digite o tamanho do ícone.', gparam.nodeSize);
 	if (!parametro) {
 		return;
 	}
 	gparam.nodeSize = parseInt(parametro);
-	 //pra funcionar corretamente, é necessário mudar todos os elementos visuais que usam nodeSize, como rect, etc... 
+	//pra funcionar corretamente, é necessário mudar todos os elementos visuais que usam nodeSize, como rect, etc... 
 	graph.forEachNode( function(node) {
 		var ui=graphics.getNodeUI(node.id); 
-		ui.getElementsByTagName('text')[0].attr('x', parametro/2).attr('y', String(gparam.tamanhoFonte*1.1 + gparam.nodeSize) + 'px');;		
-		ui.getElementsByTagName('tspan')[0].attr('x', parametro/2);		
-		ui.getElementsByTagName('tspan')[1].attr('x', parametro/2);
-		ui.getElementsByTagName('tspan')[2].attr('x', parametro/2);
-		ui.getElementsByTagName('image')[0].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
-		ui.getElementsByTagName('rect')[0].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
-		ui.getElementsByTagName('rect')[1].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
+		if (gparam.btextoEmbaixoIcone) { //se houver items criados com um estado ou outro, pode ficar inconsistente e isso não resolve.
+			ui.getElementsByTagName('text')[0].attr('x', gparam.nodeSize/2).attr('y', String(gparam.tamanhoFonte*1.1 + gparam.nodeSize) + 'px');;		
+			ui.getElementsByTagName('tspan')[0].attr('x', gparam.nodeSize/2);		
+			ui.getElementsByTagName('tspan')[1].attr('x', gparam.nodeSize/2);
+			ui.getElementsByTagName('tspan')[2].attr('x', gparam.nodeSize/2);
+			ui.getElementsByTagName('image')[0].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
+			ui.getElementsByTagName('rect')[0].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
+			ui.getElementsByTagName('rect')[1].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
+		} else {
+			ui.getElementsByTagName('text')[0].attr('x', gparam.nodeSize).attr('y', gparam.nodeSize*0.5+gparam.tamanhoFonte*0.5);;		
+			ui.getElementsByTagName('tspan')[0].attr('x', gparam.nodeSize*1.2);		
+			ui.getElementsByTagName('tspan')[1].attr('x', gparam.nodeSize*1.2);
+			ui.getElementsByTagName('tspan')[2].attr('x', gparam.nodeSize*1.2);
+			ui.getElementsByTagName('image')[0].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
+			ui.getElementsByTagName('rect')[0].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);
+			ui.getElementsByTagName('rect')[1].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);		
+		}
 	}); 
 }//.function menu_configurar_nodeSize
 
@@ -2391,6 +2851,7 @@ function drop_handler(ev) {
 	ev.preventDefault();
 	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
 	var tipos = ev.dataTransfer.types;
+	//window.focus(); //não funciona, o focus with no aplicativo de origem da dragagem
 	if (tipos.includes("text/x-moz-url")) { //funciona no firefox, mas no chrome não aparece esse flavor
 		//var data = ev.dataTransfer.getData("text");
 		var lista = ev.dataTransfer.getData("text/x-moz-url").split('\n'); //url separado do titulo por linha
@@ -2407,6 +2868,7 @@ function drop_handler(ev) {
 		alertify.error('Drop. Tipo não reconhecido');
 		console.log(tipos);
 	}
+
 }//.function drop_handler
 
 function ajustaRegiaoDrop() {
@@ -2529,16 +2991,26 @@ function evento_teclasDown(e) {
 		menu_excluirNosSelecionados();
 	} else if (testa('Delete', true, false)) { 
 		menu_excluirTudo();
+	} else if (testa('Backspace', true, false)) { 
+		excluirNoMantendoLinks();
 	} else if (testa('KeyP', false, false)) { 
 		menu_pinarNo(null);
 	} else if (testa('KeyC', false, false)) { 
 		menu_colorir();
 	} else if (testa('KeyC', true, false)) { 
 		menu_colorir('transparent');
-	} else if (testa('KeyQ', false, false)) { 
+	} else if (testa('KeyQ', false, false) || testa('Space', false, false)) { 
 		menu_rendererAtivarParar(!gparam.bRenderAtivado, true);
 	} else if (testa('KeyQ', true, false)) { 
 		menu_rendererAtivarParar(true, true);
+	} else if (testa('ArrowLeft', false, false)) { 
+		menu_teclaLeft(false);
+	} else if (testa('ArrowRight', false, false)) { 
+		menu_teclaRight(false);	
+	} else if (testa('ArrowUp', false, false)) { 
+		menu_teclaUp(false);
+	} else if (testa('ArrowDown', false, false)) { 
+		menu_teclaDown(false);	
 	} else {
 		return;
 	} 
@@ -2742,8 +3214,8 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir CNPJ ou CPF do Banco de Dados (Tecla I)'><i class="fa fa-user-plus"></i></button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (SHIFT+Q)'><i class="fa fa-play"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Q)'><i class="fa fa-stop"></i></button>&nbsp;
+		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>&nbsp;
+		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i> </button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'>&nbsp;+&nbsp;</button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'>&nbsp;-&nbsp;</button>
@@ -2872,6 +3344,16 @@ function main() {
 			<i class="fa fa-tag"></i><span class="menu-text">Só Primeiro Nome</span> 
 			</button>
 			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosPosicao(false);"> 
+			<i class="fa fa-tag"></i><span class="menu-text">Do lado do ícone</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_rotulosPosicao(true);"> 
+			<i class="fa fa-tag"></i><span class="menu-text">Embaixo do ìcone</span> 
+			</button>
+			</li>
 		</menu>
 		</li>
 		<li class="menu-item">
@@ -2909,7 +3391,7 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(false, true);"> 
-		<i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Q)</span> 
+		<i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Espaço ou Q)</span> 
 		</button>
 		</li>
 		<li class="menu-item">
@@ -3019,6 +3501,11 @@ function main() {
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_excluirTudo()"> 
 		<i class="fa fa-trash"></i> <span class="menu-text">Excluir Tudo... (SHIFT+Del)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:excluirNoMantendoLinks()"> 
+		<i class="fa fa-trash"></i> <span class="menu-text">Excluir Nó mantendo Link</span> 
 		</button>
 		</li>
 	</menu>
