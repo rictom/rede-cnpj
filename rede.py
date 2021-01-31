@@ -8,12 +8,29 @@ from flask import Flask, request, render_template, send_from_directory, send_fil
 from werkzeug.utils import secure_filename
 import os, sys, json, secrets
 import config, rede_relacionamentos
+import pandas as pd
+
 #from requests.utils import unquote
 app = Flask("rede")
+#https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
-
 gp['numeroDeEmpresasNaBase'] = rede_relacionamentos.numeroDeEmpresasNaBase()
 camadaMaxima = 15
+
+#como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
+#o lock faz esperar terminar as requisições por ordem.
+#no linux, quando se usa nginx e uwsgi, usar lock do uwsgi, senão lock do threading (funciona no linux quando só tem 1 worker)
+import contextlib
+try:
+    import uwsgi #supondo que quando tem uwsgi instalado, está usando linux e nginx
+    gUwsgiLock=True
+    #rlock = contextlib.nullcontext() #funciona no python3.7
+    gLock =  contextlib.suppress() #python <3.7 #context manager que não faz nada
+except:
+    from threading import Lock
+    gUwsgiLock=False
+    gLock = Lock() #prevenir erros de requisições seguidas, no servidor faz o esperado colocando só um thread no rede.wsgi.ini
+
 
 @app.route("/rede/")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
@@ -39,7 +56,7 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     if config.par.arquivoEntrada:
         #if os.path.exists(config.par.listaEntrada): checado em config
         extensao = os.path.splitext(config.par.arquivoEntrada)[1].lower()
-        if extensao in ['.csv','.txt','.py','.js']:
+        if extensao in ['.py','.js']:
             listaEntrada = open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read()
             if extensao=='.py': #configura para lista hierarquica
                 listaEntrada = '_>p\n' + listaEntrada
@@ -47,9 +64,20 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                 listaEntrada = '_>j\n' + listaEntrada
         elif extensao=='.json':
             listaJson = json.loads(open(config.par.arquivoEntrada, encoding=config.par.encodingArquivo).read())
+        elif extensao in ['.csv','.txt']:
+            df = pd.read_csv(config.par.arquivoEntrada, sep=config.par.separador, dtype=str, header=None, keep_default_na=False, encoding=config.par.encodingArquivo, skip_blank_lines=False)
+        elif extensao in ['.xlsx','xls']:
+            #df = pd.read_excel(config.par.arquivoEntrada, sheet_name=config.par.excel_sheet_name, header= config.par.excel_header, dtype=str, keep_default_na=False)
+            df = pd.read_excel(config.par.arquivoEntrada, sheet_name=config.par.excel_sheet_name, header= None, dtype=str, keep_default_na=False)
         else:
             print('arquivo em extensão não reconhecida, deve ser csv, txt ou json:' + config.par.arquivoEntrada)
             sys.exit(0)
+        if extensao in ['.csv', '.txt', '.xlsx', 'xls']:
+            listaEntrada = ''
+            for linha in df.values:
+                listaEntrada += '\t'.join([i.replace('\t',' ') for i in linha]) + '\n'       
+            #print(listaEntrada)
+            df = None            
     elif not cpfcnpj and not idArquivoServidor: #define cpfcnpj inicial, só para debugar.
         cpfcnpj = config.par.cpfcnpjInicial
         numeroEmpresas = gp['numeroDeEmpresasNaBase']
@@ -60,7 +88,12 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
             else:
                 mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas fictícias.\nPara inserir um novo elemento digite TESTE (CNPJ REAL NÃO SERÁ LOCALIZADO)"
                 inserirDefault =' TESTE'        
-
+    
+    if config.par.tipo_lista:
+        if config.par.tipo_lista.startswith('_>'):
+            listaEntrada = config.par.tipo_lista + '\n' + listaEntrada 
+        else:
+            listaEntrada = config.par.tipo_lista + listaEntrada
             
     paramsInicial = {'cpfcnpj':cpfcnpj, 
                      'camada':camada,
@@ -80,28 +113,66 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     # return render_template('rede_template.html', cpfcnpjInicial=cpfcnpj, camadaInicial=camada, 
     #                        mensagemInicial=mensagemInicial, inserirDefault=inserirDefault, idArquivoServidor=idArquivoServidor,
     #                        bBaseFullTextSearch = bBaseFullTextSearch, listaImagens=listaImagens)
+#.def html_pagina
+    
+# @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
+# def serve_rede_json_cnpj(cpfcnpj, camada=1):
+#     with gLock:
+#         camada = min(camadaMaxima, int(camada))
+#         listaIds = request.get_json()
+#         if listaIds:
+#             cpfcnpj=''
+#         if not cpfcnpj:
+#             return jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj,  listaIds=listaIds, camada=camada, grupo='', bjson=True)) 
+#         elif cpfcnpj.startswith('PJ_') or cpfcnpj.startswith('PF_'):
+#             return jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada, grupo='', bjson=True )) 
+#         elif cpfcnpj.startswith('EN_') or cpfcnpj.startswith('EM_') or cpfcnpj.startswith('TE_'):
+#             return jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj,   listaIds=listaIds, camada=camada, tipoLink='endereco'))
+#         return  jsonify(rede_relacionamentos.camadasRede(cpfcnpj, camada=camada))
+
 
 @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
 def serve_rede_json_cnpj(cpfcnpj, camada=1):
     camada = min(camadaMaxima, int(camada))
     listaIds = request.get_json()
-    if listaIds:
-        cpfcnpj=''
-    if not cpfcnpj:
-        return jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj,  listaIds=listaIds, camada=camada, grupo='', bjson=True)) 
-    elif cpfcnpj.startswith('PJ_') or cpfcnpj.startswith('PF_'):
-        return jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada, grupo='', bjson=True )) 
-    elif cpfcnpj.startswith('EN_') or cpfcnpj.startswith('EM_') or cpfcnpj.startswith('TE_'):
-        return jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj,   listaIds=listaIds, camada=camada, tipoLink='endereco'))
-    return  jsonify(rede_relacionamentos.camadasRede(cpfcnpj, camada=camada))
+    r = None
+    if gUwsgiLock:
+        uwsgi.lock()
+    try:
+        with gLock:
+            if listaIds:
+                cpfcnpj=''
+            if not cpfcnpj:
+                r = jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj,  listaIds=listaIds, camada=camada, grupo='', bjson=True)) 
+            elif cpfcnpj.startswith('PJ_') or cpfcnpj.startswith('PF_'):
+                r = jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada, grupo='', bjson=True )) 
+            elif cpfcnpj.startswith('EN_') or cpfcnpj.startswith('EM_') or cpfcnpj.startswith('TE_'):
+                r = jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj,   listaIds=listaIds, camada=camada, tipoLink='endereco'))
+            else:
+                r = jsonify(rede_relacionamentos.camadasRede(cpfcnpj, camada=camada))
+    finally:
+        if gUwsgiLock:
+            uwsgi.unlock()
+    return r
+#.def serve_rede_json_cnpj
 
 @app.route('/rede/grafojson/links/<int:camada>/<int:numeroItens>/<int:valorMinimo>/<int:valorMaximo>/<cpfcnpj>',  methods=['GET','POST'])
 def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, valorMaximo=0):
-    camada = min(camadaMaxima, int(camada))
-    listaIds = request.get_json()
-    if listaIds:
-        cpfcnpj=''
-    return jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj, listaIds=listaIds, camada=camada, numeroItens=numeroItens, valorMinimo=valorMinimo, valorMaximo=valorMaximo, tipoLink='link'))
+    r = None
+    if gUwsgiLock:
+        uwsgi.lock()
+    try:
+        with gLock:
+            camada = min(camadaMaxima, int(camada))
+            listaIds = request.get_json()
+            if listaIds:
+                cpfcnpj=''
+            r = jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj, listaIds=listaIds, camada=camada, numeroItens=numeroItens, valorMinimo=valorMinimo, valorMaximo=valorMaximo, tipoLink='link'))
+    finally:
+        if gUwsgiLock:
+            uwsgi.unlock()        
+    return r
+#.def serve_rede_json_links
 
 @app.route('/rede/dadosjson/<cpfcnpj>')
 def serve_dados_detalhes(cpfcnpj):

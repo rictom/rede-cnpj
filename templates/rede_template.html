@@ -1401,7 +1401,11 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 }//.function menu_inserir
 
 function menu_buscaEmSite(siteUrl){
-	var strUrl = siteUrl + '"' + graph.getNode(gparam.idnoSelecionado).data.descricao + '"';		
+	var parametro = replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ');
+	if (!parametro) {
+		parametro = graph.getNode(gparam.idnoSelecionado).data.id.substr(3);
+	}
+	var strUrl = siteUrl + '"' + parametro + '"';		
 	window.open(strUrl).focus();
 } //.function menu_buscaEmSite
 
@@ -3437,6 +3441,11 @@ function main() {
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
 			<i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil (J)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://portaldatransparencia.gov.br/busca?termo=');"> 
+			<i class="fa fa-search"></i><span class="menu-text">Portal Transparência</span> 
 			</button>
 			</li>
 		</menu>

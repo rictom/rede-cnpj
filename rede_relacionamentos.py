@@ -11,7 +11,12 @@ import os, sys, glob
 import time, copy, re, string, unicodedata, collections
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
-
+'''
+from sqlalchemy.pool import StaticPool
+engine = create_engine('sqlite://',
+                    connect_args={'check_same_thread':False},
+                    poolclass=StaticPool)
+'''
 import config
 
 try:
@@ -348,6 +353,13 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     mensagem = {'lateral':'', 'popup':'', 'confirmar':''}
     #con=sqlite3.connect(camDbSqlite)
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    '''
+    https://stackoverflow.com/questions/17497614/sqlalchemy-core-connection-context-manager
+    from sqlalchemy import create_engine
+    engine = create_engine("sqlite:///:memory:")
+    with engine.connect() as conn:
+        print(conn.closed)
+    print(conn.closed)'''
     grupo = str(grupo)
     nosaux = []
     #nosids = set()
@@ -726,7 +738,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo
             cnpjs.add(c[3:])
         else:
             if c.startswith('PF_'):
-                nome = c[:len('PF_12345678901')]
+                nome = c[15:] #supõe 'PF_12345678901-nome'
                 no = {'id': c, 'descricao':nome, 
                        'camada': camadasIds[c], 
                        'situacao_ativa': True, 

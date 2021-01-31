@@ -36,6 +36,11 @@ def runParser():
     parser.add_argument('-d','--download', action='store_true', dest='bArquivosDownload', default=config['ETC'].getboolean('arquivos_download',False), help='permitir download da pasta arquivos' )
     parser.add_argument('-D','--n-download', action='store_false', dest='bArquivosDownload', default=config['ETC'].getboolean('arquivos_download',False), help='permitir download da pasta arquivos' )
 
+    parser.add_argument('-n', '--sheet-name', action='store', dest='excel_sheet_name',default=0, help='nome da aba do excel')
+    #parser.add_argument('-r', '--header', action='store', dest='excel_header',default=None, help='aba do excel tem cabecalho ou não')
+    parser.add_argument('-s', '--separador', action='store', dest='separador', default='\t', help='separador arquivo csv')
+
+    parser.add_argument('-l', '--tipo_lista', action='store', dest='tipo_lista',default='', help='define tipo de entrada, _+  _* _>')
     return parser.parse_args()
 
 par = runParser()
