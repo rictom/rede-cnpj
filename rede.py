@@ -29,7 +29,7 @@ try:
 except:
     from threading import Lock
     gUwsgiLock=False
-    gLock = Lock() #prevenir erros de requisições seguidas, no servidor faz o esperado colocando só um thread no rede.wsgi.ini
+    gLock = Lock() #prevenir erros de requisições seguidas. No servidor faz o esperado colocando só um thread no rede.wsgi.ini
 
 
 @app.route("/rede/")

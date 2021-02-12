@@ -59,6 +59,7 @@ var gparam = {};
 	gparam.AreaSelecaoRetangular = {};
 	gparam.springLength=150;
 	gparam.bRenderAtivado = true;
+	gparam.fScale = graphics.scale;
 
 // variáveis globais
 var base = '/rede/',
@@ -781,8 +782,9 @@ function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 	if (idNosLocalizados.size) {
 		//selecionaNoid(null, false); //apaga seleção primeiro
 		for (let n of idNosLocalizados) {
-			graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible'); 
-			gparam.idNosSelecionados.add(n);
+			//graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible'); 
+			//gparam.idNosSelecionados.add(n);
+			selecionaNoid(n, true, true); 
 		}
 		alertify.success('Localizou '+ idNosLocalizados.size + ' adjacentes');
 		return idNosLocalizados.size;
@@ -1156,7 +1158,9 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			gparam.confirmaAntesDeInserirNNos = kNosAInserir;
 		}
 	}
-	pinarNoSegundos(Math.sqrt(kNosAInserir)*4000); //fixa temporariamente o nó selecionado
+	if (kNosAInserir>100) { 
+		pinarNoSegundos(Math.sqrt(kNosAInserir)*200); //fixa temporariamente o nó selecionado
+	}
 	for (let noaux of Object.values(no)) {
 		if (!graph.hasNode(noaux.id)) { 
 			graph.addNode(noaux.id, JSON.parse(JSON.stringify(noaux)));
@@ -1367,7 +1371,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	if (textoDefault) {
 		itensDefault = textoDefault;
 	}
-	var textoPrompt = 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). A Razão Social ou Nome devem ser completos.';
+	var textoPrompt = 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). A Razão Social ou Nome deve ser COMPLETO.';
 	if (gparam.inicio.bBaseFullTextSearch) {
 		textoPrompt += ' Para realizar busca por parte do nome, utilize *, ? ou aspas.';
 	} else {
@@ -1511,9 +1515,17 @@ function pinarNoSegundos(segundos) {
 	if (layout.isNodePinned(no)) {
 		return;
 	}
-	layout.pinNode(no, true);
+	layout.pinNode(no, true); //xxx
+	//gparam.scale = graphics.scale;
+	//desabilita scale temporariamente (se tiver muitos nós, mexer na escala pode travar o browser
+	graphics.scale = function(a,b) { 
+		alertify.error('O zoom foi temporariamente desativado. Aguarde alguns segundos.');
+		return gparam.renderer.getTransform().scale; 
+	}; 
 	setTimeout(
-		function() { layout.pinNode(no, false); 
+		function() { 
+			layout.pinNode(no, false); 
+			graphics.scale = gparam.fScale;
 		}, segundos
 	);
 }//.function pinarNoSegundos
@@ -2974,9 +2986,9 @@ function evento_teclasDown(e) {
 	} else if (testa('KeyE', false, false)) { 
 		menu_editar_no();
 	} else if (testa('KeyG', false, false)) { 
-		menu_buscaEmSite('https://www.google.com/?#q=');;
+		menu_buscaEmSite('https://www.google.com/search?q=');;
 	} else if (testa('KeyG', true, false)) { 
-		menu_GoogleMaps('https://www.google.com/?#q=');;
+		menu_GoogleMaps();;
 	} else if (testa('KeyJ', false, false)) { 
 		menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
 	} else if (testa('KeyN', false, false)) { 
@@ -3421,7 +3433,7 @@ function main() {
 		</button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_adjacentes();" title="Procura por palavra nos itens selecionados do gráfico "> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_adjacentes();" title="Adiciona itens com ligação aos selecionados."> 
 		<i class="fa fa-search"></i><span class="menu-text">Adjacentes (J)</span> 
 		</button>
 		</li>
