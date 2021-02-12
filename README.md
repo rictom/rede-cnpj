@@ -107,7 +107,8 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 
 versão 0.4 (janeiro/2021)
 - usando lock para evitar erro de consulta em requisições simultâneas;
-- opção para fazer busca do termo no Portal da Transparência da CGU.
+- opção para fazer busca do termo no Portal da Transparência da CGU;
+- correção de link para google search.
 
 versão 0.3.4 (janeiro/2021)
 - Possibilita ver o texto do lado direito do ícone;
