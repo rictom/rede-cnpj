@@ -36,7 +36,10 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e 
 
 ## Como utilizar o Banco de dados públicos de cnpj:
 A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite com dados para teste. Substitua esse arquivo pela base de CNPJ em sqlite que pode ser obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. Esse script converte os arquivos zipados no site da Receita Federal para o formato sqlite ou csv.<br>
-Para facilitar, o arquivo CNPJ_full.db gerado pelo script do fabioserpa foi colocado no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing. <br>Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
+Para facilitar, o arquivo CNPJ_full.db gerado pelo script do fabioserpa foi colocado no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 23/11/2020). <br>Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
+
+## OBSERVAÇÃO IMPORTANTE em março de 2021:
+A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. Como houve alteração no layout e nome de colunas, o script do Fabio Serpa para gerar o banco de dados sqlite não vai funcionar.  Até se proceder a alteração do código este projeto só vai funcionar com a versão da base em sqlite de 23/11/2020 que está no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing.
 
 ## Opções:
 Ao iniciar o script,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
