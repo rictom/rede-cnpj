@@ -86,7 +86,8 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
             if numeroEmpresas>40000000: #no código do template, dois pontos será substituida por .\n
                 mensagemInicial = f'''LEIA ANTES DE PROSSEGUIR.\n\nTodos os dados exibidos são públicos, provenientes da página de dados públicos da Secretaria da Receita Federal.\nO autor não se responsibiliza pela utilização desses dados, pelo mau uso das informações ou incorreções.\nA base tem {tnumeroEmpresas} empresas.\n''' + config.referenciaBD
             else:
-                mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas fictícias.\nPara inserir um novo elemento digite TESTE (CNPJ REAL NÃO SERÁ LOCALIZADO)"
+                #mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas fictícias.\nPara inserir um novo elemento digite TESTE (CNPJ REAL NÃO SERÁ LOCALIZADO)"
+                mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas de pessoas politicamente expostas, conforme dados do Portal da Transparência da CGU.\nPara inserir um novo elemento digite TESTE ou nome do político."
                 inserirDefault =' TESTE'        
     
     if config.par.tipo_lista:
@@ -105,7 +106,9 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'json':listaJson,
                      'listaImagens':listaImagens,
                       'bBaseFullTextSearch': bBaseFullTextSearch,
-                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone}
+                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
+                      'referenciaBD':config.referenciaBD,
+                      'referenciaBDCurto':config.referenciaBD.split(',')[0]}
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
     config.par.cpfcnpjInicial=''

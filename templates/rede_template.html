@@ -2,7 +2,7 @@
 <!-- 
 projeto disponível em https://github.com/rictom/rede-cnpj' 
 
-utilizando os seguintes códigos:
+utilizando os seguintes códigos e recursos:
 https://github.com/anvaka/VivaGraphJS
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 https://fabien-d.github.io/alertify.js/
@@ -918,21 +918,21 @@ function dadosEmHtmlPJ(d, noData) {
 	ht += "<b>CNPJ:</b> " + d['cnpj'] + "<br>";
 	ht += "<b>Razão Social:</b> "+d['razao_social'] +  "<br>";
 	ht += "<b>Nome Fantasia:</b> "+d['nome_fantasia'] + "<br>";
-	ht += "<b>Data início atividades:</b> "+d['data_inicio_ativ']+"<br>";
-	ht += "<b>Situação:</b> "+d['situacao']+" <b>Data Situação:</b> "+d['data_situacao']+"<br>";
-	ht += "<b>Motivo situação:</b> "+d['motivo_situacao'] +"<br>";
-	ht += "<b>Natureza jurídica:</b> "+d['cod_nat_juridica'] +"<br>";
+	ht += "<b>Data início atividades:</b> "+d['data_inicio_atividades']+"<br>";
+	ht += "<b>Situação:</b> "+d['situacao_cadastral']+" <b>Data Situação:</b> "+d['data_situacao_cadastral']+"<br>";
+	ht += "<b>Motivo situação:</b> "+d['motivo_situacao_cadastral'] +"<br>";
+	ht += "<b>Natureza jurídica:</b> "+d['natureza_juridica'] +"<br>";
 	ht += "<b>CNAE:</b> "+d['cnae_fiscal'] +"<br>";
-	ht += "<b>Porte empresa:</b> "+d['porte'] +"<br>";
-	ht += "<b>Opção MEI:</b> "+d['opc_mei'] +"<br>";
+	ht += "<b>Porte empresa:</b> "+d['porte_empresa'] +"<br>";
+	ht += "<b>Opção MEI:</b> "+d['opcao_mei'] +"<br>";
 	ht += "<b>Endereço:</b> "+d['endereco'] +"<br>";
 	ht += "<b>Municipio:</b> "+d['municipio']+"/"+d['uf'] + " - <b>CEP:</b>" + d['cep'] +"<br>";
 	if (d['nm_cidade_exterior'] || d['nome_pais']) { 
 		ht += "<b>Endereço Exterior:</b> "+d['nm_cidade_exterior'] +" <b>País:</b> "+d['nome_pais']+"<br>";
 	}
-	ht += "<b>Telefone:</b> "+d['ddd_1']+" "+ d['telefone_1']+"  "+d['ddd_2']+" "+d['telefone_2'] +"<br>";
-	ht += "<b>Fax:</b> "+d['ddd_fax']+" "+d['num_fax'] +"<br>";
-	ht += "<b>Email:</b> "+d['email'] +"<br>";
+	ht += "<b>Telefone:</b> "+d['ddd1']+" "+ d['telefone1']+"  "+d['ddd2']+" "+d['telefone2'] +"<br>";
+	ht += "<b>Fax:</b> "+d['ddd_fax']+" "+d['fax'] +"<br>";
+	ht += "<b>Email:</b> "+d['correio_eletronico'] +"<br>";
 	ht += "<b>Capital Social:</b> R$ "+d['capital_social'] +"<br>";
 	if (noData.nota) {
 		ht += "<br><b>Nota:</b> "+ noData.nota + "<br>";
@@ -1371,13 +1371,13 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	if (textoDefault) {
 		itensDefault = textoDefault;
 	}
-	var textoPrompt = 'Digite CNPJ, Razão Social ou Nome completo do Sócio, Nome-sócio (formato PF_***12345**-NOME) ou vários CNPJs separados por ponto e virgula (;). A Razão Social ou Nome deve ser COMPLETO.';
+	var textoPrompt = 'Digite CNPJ, radical do CNPJ, Razão Social Completa, Nome Completo do Sócio ou vários CNPJs separados por ponto e virgula (;). ';
 	if (gparam.inicio.bBaseFullTextSearch) {
-		textoPrompt += ' Para realizar busca por parte do nome, utilize *, ? ou aspas.';
+		textoPrompt += ' Para realizar busca por parte do nome, utilize * (coringa de palavra), ? (coringa de 1 caractere) ou aspas (busca na mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, F?LANO DE TAL , "FULANO DE"*, EMPRESA* BRASILEIRA.';
 	} else {
 		textoPrompt += ' Não foi implementada busca parcial.';
 	}
-	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @n, por exemplo, Fulano de Tal@20 para vinte registros. Para visualizar um CNPJ aleatório, digite TESTE';
+	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @n, por exemplo, Fulano de Tal@20 para vinte registros. Para exibir Matriz e N filiais, digite apenas o Radical do CNPJ seguido de @N. Para exibir todas as filiais, coloque o Radical e @. Digite TESTE para visualizar um CNPJ aleatório.';
 	alertify.prompt( 'Inserir item no gráfico', textoPrompt , itensDefault
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;
@@ -3235,9 +3235,10 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i> </button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'>&nbsp;+&nbsp;</button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'>&nbsp;-&nbsp;</button>
-		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj/')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
-		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Abre o projeto no Github'>Rede</button>	&nbsp;&nbsp;
+		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>&nbsp;&nbsp;
+		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
 	</div>
+	<div title="{{ parametros.referenciaBD }}">&nbsp;{{ parametros.referenciaBDCurto }}&nbsp;</div>
 	<div id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
 		<i class="fa fa-hand-holding-water"></i>&nbsp;DROP (json ou lista de identificadores)
 	</div>
@@ -3474,7 +3475,7 @@ function main() {
 		</button>
 		</li> -->
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)"> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
 		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel</span> 
 		</button>
 		</li>
