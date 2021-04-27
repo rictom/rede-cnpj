@@ -33,14 +33,14 @@ As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 ## Versão executável (versão antiga):
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/file/d/17BYxsUVW5l8xtbAC46poUmVpfdXhZjBj/view?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
-Esta versão executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
+Esta versão antiga executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
 ## Como utilizar o Banco de dados públicos de cnpj:
 A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 10/04/2021), alterando o arquivo de configuração rede.ini.<br>
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
 A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. 
-Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive. A base disponibilizada tem problemas em nomes de empresas na tabela de sócios, o que não afeta a rotina porque esta pega a Razão Social da tabela empresas. É possiível que haja outras inconsistências na base.<br>
+Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive. A base disponibilizada pela Receita tem erros em nomes de empresas na tabela de sócios, o que não afeta a rotina porque esta pega a Razão Social da tabela empresas, mas é possível que haja outras inconsistências.<br>
 
 ## Opções:
 Ao iniciar o script,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
