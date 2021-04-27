@@ -15,10 +15,10 @@ A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Par
 
 ## Versão online com base completa de dados públicos de CNPJ:
 http://168.138.150.250/rede/ <br>
-Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social ou Nome Completo de Sócio.
+Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social Completa, Nome Completo de Sócio ou Radical do CNPJ. Pode-se inserir vários CNPJs de uma só vez, separando-os por (;).
 Funciona parcialmente em celular, com menu errático.
 
-## Versão online com base de testes (desatualizada):
+## Versão online com base de testes (versão antiga):
 http://rtomi.pythonanywhere.com/rede/ <br>
 Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
 
@@ -30,16 +30,17 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 
-## Versão executável:
+## Versão executável (versão antiga):
 Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/file/d/17BYxsUVW5l8xtbAC46poUmVpfdXhZjBj/view?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
+Esta versão executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
 ## Como utilizar o Banco de dados públicos de cnpj:
-A pasta contém um arquivo CNPJ_full.db, que é o banco de dados sqlite com dados para teste. Substitua esse arquivo pela base de CNPJ em sqlite que pode ser obtido pelo script disponível em https://github.com/fabioserpa/CNPJ-full. Esse script converte os arquivos zipados no site da Receita Federal para o formato sqlite ou csv.<br>
-Para facilitar, o arquivo CNPJ_full.db gerado pelo script do fabioserpa foi colocado no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 23/11/2020). <br>Se desejar colocar o banco de dados em algum lugar fora da pasta, altere a configuração em rede.ini.
+A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 10/04/2021), alterando o arquivo de configuração rede.ini.<br>
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
-A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. Como houve alteração no layout e nome de colunas, o script do Fabio Serpa para gerar o banco de dados sqlite não vai funcionar.  Até se proceder a alteração do código este projeto só vai funcionar com a versão da base em sqlite de 23/11/2020 que está no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing.
+A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. 
+Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive. A base disponibilizada tem problemas em nomes de empresas na tabela de sócios, o que não afeta a rotina porque esta pega a Razão Social da tabela empresas. É possiível que haja outras inconsistências na base.<br>
 
 ## Opções:
 Ao iniciar o script,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
@@ -89,15 +90,11 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 ## Fonte dos dados:
 
 Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
-https://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj<br>
+https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj<br>
 
-Scripts em python para converter a base de cnpj da receita em sqlite:<br>
-https://github.com/fabioserpa/CNPJ-full<br>
-Obs: é preciso alterar o script para indexar a coluna “razão_social” da tabela empresas, senão a consulta por nome é lenta.<br>
-
-Arquivo CNPJ_full.db completo, referência 23/11/2020, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
+Arquivo CNPJ.db completo, referência 10/04/2021, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
 https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing <br>
-Para juntar os blocos, abra o primeiro (CNPJ_full-partes.7z.001) no 7zip. O arquivo compactado tem o tamanho de 4,1GB. O arquivo descompactado tem 22GB, por isso a descompactação pode demorar.<br>
+Para juntar os blocos, abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem 24GB.<br>
 
 ## Outras referências:
 Biblioteca em javascript para visualização:<br>
@@ -107,6 +104,9 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+versão 0.5 (abril/2021)
+- alteração do código para layout novo das tabelas;
+- busca por Radical de CNPJ ou CPF de sócio (busca somente pelo miolo do CPF);
 
 versão 0.4 (janeiro/2021)
 - usando lock para evitar erro de consulta em requisições simultâneas;
