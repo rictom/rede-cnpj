@@ -18,10 +18,6 @@ http://168.138.150.250/rede/ <br>
 Leia as informações iniciais, e digite "TESTE", CNPJ, Razão Social Completa, Nome Completo de Sócio ou Radical do CNPJ. Pode-se inserir vários CNPJs de uma só vez, separando-os por (;).
 Funciona parcialmente em celular, com menu errático.
 
-## Versão online com base de testes (versão antiga):
-http://rtomi.pythonanywhere.com/rede/ <br>
-Utilizando a base de testes. Ao abrir a janela, digite "Teste". (Não dá pra digitar um cnpj porque todos os dados são fictícios)
-
 ## Versão em python:
 É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython.<br> 
 Para iniciar esse script, em um console DOS digite<br>
@@ -30,8 +26,8 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 
-## Versão executável (versão antiga):
-Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/file/d/17BYxsUVW5l8xtbAC46poUmVpfdXhZjBj/view?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
+## Versão executável:
+Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-exe.7z](https://drive.google.com/file/d/1rjsWmzzudmrjACR61HC2f2HwZ75RueCY/view?usp=sharing). Para executar a rotina, clique duas vezes em rede.exe. Obs: a versão executável foi criada por pyinstaller para funcionar no windows. É possível que falte alguma dll para funcionar corretamente.<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 Esta versão antiga executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
