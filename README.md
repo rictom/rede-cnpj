@@ -32,14 +32,13 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e 
 Esta versão antiga executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
 ## Como utilizar o Banco de dados públicos de cnpj:
-A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 10/04/2021), alterando o arquivo de configuração rede.ini.<br>
+A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 18/06/2021), alterando o arquivo de configuração rede.ini.<br>
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
 A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. 
-Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive. A base disponibilizada pela Receita tem erros em nomes de empresas na tabela de sócios, o que não afeta a rotina porque esta pega a Razão Social da tabela empresas, mas é possível que haja outras inconsistências.<br>
+Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive.<br>
 
 ## Opções:
-Ao iniciar o script,  será aberto um console (para coletar erros) e http://127.0.0.1:5000/rede/ no navegador padrão. <br>
 
 A roda do mouse expande ou diminui o tamanho da exibição.<br>
 Fazendo click duplo em um ícone, a rotina expande as ligações.<br>
@@ -88,7 +87,7 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
 https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj<br>
 
-Arquivo CNPJ.db completo, referência 10/04/2021, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
+Arquivo CNPJ.db completo, referência 18/06/2021, já no formato sqlite, dividido em cinco blocos, foi copiado no Google Drive:<br>
 https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing <br>
 Para juntar os blocos, abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem 24GB.<br>
 
@@ -100,6 +99,10 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+
+versão 0.5.1 (junho/2021)
+- atualização da tabela sqlite cnpj.db com dados públicos de 18/06/2021.
+
 versão 0.5 (abril/2021)
 - alteração do código para layout novo das tabelas;
 - busca por Radical de CNPJ ou CPF de sócio (busca somente pelo miolo do CPF);
