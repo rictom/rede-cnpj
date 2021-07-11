@@ -15,7 +15,7 @@ app = Flask("rede")
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['numeroDeEmpresasNaBase'] = rede_relacionamentos.numeroDeEmpresasNaBase()
-camadaMaxima = 15
+gp['camadaMaxima'] = 15
 
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
@@ -42,7 +42,7 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     listaJson = ''
     #camada = config.par.camadaInicial if config.par.camadaInicial else camada
     camada = camada if camada else config.par.camadaInicial
-    camada = min(camadaMaxima, camada)
+    camada = min(gp['camadaMaxima'], camada)
     #print(list(request.args.keys()))
     #print(request.args.get('mensagem_inicial'))
     # if par.idArquivoServidor:
@@ -121,7 +121,7 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
 # @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
 # def serve_rede_json_cnpj(cpfcnpj, camada=1):
 #     with gLock:
-#         camada = min(camadaMaxima, int(camada))
+#         camada = min(gp['camadaMaxima'], int(camada))
 #         listaIds = request.get_json()
 #         if listaIds:
 #             cpfcnpj=''
@@ -136,7 +136,7 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
 
 @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
 def serve_rede_json_cnpj(cpfcnpj, camada=1):
-    camada = min(camadaMaxima, int(camada))
+    camada = min(gp['camadaMaxima'], int(camada))
     listaIds = request.get_json()
     r = None
     if gUwsgiLock:
@@ -166,7 +166,7 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
         uwsgi.lock()
     try:
         with gLock:
-            camada = min(camadaMaxima, int(camada))
+            camada = min(gp['camadaMaxima'], int(camada))
             listaIds = request.get_json()
             if listaIds:
                 cpfcnpj=''

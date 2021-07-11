@@ -156,7 +156,7 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	var LF = String.fromCharCode(10);
 	var texto = node.id;
 	if (node.id.startsWith('PJ_')) {
-		texto += LF + node.data.descricao + LF + node.data.logradouro + LF + node.data.municipio + '/' + node.data.uf;
+		texto += LF + node.data.descricao + LF + sv(node.data.logradouro) + LF + sv(node.data.municipio) + '/' + sv(node.data.uf);
 	} else if (node.id.startsWith('PF_')) {	
 	
 	} else if (node.id.startsWith('LI_')) {
@@ -1199,9 +1199,10 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			ligExistente = graph.hasLink(ligaux.destino, ligaux.origem);
 		}
 		if (ligExistente) { 
-			labelLigacao = ligExistente.data.label;
+			labelLigacao = ligExistente.data.label ? ligExistente.data.label : '';
 			var conjLabel = new Set(labelLigacao.split(';')); //; é separador dos tipos de ligação
-			var conjNovo = new Set(ligaux.label.split(';'));
+			//var conjNovo = new Set(ligaux.label.split(';')); //bug, quando a ligacao.label é null
+			var conjNovo = new Set(ligaux.label ?  ligaux.label.split(';') : ''.split(';'));
 			let uniao = new Set([...conjLabel, ...conjNovo]);
 			uniao.delete('');
 			ligExistente.data.label = [...uniao].join(';')
@@ -1286,7 +1287,11 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 			  response.json().then(function(data) {
 				//console.log(data);
 				document.body.style.cursor = 'default';
-				inserirJson(data, idin + ' em camada ' + camada +'. ', bNaoConfirma);
+				if (data.no.length) {
+					inserirJson(data, idin + ' em camada ' + camada +'. ', bNaoConfirma);
+				} else {
+					alertify.error('Não encontrou ' + idin + ' na base.');
+				}
 			  });
 			}
 		  )
@@ -1868,9 +1873,13 @@ function alterarItens(dadosNos) {//altera dados do item a partir de lista de dad
 			if (chave=='id') {
 				continue;
 			}
-			node.data[chave] = valor;
+			var valorAux = valor.trim();
+			if ((chave=='nota') && (valorAux.startsWith('+'))) { //se começar com +, adiciona a nota existente
+				valorAux = node.data['nota'] + ' ' + valorAux.substr(1);
+			} 
+			node.data[chave] = valorAux;
 			if (chave=='nota') {
-				ui.getElementsByTagName('tspan')[2].text(valor);
+				ui.getElementsByTagName('tspan')[2].text(valorAux);
 			} else if (chave=='cor') {
 				try {
 					ui.getElementsByTagName('rect')[0].setAttribute('fill',valor);
@@ -3126,9 +3135,10 @@ function ajustaAmbiente() {
 		} 
 		alert('Isto não funciona corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
 		document.getElementById("drop_area").style.display = "none"; //esconde área de drop em mobile
+		document.getElementById('div_referencia').textContent=""; //apaga referencia
 	} else { //desktop
 		document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
-		document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";	
+		document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
 		ajustaAmbiente_adicionarListaIconesAoMenu();
@@ -3238,7 +3248,7 @@ function main() {
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>&nbsp;&nbsp;
 		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
 	</div>
-	<div title="{{ parametros.referenciaBD }}">&nbsp;{{ parametros.referenciaBDCurto }}&nbsp;</div>
+	<div id='div_referencia' title="{{ parametros.referenciaBD }}">&nbsp;{{ parametros.referenciaBDCurto }}&nbsp;</div>
 	<div id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
 		<i class="fa fa-hand-holding-water"></i>&nbsp;DROP (json ou lista de identificadores)
 	</div>

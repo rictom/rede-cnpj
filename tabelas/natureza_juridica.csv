@@ -1,80 +1,89 @@
 codigo;natureza_juridica
-1015;Ã“rgÃ£o PÃºblico do Poder Executivo FederalÂ 
-1023;Ã“rgÃ£o PÃºblico do Poder Executivo Estadual ou do Distrito FederalÂ 
-1031;Ã“rgÃ£o PÃºblico do Poder Executivo MunicipalÂ 
-1040;Ã“rgÃ£o PÃºblico do Poder Legislativo FederalÂ 
-1058;Ã“rgÃ£o PÃºblico do Poder Legislativo Estadual ou do Distrito FederalÂ 
-1066;Ã“rgÃ£o PÃºblico do Poder Legislativo MunicipalÂ 
-1074;Ã“rgÃ£o PÃºblico do Poder JudiciÃ¡rio FederalÂ 
-1082;Ã“rgÃ£o PÃºblico do Poder JudiciÃ¡rio EstadualÂ 
-1104;Autarquia FederalÂ 
-1112;Autarquia Estadual ou do Distrito FederalÂ 
-1120;Autarquia MunicipalÂ 
-1139;FundaÃ§Ã£o PÃºblica de Direito PÃºblico FederalÂ 
-1147;FundaÃ§Ã£o PÃºblica de Direito PÃºblico Estadual ou do Distrito FederalÂ 
-1155;FundaÃ§Ã£o PÃºblica de Direito PÃºblico MunicipalÂ 
-1163;Ã“rgÃ£o PÃºblico AutÃ´nomo FederalÂ 
-1171;Ã“rgÃ£o PÃºblico AutÃ´nomo Estadual ou do Distrito FederalÂ 
-1180;Ã“rgÃ£o PÃºblico AutÃ´nomo MunicipalÂ 
-1198;ComissÃ£o PolinacionalÂ 
-1201;Fundo PÃºblicoÂ 
-1210;ConsÃ³rcio PÃºblico de Direito PÃºblico (AssociaÃ§Ã£o PÃºblica)Â 
-1228;ConsÃ³rcio PÃºblico de Direito PrivadoÂ 
-1236;Estado ou Distrito FederalÂ 
-1244;MunicÃ­pioÂ 
-1252;FundaÃ§Ã£o PÃºblica de Direito Privado FederalÂ 
-1260;FundaÃ§Ã£o PÃºblica de Direito Privado Estadual ou do Distrito FederalÂ 
-1279;FundaÃ§Ã£o PÃºblica de Direito Privado MunicipalÂ 
-2011;Empresa PÃºblicaÂ 
-2038;Sociedade de Economia MistaÂ 
-2046;Sociedade AnÃ´nima AbertaÂ 
-2054;Sociedade AnÃ´nima FechadaÂ 
-2062;Sociedade EmpresÃ¡ria LimitadaÂ 
-2070;Sociedade EmpresÃ¡ria em Nome ColetivoÂ 
-2089;Sociedade EmpresÃ¡ria em Comandita SimplesÂ 
-2097;Sociedade EmpresÃ¡ria em Comandita por AÃ§ÃµesÂ 
-2127;Sociedade em Conta de ParticipaÃ§Ã£oÂ 
-2135;EmpresÃ¡rio IndividualÂ 
-2143;CooperativaÂ 
-2151;ConsÃ³rcio de SociedadesÂ 
-2160;Grupo de SociedadesÂ 
-2178;Estabelecimento, no Brasil, de Sociedade EstrangeiraÂ 
-2194;Estabelecimento, no Brasil, de Empresa Binacional Argentino-BrasileiraÂ 
-2216;Empresa Domiciliada no ExteriorÂ 
-2224;Clube/Fundo de InvestimentoÂ 
-2232;Sociedade Simples PuraÂ 
-2240;Sociedade Simples LimitadaÂ 
-2259;Sociedade Simples em Nome ColetivoÂ 
-2267;Sociedade Simples em Comandita SimplesÂ 
-2275;Empresa BinacionalÂ 
-2283;ConsÃ³rcio de EmpregadoresÂ 
-2291;ConsÃ³rcio SimplesÂ 
-2305;Empresa Individual de Responsabilidade Limitada (de Natureza EmpresÃ¡ria)Â 
-2313;Empresa Individual de Responsabilidade Limitada (de Natureza Simples)Â 
-2321;Sociedade Unipessoal de AdvogadosÂ 
-2330;Cooperativas de ConsumoÂ 
-3034;ServiÃ§o Notarial e Registral (CartÃ³rio)Â 
-3069;FundaÃ§Ã£o PrivadaÂ 
-3077;ServiÃ§o Social AutÃ´nomoÂ 
-3085;CondomÃ­nio EdilÃ­cioÂ 
-3107;ComissÃ£o de ConciliaÃ§Ã£o PrÃ©viaÂ 
-3115;Entidade de MediaÃ§Ã£o e ArbitragemÂ 
-3131;Entidade SindicalÂ 
-3204;Estabelecimento, no Brasil, de FundaÃ§Ã£o ou AssociaÃ§Ã£o EstrangeirasÂ 
-3212;FundaÃ§Ã£o ou AssociaÃ§Ã£o Domiciliada no ExteriorÂ 
-3220;OrganizaÃ§Ã£o ReligiosaÂ 
-3239;Comunidade IndÃ­genaÂ 
-3247;Fundo PrivadoÂ 
-3255;Ã“rgÃ£o de DireÃ§Ã£o Nacional de Partido PolÃ­ticoÂ 
-3263;Ã“rgÃ£o de DireÃ§Ã£o Regional de Partido PolÃ­ticoÂ 
-3271;Ã“rgÃ£o de DireÃ§Ã£o Local de Partido PolÃ­ticoÂ 
-3280;ComitÃª Financeiro de Partido PolÃ­ticoÂ 
-3298;Frente PlebiscitÃ¡ria ou ReferendÃ¡riaÂ 
-3301;OrganizaÃ§Ã£o Social (OS)Â 
-3999;AssociaÃ§Ã£o PrivadaÂ 
-4014;Empresa Individual ImobiliÃ¡riaÂ 
-4090;Candidato a Cargo PolÃ­tico EletivoÂ 
-4120;Produtor Rural (Pessoa FÃ­sica)Â 
-5010;OrganizaÃ§Ã£o InternacionalÂ 
-5029;RepresentaÃ§Ã£o DiplomÃ¡tica EstrangeiraÂ 
-5037;Outras InstituiÃ§Ãµes ExtraterritoriaisÂ 
+"0000";"NATUREZA JURIDICA NAO INFORMADA"
+"1015";"Órgão Público do Poder Executivo Federal"
+"1023";"Órgão Público do Poder Executivo Estadual ou do Distrito Federal"
+"1031";"Órgão Público do Poder Executivo Municipal"
+"1040";"Órgão Público do Poder Legislativo Federal"
+"1058";"Órgão Público do Poder Legislativo Estadual ou do Distrito Federal"
+"1066";"Órgão Público do Poder Legislativo Municipal"
+"1074";"Órgão Público do Poder Judiciário Federal"
+"1082";"Órgão Público do Poder Judiciário Estadual"
+"1104";"Autarquia Federal"
+"1112";"Autarquia Estadual ou do Distrito Federal"
+"1120";"Autarquia Municipal"
+"1139";"Fundação Pública de Direito Público Federal"
+"1147";"Fundação Pública de Direito Público Estadual ou do Distrito Federal"
+"1155";"Fundação Pública de Direito Público Municipal"
+"1163";"Órgão Público Autônomo Federal"
+"1171";"Órgão Público Autônomo Estadual ou do Distrito Federal"
+"1180";"Órgão Público Autônomo Municipal"
+"1198";"Comissão Polinacional"
+"1210";"Consórcio Público de Direito Público (Associação Pública)"
+"1228";"Consórcio Público de Direito Privado"
+"1236";"Estado ou Distrito Federal"
+"1244";"Município"
+"1252";"Fundação Pública de Direito Privado Federal"
+"1260";"Fundação Pública de Direito Privado Estadual ou do Distrito Federal"
+"1279";"Fundação Pública de Direito Privado Municipal"
+"1287";"Fundo Público da Administração Indireta Federal"
+"1295";"Fundo Público da Administração Indireta Estadual ou do Distrito Federal"
+"1309";"Fundo Público da Administração Indireta Municipal"
+"1317";"Fundo Público da Administração Direta Federal"
+"1325";"Fundo Público da Administração Direta Estadual ou do Distrito Federal"
+"1333";"Fundo Público da Administração Direta Municipal"
+"1341";"União"
+"2011";"Empresa Pública"
+"2038";"Sociedade de Economia Mista"
+"2046";"Sociedade Anônima Aberta"
+"2054";"Sociedade Anônima Fechada"
+"2062";"Sociedade Empresária Limitada"
+"2070";"Sociedade Empresária em Nome Coletivo"
+"2089";"Sociedade Empresária em Comandita Simples"
+"2097";"Sociedade Empresária em Comandita por Ações"
+"2100";"Sociedade Mercantil de Capital e Indústria"
+"2127";"Sociedade em Conta de Participação"
+"2135";"Empresário (Individual)"
+"2143";"Cooperativa"
+"2151";"Consórcio de Sociedades"
+"2160";"Grupo de Sociedades"
+"2178";"Estabelecimento, no Brasil, de Sociedade Estrangeira"
+"2194";"Estabelecimento, no Brasil, de Empresa Binacional Argentino-Brasileira"
+"2216";"Empresa Domiciliada no Exterior"
+"2224";"Clube/Fundo de Investimento"
+"2232";"Sociedade Simples Pura"
+"2240";"Sociedade Simples Limitada"
+"2259";"Sociedade Simples em Nome Coletivo"
+"2267";"Sociedade Simples em Comandita Simples"
+"2275";"Empresa Binacional"
+"2283";"Consórcio de Empregadores"
+"2291";"Consórcio Simples"
+"2305";"Empresa Individual de Responsabilidade Limitada (de Natureza Empresária)"
+"2313";"Empresa Individual de Responsabilidade Limitada (de Natureza Simples)"
+"2321";"Sociedade Unipessoal de Advocacia"
+"2330";"Cooperativas de Consumo"
+"3034";"Serviço Notarial e Registral (Cartório)"
+"3069";"Fundação Privada"
+"3077";"Serviço Social Autônomo"
+"3085";"Condomínio Edilício"
+"3107";"Comissão de Conciliação Prévia"
+"3115";"Entidade de Mediação e Arbitragem"
+"3131";"Entidade Sindical"
+"3204";"Estabelecimento, no Brasil, de Fundação ou Associação Estrangeiras"
+"3212";"Fundação ou Associação Domiciliada no Exterior"
+"3220";"Organização Religiosa"
+"3239";"Comunidade Indígena"
+"3247";"Fundo Privado"
+"3255";"Órgão de Direção Nacional de Partido Político"
+"3263";"Órgão de Direção Regional de Partido Político"
+"3271";"Órgão de Direção Local de Partido Político"
+"3280";"Comitê Financeiro de Partido Político"
+"3298";"Frente Plebiscitária ou Referendária"
+"3301";"Organização Social (OS)"
+"3999";"Associação Privada"
+"4014";"Empresa Individual Imobiliária"
+"4090";"Candidato a Cargo Político Eletivo"
+"4120";"Produtor Rural (Pessoa Física)"
+"5010";"Organização Internacional"
+"5029";"Representação Diplomática Estrangeira"
+"5037";"Outras Instituições Extraterritoriais"
+"8885";"NATUREZA JURIDICA NAO INFORMADA"

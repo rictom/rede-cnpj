@@ -39,10 +39,10 @@ class DicionariosCodigos():
         self.dicMotivoSituacao = pd.Series(dfaux['Descrição'].values, index=dfaux['Código']).to_dict()
         dfaux = pd.read_excel(r"tabelas/cnae.xlsx", sheet_name='codigo-grupo-classe-descr')
         self.dicCnae = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
-        #self.dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
-        self.dicSituacaoCadastral = {'1':'Nula', '2':'Ativa', '3':'Suspensa', '4':'Inapta', '8':'Baixada'}
+        self.dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
+        #self.dicSituacaoCadastral = {'1':'Nula', '2':'Ativa', '3':'Suspensa', '4':'Inapta', '8':'Baixada'}
         self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
-        dfaux = pd.read_csv(r"tabelas/natureza_juridica.csv", sep=';', encoding='utf8', dtype=str)
+        dfaux = pd.read_csv(r"tabelas/natureza_juridica.csv", sep=';', encoding='latin1', dtype=str)
         self.dicNaturezaJuridica = pd.Series(dfaux['natureza_juridica'].values, index=dfaux['codigo']).to_dict()
 
 gdic = DicionariosCodigos()
@@ -213,7 +213,7 @@ def busca_cnpj(cnpj_basico, limiteIn):
                 inner join estabelecimento te on te.cnpj_basico=t.cnpj_basico
                 where t.cnpj_basico=\'{cnpj_basico}\'
                 order by te.matriz_filial, te.cnpj_ordem
-                limit {limite}
+                limit {limite+1}
             ''' 
 
     elif limite<0: #mostra todos as filiais e matriz
@@ -267,6 +267,11 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
             cpf = cpfcnpjnome[:11]
             nome = cpfcnpjnome[12:]
             cpfnomes.add((cpf,nome))  
+        elif i.startswith('PE_'):
+            cpfcnpjnome = i[3:]
+            nome = cpfcnpjnome
+            cpf = ''
+            cpfnomes.add((cpf,nome))  
         elif len(i)>3 and i[2]=='_':
             outrosIdentificadores.add(i)
         else:
@@ -291,7 +296,7 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
                 if lcpfs:
                     cpfnomes.update(set(lcpfs))
                 pass #fazer verificação por CPF??
-            elif not soDigitos:
+            elif not soDigitos and i.strip():
                 cnpjsaux, cpfnomesaux = buscaPorNome(i, limite=limite)
                 if cnpjsaux:
                     cnpjs.update(cnpjsaux)
@@ -345,7 +350,8 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo=''):
     camadasIds = {}
     
     ids = set(['PJ_'+c for c in cnpjs])
-    ids.update(set(['PF_'+cpf+'-'+nome for cpf,nome in cpfnomes]))
+    ids.update(set(['PF_'+cpf+'-'+nome for cpf,nome in cpfnomes if cpf]))
+    ids.update(set(['PE_'+nome for cpf,nome in cpfnomes if not cpf]))
     ids.update(outrosIdentificadores)
     #con.execute('DROP TABLE IF EXISTS tmp_ids;') #xx
     # con.execute('''
@@ -388,11 +394,16 @@ def cnpj2id(cnpj):
     return 'PJ_' + cnpj
 
 def cpfnome2id(cpf,nome):
-    return 'PF_'+cpf+'-'+nome
+    if cpf!='':
+        return 'PF_'+cpf+'-'+nome
+    else:
+        return 'PE_'+nome
 
 def id2cpfnome(id):
     if id.startswith('PF_'):
         return id[3:14], id[15:]
+    if id.startswith('PE_'):
+        return '', id[3:]
     
 def id2cnpj(id):
     return id[3:]
@@ -500,7 +511,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         select distinct cnpj_cpf_socio as cpf, nome_socio as nome, "{grupo}" as grupo, {cam+1} as camada
         From tmp_socios ts
         left join tmp_cpfnomes tcn on tcn.cpf = ts.cnpj_cpf_socio and tcn.nome = ts.nome_socio
-        where  tcn.cpf is NULL AND tcn.nome is NULL and length(cnpj_cpf_socio)=11;
+        where  tcn.cpf is NULL AND tcn.nome is NULL and length(cnpj_cpf_socio)<>14;
                     
         Insert INTO tmp_ids (identificador, grupo, camada)
         select distinct "PJ_" || t.cnpj as identificador,  t.grupo, t.camada
@@ -512,7 +523,14 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         select distinct "PF_" || t.cpf || "-" || t.nome  as identificador, t.grupo, t.camada
         From tmp_cpfnomes t
         left join tmp_ids on tmp_ids.identificador = ("PF_" || t.cpf || "-" || t.nome)
-        where tmp_ids.identificador is NULL;
+        where t.cpf<>"" and tmp_ids.identificador is NULL;
+        
+        Insert INTO tmp_ids (identificador, grupo, camada)
+        select distinct "PE_" || t.nome  as identificador, t.grupo, t.camada
+        From tmp_cpfnomes t
+        left join tmp_ids on tmp_ids.identificador = ("PE_" || t.nome)
+        where t.cpf = "" and tmp_ids.identificador is NULL;
+        
         '''
         for sql in query.split(';'):
             con.execute(sql)
@@ -532,11 +550,14 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     queryLertmp = '''
         Select *
         from tmp_ids
-        where substr(identificador,1,3)='PF_'
+        where substr(identificador,1,3)='PF_' or substr(identificador,1,3)='PE_'
     '''
     for k in con.execute(queryLertmp):
         kid = k['identificador']
-        _, descricao = id2cpfnome(kid) #kid[15:]
+        if kid[:3]=='PF_':
+            _, descricao = id2cpfnome(kid) #kid[15:] 
+        else: #'PE_'
+            descricao = '(EMPRESA SÓCIA NO EXTERIOR)'
         no = {'id': kid, 'descricao':descricao, 
                 'camada': k['camada'], 
                 'situacao_ativa': True, 
@@ -552,7 +573,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     for k in con.execute(querySocios):
         ksocio = k['cnpj_cpf_socio']
         if len(ksocio)==14:
-            destino = cnpj2id(ksocio) #'PJ_'+ ksocio  
+            destino = cnpj2id(ksocio) #'PJ_'+ ksocio
         else:
             destino = cpfnome2id(ksocio,k['nome_socio']) # 'PF_'+ksocio+'-'+k['nome_socio']
         ligacao = {"origem":cnpj2id(k['cnpj']), #'PJ_'+k['cnpj'], 
@@ -632,7 +653,7 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
                 tm.municipio, tt.uf,  te.natureza_juridica as cod_nat_juridica
                 from tmp_cnpjsdados tp
                 inner join estabelecimento tt on tt.cnpj = tp.cnpj
-                left join empresas te on te.cnpj_basico = tt.cnpj_basico
+                left join empresas te on te.cnpj_basico = tt.cnpj_basico --trocar por inner join deixa a consulta lenta...
                 left join municipio tm on tm.cod_municipio=tt.municipio
             ''' #pode haver empresas fora da base de teste
     setCNPJsRecuperados = set()
@@ -640,7 +661,7 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
         listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
         logradouro = ', '.join(listalogradouro)
         no = {'id': cnpj2id(k['cnpj']), 'descricao': k['razao_social'], 
-              'camada': camadasIds[cnpj2id(k['cnpj'])], 'tipo':0, 'situacao_ativa': k['situacao']=='2',
+              'camada': camadasIds[cnpj2id(k['cnpj'])], 'tipo':0, 'situacao_ativa': int(k['situacao'])==2,
               'logradouro': f'''{k['tipo_logradouro']} {logradouro}''',
               'municipio': k['municipio'], 'uf': k['uf'], 'cod_nat_juridica':k['cod_nat_juridica']
               }
@@ -935,7 +956,10 @@ def ajustaValor(valor, tipoInteiro=False):
     return v
         
 def ajustaData(d): #aaaammdd
-    return d[-2:]+'/' + d[4:6] + '/' + d[:4]
+    if d:
+        return d[-2:]+'/' + d[4:6] + '/' + d[:4]
+    else:
+        return ''
 
 def dadosParaExportar(dados):    
     #print('dadosParaExportar-inicio: ' + time.ctime())
@@ -987,14 +1011,14 @@ def dadosParaExportar(dados):
     
     dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
     dfe['data_inicio_atividades'] = dfe['data_inicio_atividades'].apply(ajustaData)
-    dfe['situacao_cadastral'] = dfe['situacao_cadastral'].apply(lambda x: gdic.dicSituacaoCadastral.get(x,''))
+    dfe['situacao_cadastral'] = dfe['situacao_cadastral'].apply(lambda x: gdic.dicSituacaoCadastral.get(x,'') if x else '')
                                             
     dfe['data_situacao_cadastral'] =  dfe['data_situacao_cadastral'].apply(ajustaData)
-    dfe['motivo_situacao_cadastral'] = dfe['motivo_situacao_cadastral'].apply(lambda x: x + '-' + gdic.dicMotivoSituacao.get(x,''))
-    dfe['natureza_juridica'] = dfe['natureza_juridica'].apply(lambda x: x + '-' + gdic.dicNaturezaJuridica.get(x,''))
-    dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x+'-'+ gdic.dicCnae.get(int(x),''))
+    dfe['motivo_situacao_cadastral'] = dfe['motivo_situacao_cadastral'].apply(lambda x: x + '-' + gdic.dicMotivoSituacao.get(x,'') if x else '')
+    dfe['natureza_juridica'] = dfe['natureza_juridica'].apply(lambda x: x + '-' + gdic.dicNaturezaJuridica.get(x,'') if x else 11)
+    dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x +'-'+ gdic.dicCnae.get(int(x),'') if x else '')
     
-    dfe['porte_empresa'] = dfe['porte_empresa'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,''))
+    dfe['porte_empresa'] = dfe['porte_empresa'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,'') if x else '')
     
     dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False)
 
@@ -1040,7 +1064,7 @@ def ajustaLabelIcone(nosaux):
         elif prefixo=='EM':
             imagem = 'icone-grafo-email.png'
         elif prefixo=='PJ':
-            codnat = no['cod_nat_juridica']
+            codnat = no['cod_nat_juridica'] if no['cod_nat_juridica'] else '' # bug codnat=None, banco do brasil não está na tabela empresa
             if codnat.startswith('1'):
                 imagem = 'icone-grafo-empresa-publica.png'
             elif codnat =='2135': #empresario individual
@@ -1055,6 +1079,8 @@ def ajustaLabelIcone(nosaux):
                 imagem = 'icone-grafo-empresa-estrangeira.png'  
             else:
                 imagem = 'icone-grafo-empresa.png'
+        elif prefixo=='PE':
+            imagem = 'icone-grafo-empresa.png'
         else:
             imagem = 'icone-grafo-desconhecido.png' #caso genérico
         #no['imagem'] = '/rede/static/imagem/' + imagem
@@ -1078,10 +1104,16 @@ def provavelSexo(nome):
     return sexo
 
 def numeroDeEmpresasNaBase(): #nome tem que ser completo. Com Teste, pega item randomico
-    #remove acentos
+    #pega qtde de registros na tabela _referencia para acelerar o início da rotina
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
-    r = con.execute('select count(*) as contagem from empresas;')
-    return r.fetchone()[0]
+    try:
+        res = con.execute('select valor from _referencia where referencia="cnpj_qtde"').fetchone()[0]
+        r = int(res)
+    except:
+        r = 0
+    if not r:
+        r = con.execute('select count(*) as contagem from empresas;').fetchone()[0]
+    return r
 
 def imagensNaPastaF(bRetornaLista=False):
     dic = {}
