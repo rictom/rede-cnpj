@@ -650,7 +650,7 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
     query = '''
                 SELECT tt.cnpj, te.razao_social, tt.situacao_cadastral as situacao, tt.matriz_filial,
                 tt.tipo_logradouro, tt.logradouro, tt.numero, tt.complemento, tt.bairro,
-                tm.municipio, tt.uf,  te.natureza_juridica as cod_nat_juridica
+                ifnull(tm.municipio,tt.nome_cidade_exterior) as municipio, tt.uf as uf,  te.natureza_juridica as cod_nat_juridica
                 from tmp_cnpjsdados tp
                 inner join estabelecimento tt on tt.cnpj = tp.cnpj
                 left join empresas te on te.cnpj_basico = tt.cnpj_basico --trocar por inner join deixa a consulta lenta...
@@ -885,7 +885,7 @@ def jsonDados(cpfcnpjIn):
     #             INNER JOIN tmp_cnpjs1 tp on tp.cnpj=t.cnpj
     #         '''    
     query = '''
-        select t.*, te.*, tm.municipio as municipio_texto, tsimples.opcao_mei
+        select t.*, te.*, ifnull(tm.municipio,t.nome_cidade_exterior) as municipio_texto, tsimples.opcao_mei
         from estabelecimento t
         inner join tmp_cnpjs1 tp on tp.cnpj=t.cnpj
         left join empresas te on te.cnpj_basico=t.cnpj_basico

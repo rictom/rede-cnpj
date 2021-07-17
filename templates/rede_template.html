@@ -303,9 +303,11 @@ graphics.node(function(node) {
 	/*
 	ui.onclick = function(event) { 
 		event.preventDefault();
-		return;
+		pausarLayout(300); //xxx
+		return true;
 	}; */
-	ui.onmouseup = function(event) { 
+
+	ui.onmousedown = function(event) {  //estava onmouseup, assim dá pra congelar após click
 		if (event.which == 1) {
 			if (event.altKey) {
 				event.preventDefault();	
@@ -313,8 +315,10 @@ graphics.node(function(node) {
 				return;
 			}
 			if (!event.ctrlKey) {
-				event.preventDefault();	
+				event.preventDefault();				
 				selecionaNoid(node.id, event.shiftKey);
+				//pinarNoTemp(1000);
+				pausarLayout(500); //delay para facilitar duplo clique
 			}
 		} else if (event.which == 2) {
 			//botão central abre edição de nota
@@ -808,6 +812,17 @@ function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 	gparam.bRenderAtivado = bAtivar;
 }//.function menu_rendererAtivarParar
 
+function pausarLayout(milissegundos) {
+	gparam.renderer.pause();
+	setTimeout(
+		function() { 
+			if (gparam.bRenderAtivado) {
+				gparam.renderer.resume();
+			};
+		}, milissegundos
+	);
+}//.function pausarLayout
+
 function removeIdNo(noId) { 
 	//remover o nó da lista de nós
 	//remover ligações que partem do nó e que chegam ao nó
@@ -1159,7 +1174,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		}
 	}
 	if (kNosAInserir>100) { 
-		pinarNoSegundos(Math.sqrt(kNosAInserir)*200); //fixa temporariamente o nó selecionado
+		pinarNoTemp(Math.sqrt(kNosAInserir)*200); //fixa temporariamente o nó selecionado
 	}
 	for (let noaux of Object.values(no)) {
 		if (!graph.hasNode(noaux.id)) { 
@@ -1511,7 +1526,7 @@ function menu_pinarNo(bfixar){
 //	layout.pinNode(no, !layout.isNodePinned(no));
 }//.function menu_pinarNo
 
-function pinarNoSegundos(segundos) {
+function pinarNoTemp(milissegundos) {
 	var layout = gparam.layout;
 	if (!gparam.idnoSelecionado) {
 		return;
@@ -1531,9 +1546,9 @@ function pinarNoSegundos(segundos) {
 		function() { 
 			layout.pinNode(no, false); 
 			graphics.scale = gparam.fScale;
-		}, segundos
+		}, milissegundos
 	);
-}//.function pinarNoSegundos
+}//.function pinarNoTemp
 
 function menu_rotulosCompletos(bTipo) { 
 	if (bTipo===null) {
