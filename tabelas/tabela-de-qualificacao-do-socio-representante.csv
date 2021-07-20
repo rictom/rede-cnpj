@@ -1,13 +1,13 @@
 ﻿codigo;descricao;COLETADO ATUALMENTE
-1;Acionista;Não
-2;Acionista Controlador;Não
-3;Acionista Diretor;Não
-4;Acionista Presidente;Não
-5;Administrador ;Sim
-6;Administradora de consórcio de Empresas ou Grupo de Empresas;Não
-7;Comissário;Não
-8;Conselheiro de Administração;Sim
-9;Curador ;Sim
+01;Acionista;Não
+02;Acionista Controlador;Não
+03;Acionista Diretor;Não
+04;Acionista Presidente;Não
+05;Administrador ;Sim
+06;Administradora de consórcio de Empresas ou Grupo de Empresas;Não
+07;Comissário;Não
+08;Conselheiro de Administração;Sim
+09;Curador ;Sim
 10;Diretor ;Sim
 11;Interventor ;Sim
 12;Inventariante ;Sim

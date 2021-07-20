@@ -150,7 +150,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
         if contagemRegistros>=limite:
             break
         if nomeMatch:
-            if not fnmatch(r.nome_socio, nomeMatchInicial):
+            if not fnmatch(r.nome_socio.strip(), nomeMatchInicial):
                 continue
         if len(r.cnpj_cpf_socio)==14:
             cjs.add(r.cnpj_cpf_socio)
@@ -191,7 +191,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
         if contagemRegistros>=limite:
             break
         if nomeMatch:
-            if not fnmatch(r.razao_social, nomeMatchInicial):
+            if not fnmatch(r.razao_social.strip(), nomeMatchInicial): #strip porque tem espaço no começo da razão social
                 continue
         cjs.add(r.cnpj)    
         contagemRegistros +=1

@@ -100,9 +100,11 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 
 ## Histórico de versões
 
-versão 0.6.1 (julho/2021)
+versão 0.6.2 (julho/2021)
 - melhoria para dar clique duplo em ícones;
-- correção de erro de ligação para empresa no exterior sem cnpj.
+- correção de erro de ligação para empresa no exterior sem cnpj;
+- somente o ícone pode ser clicado;
+- mensagem de alerta para utilizar caractere curinga.
 
 versão 0.5.1 (junho/2021)
 - atualização da tabela sqlite cnpj.db com dados públicos de 18/06/2021.

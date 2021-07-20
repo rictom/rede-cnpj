@@ -272,7 +272,9 @@ graphics.node(function(node) {
 	node.data.nota = nota;
 	
 	if (gparam.btextoEmbaixoIcone) { //textp embaixo do ícone
-		var svgText = Viva.Graph.svg('text').attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
+		var svgText = Viva.Graph.svg('text')
+			.attr('pointer-events', 'none') //o texto não é mais clicável
+			.attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
 			.attr('x', gparam.nodeSize/2).attr('text-anchor','middle')  
 			.attr('font-size',gparam.tamanhoFonte+'px'); 
 		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
@@ -280,7 +282,9 @@ graphics.node(function(node) {
 		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
 			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
 	} else { //texto à direita do ícone
-		var svgText = Viva.Graph.svg('text').attr('y',  gparam.nodeSize*0.5+gparam.tamanhoFonte*0.5) 
+		var svgText = Viva.Graph.svg('text')
+			.attr('pointer-events', 'none')
+			.attr('y',  gparam.nodeSize*0.5+gparam.tamanhoFonte*0.5)
 			.attr('x', gparam.nodeSize).attr('text-anchor','left')  
 			.attr('font-size',gparam.tamanhoFonte+'px')
 			.attr('style','font-family:Comic Sans MS;') ; 	
@@ -289,7 +293,6 @@ graphics.node(function(node) {
 		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.5)
 			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
 	}
-
 
 	svgText.append(textspan);
 	svgText.append(textspan2);			
@@ -303,7 +306,7 @@ graphics.node(function(node) {
 	/*
 	ui.onclick = function(event) { 
 		event.preventDefault();
-		pausarLayout(300); //xxx
+		pausarLayout(300); 
 		return true;
 	}; */
 
@@ -1305,7 +1308,11 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 				if (data.no.length) {
 					inserirJson(data, idin + ' em camada ' + camada +'. ', bNaoConfirma);
 				} else {
-					alertify.error('Não encontrou ' + idin + ' na base.');
+					if (isNumeric(idin.replace(/[\.\-\//]/g, '').trim()) || idin.includes('*')) { 
+						alertify.error('Não encontrou ' + idin + ' na base.');
+					} else {
+						alertify.error('Não encontrou ' + idin + ' na base. Utilize o caractere curinga, por exemplo, ' + idin + '*');
+					}
 				}
 			  });
 			}
@@ -1535,11 +1542,14 @@ function pinarNoTemp(milissegundos) {
 	if (layout.isNodePinned(no)) {
 		return;
 	}
-	layout.pinNode(no, true); //xxx
+	layout.pinNode(no, true); 
 	//gparam.scale = graphics.scale;
 	//desabilita scale temporariamente (se tiver muitos nós, mexer na escala pode travar o browser
+	gparam.mensagem_alerta_zoom_desativado = 'O zoom foi temporariamente desativado. Aguarde alguns segundos.';
 	graphics.scale = function(a,b) { 
-		alertify.error('O zoom foi temporariamente desativado. Aguarde alguns segundos.');
+		//alertify.error('O zoom foi temporariamente desativado. Aguarde alguns segundos.');
+		if (gparam.mensagem_alerta_zoom_desativado) { alertify.error(gparam.mensagem_alerta_zoom_desativado); };
+		gparam.mensagem_alerta_zoom_desativado = ''; //exibe mensagem só uma vez
 		return gparam.renderer.getTransform().scale; 
 	}; 
 	setTimeout(
@@ -1547,7 +1557,7 @@ function pinarNoTemp(milissegundos) {
 			layout.pinNode(no, false); 
 			graphics.scale = gparam.fScale;
 		}, milissegundos
-	);
+	); 
 }//.function pinarNoTemp
 
 function menu_rotulosCompletos(bTipo) { 
