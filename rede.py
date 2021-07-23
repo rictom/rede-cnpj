@@ -310,6 +310,5 @@ def removeAcentos(data):
 
 if __name__ == '__main__':
     import webbrowser
-    webbrowser.open('http://127.0.0.1:5000/rede', new=0, autoraise=True)
-    #app.run(debug=True, use_reloader=True)    
+    webbrowser.open('http://127.0.0.1:5000/rede', new=0, autoraise=True) 
     app.run(host='0.0.0.0',debug=True, use_reloader=False)

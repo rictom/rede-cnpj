@@ -933,7 +933,7 @@ function dadosEmHtmlPJ(d, noData) {
 	//for (var i of Object.entries(gparam.json)) {
 	//	texto += '<b>' + i[0] + ':<b> ' + i[1] + '<br> '; }
 	var ht = '';
-	ht += "<b>CNPJ:</b> " + d['cnpj'] + "<br>";
+	ht += "<b>CNPJ:</b> " + d['cnpj'] + " - " + d['matriz_filial'] + "<br>";
 	ht += "<b>Razão Social:</b> "+d['razao_social'] +  "<br>";
 	ht += "<b>Nome Fantasia:</b> "+d['nome_fantasia'] + "<br>";
 	ht += "<b>Data início atividades:</b> "+d['data_inicio_atividades']+"<br>";
