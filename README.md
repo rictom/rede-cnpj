@@ -38,6 +38,7 @@ base_receita = CNPJ.db<br>
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
 A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. 
 Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive.<br>
+Em https://github.com/rictom/cnpj-sqlite coloquei um script em python para converter os arquivos zipados do site da Receita para sqlite, para ser utilizado neste projeto.<br>
 
 ## Opções:
 
