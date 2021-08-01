@@ -1272,6 +1272,16 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	if (jsonIn.mensagem.lateral) {
 		alertify.success(jsonIn.mensagem.lateral);
 	}
+	if (kn  && !gparam.bRenderAtivado) { //ativa leiaute por 1 segundo para exibir novos itens
+		gparam.renderer.resume();
+		setTimeout(
+			function() { 
+				if (!gparam.bRenderAtivado) {
+					gparam.renderer.pause();
+				};
+			}, 500
+		);	
+	}
 }//.function inserirJson
 
 function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
@@ -1400,11 +1410,11 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	}
 	var textoPrompt = 'Digite CNPJ, radical do CNPJ, Razão Social Completa, Nome Completo do Sócio ou vários CNPJs separados por ponto e virgula (;). ';
 	if (gparam.inicio.bBaseFullTextSearch) {
-		textoPrompt += ' Para realizar busca por parte do nome, utilize * (coringa de palavra), ? (coringa de 1 caractere) ou aspas (busca na mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, F?LANO DE TAL , "FULANO DE"*, EMPRESA* BRASILEIRA.';
+		textoPrompt += ' Para realizar busca por parte do nome, utilize * (curinga de palavra), ? ( 1 caractere) ou aspas (mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, F?LANO DE TAL , "FULANO DE"*, EMPRESA* BRASILEIRA.';
 	} else {
 		textoPrompt += ' Não foi implementada busca parcial.';
 	}
-	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @n, por exemplo, Fulano de Tal@20 para vinte registros. Para exibir Matriz e N filiais, digite apenas o Radical do CNPJ seguido de @N. Para exibir todas as filiais, coloque o Radical e @. Digite TESTE para visualizar um CNPJ aleatório.';
+	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @n, por exemplo, FULANO@20,  para vinte registros. Para exibir Matriz e N filiais, digite apenas o Radical do CNPJ seguido de @N. Digite TESTE para visualizar um CNPJ aleatório.';
 	alertify.prompt( 'Inserir item no gráfico', textoPrompt , itensDefault
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;

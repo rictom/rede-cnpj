@@ -92,14 +92,18 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
         precisa fazer consulta em camDbSqlite quando não for usar match
     '''
     #remove acentos
+    #se limite==-1, não havia @N no nome
     nomeIn = nomeIn.strip().upper()
     nomeMatch = ''
     try:
         limite = int(limite)
     except:
         limite = 0
-    # print('limite', limite)
+
+    if (not( ('*' in nomeIn) or ('?' in nomeIn) or ('"' in nomeIn))) and limite>0: # se tinha arroba mas sem caractere curinga, acrescenta *
+        nomeIn = '*' + nomeIn + '*'
     limite =  min(limite,100) if limite else 10
+    #print('limite', limite, nomeIn)
     if ('*' in nomeIn) or ('?' in nomeIn) or ('"' in nomeIn):
         nomeMatchInicial = nomeIn.strip()
         nomeMatch = nomeMatchInicial
@@ -212,12 +216,13 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
 #.def buscaPorNome(
 
 def busca_cnpj(cnpj_basico, limiteIn):
+    kLimiteFiliais = 200
     con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
     try:
         limite = int(limiteIn)
     except ValueError:
         limite = 0
-
+    limite = min(limite, 100)
     if limite>0: #limita a quantidade de filias
         query = f'''
                 SELECT te.cnpj
@@ -229,12 +234,14 @@ def busca_cnpj(cnpj_basico, limiteIn):
             ''' 
 
     elif limite<0: #mostra todos as filiais e matriz
+        #limitando a kLimiteFiliais registros, quando tenta exibir todos os do BB pode travar o script
         query = f'''
                 SELECT te.cnpj
                 FROM empresas t
                 left join estabelecimento te on te.cnpj_basico=t.cnpj_basico
                 where t.cnpj_basico=\'{cnpj_basico}\'
                 order by te.matriz_filial, te.cnpj_ordem
+                limit {kLimiteFiliais} 
             ''' 
     else: #sem limite definido, só matriz
         query = f'''
@@ -1113,7 +1120,7 @@ def numeroDeEmpresasNaBase(): #nome tem que ser completo. Com Teste, pega item r
     except:
         r = 0
     if not r:
-        r = con.execute('select count(*) as contagem from empresas;').fetchone()[0]
+        r = con.execute('select count(*) as contagem from estabelecimento;').fetchone()[0]
     return r
 
 def imagensNaPastaF(bRetornaLista=False):
