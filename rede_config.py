@@ -8,7 +8,7 @@ config = configparser.ConfigParser()
 
 confPadrao = 'rede.ini'
 if (os.path.exists(confPadrao)):
-    config.read(confPadrao)
+    config.read(confPadrao) #, encoding='utf8')
 else:
     print('O arquivo de configuracao ' + confPadrao + ' não foi localizado. Parando...')
     sys.exit(1)
@@ -25,7 +25,9 @@ def runParser():
     parser.add_argument('-j', '--json', action='store', dest='idArquivoServidor', default='', type=str, help='nome json no servidor')
     parser.add_argument('-a', '--lista', action='store', dest='arquivoEntrada', default='',help="inserir itens de arquivo em gráfico", metavar="FILE")
     parser.add_argument('-e', '--encoding', action='store', dest='encodingArquivo', default='utf8',help="codificação do arquivo", metavar="FILE")
-    #parser.add_argument('-p', '--pasta', action='store', dest='pastaArquivos', default='arquivos',type=dir_path, help='pasta de arquivos do usuário do projeto')
+    #parser.add_argument('-p', '--pasta', action='store', dest='pasta_arquivos', default='arquivos',type=dir_path, help='pasta de arquivos do usuário do projeto')
+    parser.add_argument('-p', '--pasta', action='store', dest='pasta_arquivos', default=config['BASE'].get('pasta_arquivos', 'arquivos'), type=str, help='pasta de arquivos do usuário do projeto')
+    parser.add_argument('-f', '--porta_flask', action='store', dest='porta_flask', type=int, default=config['BASE'].getint('porta_flask',5000), help='porta da aplicação')
 
     parser.add_argument('-t', '--texto-embaixo', action='store_true', dest='btextoEmbaixoIcone', default=True,  help='texto em baixo do ícone' )
     parser.add_argument('-T', '--texto-ao-lado', action='store_false', dest='btextoEmbaixoIcone',  help='texto ao lado do ícone' )
@@ -64,8 +66,8 @@ if par.arquivoEntrada:
 #         raise argparse.ArgumentTypeError(f"{path} não é um caminho válido")
         
 referenciaBD = config['BASE'].get('referencia_bd','')
-if referenciaBD:
-    referenciaBD = 'Referência - ' + referenciaBD + '.'
+# if referenciaBD:
+#     referenciaBD = 'Referência - ' + referenciaBD + '.'
     
 #dic = vars(pr) #converte para dicionario 
 # cpfcnpjInicial = par.cpfcnpjInicial

@@ -5,12 +5,19 @@ Created on set/2020
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
 from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
+
 from werkzeug.utils import secure_filename
-import os, sys, json, secrets
-import config, rede_relacionamentos
+import os, sys, json, secrets, copy
+import rede_config as config, rede_relacionamentos
 import pandas as pd
 
-#from requests.utils import unquote
+from requests.utils import unquote
+
+try: #define alguma atividade quando é chamado por /rede/envia_json
+    import rede_acao
+except:
+    pass
+
 app = Flask("rede")
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
@@ -35,7 +42,7 @@ except:
 @app.route("/rede/")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
-def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
+def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     mensagemInicial = ''
     inserirDefault = ''
     listaEntrada = ''
@@ -51,7 +58,6 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     idArquivoServidor = idArquivoServidor if idArquivoServidor else config.par.idArquivoServidor
     if idArquivoServidor:
         idArquivoServidor = secure_filename(idArquivoServidor)
-    bBaseFullTextSearch = 1 if config.config['BASE'].get('base_receita_fulltext','') else 0
     listaImagens = rede_relacionamentos.imagensNaPastaF(True)
     if config.par.arquivoEntrada:
         #if os.path.exists(config.par.listaEntrada): checado em config
@@ -105,38 +111,23 @@ def html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'lista':listaEntrada,
                      'json':listaJson,
                      'listaImagens':listaImagens,
-                      'bBaseFullTextSearch': bBaseFullTextSearch,
-                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
-                      'referenciaBD':config.referenciaBD,
-                      'referenciaBDCurto':config.referenciaBD.split(',')[0]}
+                     'bBaseReceita': 1 if config.config['BASE'].get('base_receita','') else 0,
+                     'bBaseFullTextSearch': 1 if config.config['BASE'].get('base_receita_fulltext','') else 0,
+                     'bBaseLocal': 1 if config.config['BASE'].get('base_local','') else 0,
+                     'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
+                     'referenciaBD':config.referenciaBD,
+                     'referenciaBDCurto':config.referenciaBD.split(',')[0]}
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
     config.par.cpfcnpjInicial=''
     return render_template('rede_template.html', parametros=paramsInicial)
-    # return render_template('rede_template.html', cpfcnpjInicial=cpfcnpj, camadaInicial=camada, 
-    #                        mensagemInicial=mensagemInicial, inserirDefault=inserirDefault, idArquivoServidor=idArquivoServidor,
-    #                        bBaseFullTextSearch = bBaseFullTextSearch, listaImagens=listaImagens)
-#.def html_pagina
-    
-# @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
-# def serve_rede_json_cnpj(cpfcnpj, camada=1):
-#     with gLock:
-#         camada = min(gp['camadaMaxima'], int(camada))
-#         listaIds = request.get_json()
-#         if listaIds:
-#             cpfcnpj=''
-#         if not cpfcnpj:
-#             return jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj,  listaIds=listaIds, camada=camada, grupo='', bjson=True)) 
-#         elif cpfcnpj.startswith('PJ_') or cpfcnpj.startswith('PF_'):
-#             return jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada, grupo='', bjson=True )) 
-#         elif cpfcnpj.startswith('EN_') or cpfcnpj.startswith('EM_') or cpfcnpj.startswith('TE_'):
-#             return jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj,   listaIds=listaIds, camada=camada, tipoLink='endereco'))
-#         return  jsonify(rede_relacionamentos.camadasRede(cpfcnpj, camada=camada))
-
+#.def serve_html_pagina
 
 @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
 def serve_rede_json_cnpj(cpfcnpj, camada=1):
     camada = min(gp['camadaMaxima'], int(camada))
+    #cpfcnpj = cpfcnpj.upper().strip() #upper dá inconsistência com email, que está minusculo na base
+    cpfcnpj = cpfcnpj.strip()
     listaIds = request.get_json()
     r = None
     if gUwsgiLock:
@@ -146,13 +137,16 @@ def serve_rede_json_cnpj(cpfcnpj, camada=1):
             if listaIds:
                 cpfcnpj=''
             if not cpfcnpj:
-                r = jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj,  listaIds=listaIds, camada=camada, grupo='', bjson=True)) 
+                noLig = rede_relacionamentos.camadasRede(cpfcnpjIn=None, listaIds=listaIds, camada=camada, grupo='', bjson=True)
             elif cpfcnpj.startswith('PJ_') or cpfcnpj.startswith('PF_'):
-                r = jsonify(rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada, grupo='', bjson=True )) 
+                noLig = rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada, grupo='', bjson=True )
             elif cpfcnpj.startswith('EN_') or cpfcnpj.startswith('EM_') or cpfcnpj.startswith('TE_'):
-                r = jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj,   listaIds=listaIds, camada=camada, tipoLink='endereco'))
+                noLig = rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj, listaIds=listaIds, camada=camada, tipoLink='endereco')
+            elif cpfcnpj.startswith('ID_'): #ver se o upper é necessário 
+                noLig = rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj.upper(), listaIds=listaIds, camada=camada, tipoLink='base_local')
             else:
-                r = jsonify(rede_relacionamentos.camadasRede(cpfcnpj, camada=camada))
+                noLig = rede_relacionamentos.camadasRede(cpfcnpjIn=cpfcnpj, camada=camada)
+            r = jsonify(noLig)
     finally:
         if gUwsgiLock:
             uwsgi.unlock()
@@ -179,7 +173,10 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
 
 @app.route('/rede/dadosjson/<cpfcnpj>')
 def serve_dados_detalhes(cpfcnpj):
-    return jsonify(rede_relacionamentos.jsonDados(cpfcnpj))
+    r = rede_relacionamentos.jsonDados(cpfcnpj)
+    if r:
+        return jsonify(r)
+    return jsonify(rede_relacionamentos.jsonBaseLocal(cpfcnpj))
 
 #https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 
@@ -188,7 +185,9 @@ static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'sta
 def serve_dir_directory_index(arquivopath):
     return send_from_directory(static_file_dir, arquivopath)
 
-local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'arquivos')
+#local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'arquivos')
+local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos)
+
 
 @app.route('/rede/arquivos_json/<arquivopath>') #, methods=['GET'])
 def serve_arquivos_json(arquivopath):
@@ -204,6 +203,7 @@ def serve_arquivos_json(arquivopath):
 
 @app.route('/rede/arquivos_json_upload/<nomeArquivo>', methods=['POST'])
 def serve_arquivos_json_upload(nomeArquivo):
+    nomeArquivo = unquote(nomeArquivo)
     filename = secure_filename(nomeArquivo)
     if len(request.get_json())>100000:
         return jsonify({'mensagem':{'lateral':'', 'popup':'O arquivo é muito grande e não foi salvo', 'confirmar':''}})
@@ -218,6 +218,26 @@ def serve_arquivos_json_upload(nomeArquivo):
         json.dump(nosLigacoes, outfile)
     return jsonify({'nomeArquivoServidor':filename})
 
+@app.route('/rede/json_para_base/<comentario>', methods=['POST'])
+def serve_arquivos_json_upload_para_base(comentario=''):
+    comentario = unquote(comentario)
+    if not usuarioLocal():
+        return jsonify({'mensagem':{'lateral':'', 'popup':'Opção apenas disponível para usuário local', 'confirmar':''}})
+    if not config.config['BASE'].get('base_local',''):
+        return jsonify({'mensagem':{'lateral':'', 'popup':'Base sqlite local não foi configurada', 'confirmar':''}})
+        
+    nosLigacoes = request.get_json()
+    rede_relacionamentos.carregaJSONemBaseLocal(nosLigacoes, comentario)
+    return jsonify({'retorno':'ok'})
+
+@app.route('/rede/envia_json/<acao>', methods=['POST'])
+def serve_envia_json_acao(acao=''):
+    if not usuarioLocal():
+        return jsonify({'mensagem':{'lateral':'', 'popup':'Opção apenas disponível para usuário local', 'confirmar':''}})
+    nosLigacoes = request.get_json()
+    #print(nosLigacoes)
+    r = rede_acao.rede_acao(acao, nosLigacoes)
+    return jsonify({'retorno':'ok'})
 # @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
 # def serve_arquivos_download(arquivopath):
 #     if not config.par.bArquivosDownload:
@@ -310,5 +330,5 @@ def removeAcentos(data):
 
 if __name__ == '__main__':
     import webbrowser
-    webbrowser.open('http://127.0.0.1:5000/rede', new=0, autoraise=True) 
-    app.run(host='0.0.0.0',debug=True, use_reloader=False)
+    webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 
+    app.run(host='0.0.0.0',debug=True, use_reloader=False, port=config.par.porta_flask)

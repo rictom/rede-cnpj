@@ -8,7 +8,7 @@ json a partir da tabela sqlite
 Não fazer Create table ou criar índice para uma tabela a ser criada ou modificada pelo pandas 
 """
 import os, sys, glob
-import time, copy, re, string, unicodedata, collections
+import time, copy, re, string, unicodedata, collections, json
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
 '''
@@ -17,15 +17,20 @@ engine = create_engine('sqlite://',
                     connect_args={'check_same_thread':False},
                     poolclass=StaticPool)
 '''
-import config
+import rede_config as config
 
 try:
-    camDbSqlite = config.config['BASE']['base_receita']
+    caminhoDBReceita = config.config['BASE']['base_receita']
 except:
     sys.exit('o arquivo sqlite não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto.')
-camDBSqliteFTS = config.config['BASE'].get('base_receita_fulltext','')
-caminhoDBLinks = config.config['BASE'].get('base_links', '')
+if not caminhoDBReceita: #se não houver db da receita, carrega um template para evitar erros nas consultas
+    caminhoDBReceita = 'base_cnpj_vazia.db'
+caminhoDBReceitaFTS = config.config['BASE'].get('base_receita_fulltext','')
 caminhoDBEnderecoNormalizado = config.config['BASE'].get('base_endereco_normalizado', '')
+caminhoDBLinks = config.config['BASE'].get('base_links', '')
+
+caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '')
+
 #logAtivo = True if config['rede']['logAtivo']=='1' else False #registra cnpjs consultados
 logAtivo = config.config['ETC'].getboolean('logativo',False) #registra cnpjs consultados
 #    ligacaoSocioFilial = True if config['rede']['ligacaoSocioFilial']=='1' else False #registra cnpjs consultados
@@ -33,9 +38,11 @@ ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',Fals
 
 gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'pool_size':1} #poll_size=1 força usar só uma conexão??
 
-class DicionariosCodigos():
+class DicionariosCodigosCNPJ():
     def __init__(self):
-        con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+        if not caminhoDBReceita:
+            return
+        con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
         #dfaux = pd.read_csv(r"tabelas/tabela-de-qualificacao-do-socio-representante.csv", sep=';')
         dfaux = pd.read_sql_table('qualificacao_socio', con, index_col=None )
         self.dicQualificacao_socio = pd.Series(dfaux.descricao.values,index=dfaux.codigo).to_dict()
@@ -54,7 +61,7 @@ class DicionariosCodigos():
         self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
 
 
-gdic = DicionariosCodigos()
+gdic = DicionariosCodigosCNPJ()
 
 dfaux=None
 
@@ -77,7 +84,7 @@ def timeit(method):
     return timed
 
 def apagaTabelasTemporarias():
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     #con.execute('DROP TABLE if exists tmp_cnpjs')
     con.execute('DROP TABLE if exists tmp_cpfpjnomes')
     con.execute('DROP TABLE if exists tmp_ids')
@@ -88,8 +95,8 @@ def apagaTabelasTemporarias():
 apagaTabelasTemporarias() #apaga quando abrir o módulo
 
 def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega item randomico
-    '''camDBSqliteFTS base com indice full text search, fica rápido com match mas com = fila lento, por isso
-        precisa fazer consulta em camDbSqlite quando não for usar match
+    '''caminhoDBReceitaFTS base com indice full text search, fica rápido com match mas com = fila lento, por isso
+        precisa fazer consulta em caminhoDBReceita quando não for usar match
     '''
     #remove acentos
     #se limite==-1, não havia @N no nome
@@ -112,11 +119,11 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
             nomeMatch = nomeMatch[1:].strip()
         if '?' in nomeMatch: #? não é aceito em match do sqlite, mas pode ser usado no fnmatch
             nomeMatch = nomeMatch.replace('?', '*')
-        if camDBSqliteFTS:
-            confts = sqlalchemy.create_engine(f"sqlite:///{camDBSqliteFTS}", execution_options=gEngineExecutionOptions)
+        if caminhoDBReceitaFTS:
+            confts = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceitaFTS}", execution_options=gEngineExecutionOptions)
         nomeMatch = ''.join(x for x in unicodedata.normalize('NFKD', nomeMatch) if x in string.printable).upper()
         #nomeMatch = re.sub(r'[^a-zA-Z0-9_ *""]', '', nomeMatch)
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
 
 
     nome = ''.join(x for x in unicodedata.normalize('NFKD', nomeIn) if x in string.printable).upper()
@@ -125,7 +132,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
 
     cursor = []
     if nomeMatch:
-         if not camDBSqliteFTS: #como não há tabela, não faz consulta por match
+         if not caminhoDBReceitaFTS: #como não há tabela, não faz consulta por match
              #con = None
              return set(), set()
          queryfts = f'''
@@ -217,7 +224,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
 
 def busca_cnpj(cnpj_basico, limiteIn):
     kLimiteFiliais = 200
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     try:
         limite = int(limiteIn)
     except ValueError:
@@ -257,7 +264,7 @@ def busca_cnpj(cnpj_basico, limiteIn):
 def busca_cpf(cpfin):
     '''como a base não tem cpfs de sócios completos, faz busca só do miolo'''
     cpf = '***' + cpfin[3:9] + '**'
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     query = f'''
                 SELECT distinct cnpj_cpf_socio, nome_socio
                 FROM socios
@@ -415,8 +422,8 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     #print('INICIANDO-------------------------')
     #print(f'camadasRede ({camada})-{cpfcnpjIn}-inicio: ' + time.ctime() + ' ', end='')
     mensagem = {'lateral':'', 'popup':'', 'confirmar':''}
-    #con=sqlite3.connect(camDbSqlite)
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    #con=sqlite3.connect(caminhoDBReceita)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     '''
     https://stackoverflow.com/questions/17497614/sqlalchemy-core-connection-context-manager
     from sqlalchemy import create_engine
@@ -600,7 +607,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
                    "label":k['cod_qualificacao']} #gdic.dicQualificacao_socio.get(int(k['cod_qualificacao']),'').strip()}
         ligacoes.append(copy.deepcopy(ligacao))
     if logAtivo or not bjson:
-        conlog = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+        conlog = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
         conlog.execute('create table if not exists log_cnpjs (cnpj text, grupo text, camada text)')
         conlog.execute('''insert into log_cnpjs 
             select * from tmp_cnpjs; ''')
@@ -617,7 +624,8 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         #camadasIds[kcnpj] = k['camada']
         camadasIds[cnpj2id(kcnpj)] = k['camada']
 
-    nos = dadosDosNosCNPJs(con=con, cnpjs=cnpjs, nosaux=nosaux, dicRazaoSocial=dicRazaoSocial, camadasIds=camadasIds)
+    #nos = dadosDosNosCNPJs(con=con, cnpjs=cnpjs, nosaux=nosaux, dicRazaoSocial=dicRazaoSocial, camadasIds=camadasIds)
+    dadosDosNosCNPJs(con=con, cnpjs=cnpjs, nosaux=nosaux, dicRazaoSocial=dicRazaoSocial, camadasIds=camadasIds)
     #camada=0, pega só os dados
     if camada>0: 
         #esta chamada de endereco estava deixando a rotina lenta. Ficou OK removendo a criação de tabela prévia.
@@ -631,14 +639,22 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
                     ids.add(item)
             except:
                 continue
-        jsonEnderecos = camadaLink(cpfcnpjIn='',conCNPJ=con, camada=1,  grupo=grupo,  listaIds=ids, tipoLink='endereco')
-        
-        for item in jsonEnderecos['no']:
-            if item['id'] not in camadasIds:
-                nos.append(item)
-        ligacoes.extend(jsonEnderecos['ligacao'])
+        for tipo in ['endereco','base_local']: #endereço ou base_local só pega 1 camada.
+            if tipo=='endereco':
+                if not caminhoDBEnderecoNormalizado:
+                    continue
+            elif tipo=='base_local':
+                 if not caminhoDBBaseLocal:
+                    continue               
+            jsonEnderecosBanco = camadaLink(cpfcnpjIn='', conCNPJ=con, camada=1 if tipo=='endereco' else camada,  grupo=grupo,  listaIds=ids, tipoLink=tipo)
+            for item in jsonEnderecosBanco['no']:
+                if item['id'] not in camadasIds:
+                    nosaux.append(item)
+            ligacoes.extend(jsonEnderecosBanco['ligacao'])
     #print(' jsonenderecos-fim: ' + ' '.join(str(time.ctime()).split()[3:]))
-    textoJson={'no': nos, 'ligacao':ligacoes, 'mensagem':mensagem} 
+    dadosDosNosBaseLocal(nosaux, camadasIds)
+    nosaux=ajustaLabelIcone(nosaux)
+    textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem} 
     con = None
     #print(listaIds)
     #print(textoJson)
@@ -647,6 +663,20 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     return textoJson
 #.def camadasRede
 
+def dadosDosNosBaseLocal(nosInOut, camadasIds):
+    if not caminhoDBBaseLocal:
+        return 
+    dicDados = jsonBaseLocal(listaIds=list(camadasIds)) 
+    nosaux = []
+    for n in nosInOut: 
+        if n['id'] in dicDados:
+            daux = copy.deepcopy(dicDados[n['id']])
+            for k,v in daux.items():
+                n[k] = v
+        nosaux.append(copy.deepcopy(n))
+    nosInOut = nosaux
+#.def dadosDosNosBaseLocal
+            
 def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable['grupo'] = ''
@@ -686,15 +716,17 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
               }
         nosaux.append(copy.deepcopy(no))
     #ajusta nos, colocando label
-    nosaux=ajustaLabelIcone(nosaux)
+    #nosaux=ajustaLabelIcone(nosaux)
     nos = nosaux #nosaux[::-1] #inverte, assim os nos de camada menor serao inseridas depois, ficando na frente
-    nos.sort(key=lambda n: n['camada'], reverse=True) #inverte ordem, porque os últimos icones vão aparecer na frente. Talvez na prática não seja útil.
+    nosaux = nos.sort(key=lambda n: n['camada'], reverse=True) #inverte ordem, porque os últimos icones vão aparecer na frente. Talvez na prática não seja útil.   
     con.execute('DROP TABLE if exists tmp_cnpjsdados ') 
-    return nos
+    #return nos
 #.def dadosDosNosCNPJs
 
 @timeit
-def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo=0, valorMaximo=0, grupo='', bjson=True, listaIds=None, tipoLink='link'):    
+def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, 
+               valorMinimo=0, valorMaximo=0, grupo='', bjson=True, 
+               listaIds=None, tipoLink='link'):    
     #se cpfcnpjIn=='', usa dados das tabelas tmp_cnpjs e tmp_cpfnomes, não haverá camada=0
     #se fromTmpTable=False, espera que cpfcnpjIn='cpf-nome;cnpj;nome...'
     #se fromTmpTable=True, ignora cpfcnpjIn e pega dados a partir de tmp_cnpjs e tmp_cpfnomes
@@ -726,23 +758,19 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo
                     ON  tl.identificador = t.id2
                      ) ORDER by valor DESC
                     '''
-    elif tipoLink=='endereco':
+    elif tipoLink=='endereco' or tipoLink=='base_local':
+        if tipoLink=='endereco':
+            con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBEnderecoNormalizado}", execution_options=gEngineExecutionOptions)        
+            tabela = 'link_ete'
+        else:
+            con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}", execution_options=gEngineExecutionOptions)
+            tabela = 'links'       
 
-        con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBEnderecoNormalizado}", execution_options=gEngineExecutionOptions)        
-        #tabela = 'link_endereco'
-        tabela = 'link_ete'
         valorMinimo=0
         valorMaximo=0
         numeroItens=0
         bValorInteiro = True
-        # query = f''' SELECT t.id1, t.id2, t.descricao, t.valor
-        #              FROM {tabela} t
-        #              INNER JOIN tmp_ids tl ON  tl.identificador = t.id1
-        #              UNION
-        #              SELECT t.id1, t.id2, t.descricao, t.valor
-        #              FROM {tabela} t
-        #              INNER JOIN tmp_ids tl ON  tl.identificador = t.id2
-        #              '''
+
         query = f''' SELECT distinct t.id1, t.id2, t.descricao, t.valor
                      FROM tmp_ids tl
                      INNER JOIN {tabela} t ON  tl.identificador = t.id1
@@ -753,6 +781,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo
                      '''
     else:
         print('tipoLink indefinido')
+        return {'no': [], 'ligacao':[], 'mensagem':'erro, tipoLink indefinido'} 
         
     grupo = str(grupo)
     nosaux = []
@@ -800,12 +829,21 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo
                 camadasIds[k['id2']] = cam+1
             #neste caso, não deve haver ligação repetida, mas é necessário colocar uma verificação se for ligações generalizadas
             # if orig_destAnt == ('PJ_'+k['cnpj'], destino):
-            #     print('XXXXXXXXXXXXXX repetiu ligacao', orig_destAnt)
+            #     print('repetiu ligacao', orig_destAnt)
             # orig_destAnt = ('PJ_'+k['cnpj'], destino)
             if (k['id1'], k['id2']) not in setLigacoes: #cam+1==camada and bjson: #só pega dados na última camada
+                # ligacao = {"origem":k['id1'], "destino":k['id2'], 
+                #            "cor": "silver" if  tipoLink=='endereco' else "gold", #"cor":"gray", 
+                #            "camada":cam+1, "tipoDescricao":'link',"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
                 ligacao = {"origem":k['id1'], "destino":k['id2'], 
                            "cor": "silver" if  tipoLink=='endereco' else "gold", #"cor":"gray", 
-                           "camada":cam+1, "tipoDescricao":'link',"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
+                           "camada":cam+1, "tipoDescricao":'link'} #"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
+
+
+                if tipoLink=='base_local':
+                    ligacao['label'] = k['descricao'] 
+                else:
+                    ligacao['label'] = k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)
                 ligacoes.append(copy.deepcopy(ligacao))
                 setLigacoes.add((k['id1'], k['id2']))
             else:
@@ -823,47 +861,56 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo
         #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
         limite = limite * numeroItens * 2
 
-    # if logAtivo or not bjson:
-    #     conlog = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options={"sqlite_raw_colnames": True})
-    #     conlog.execute('create table if not exists log_cnpjs (cnpj text, grupo text, camada text)')
-    #     conlog.execute('''insert into log_cnpjs 
-    #         select * from tmp_cnpjs; ''')
-    #     conlog.execute('create table if not exists log_cpfnomes (cpf text, nome text, grupo text, camada text);')
-    #     conlog.execute('''insert into log_cpfnomes 
-    #         select cpf, nome, grupo, cast(camada as int) from tmp_cpfnomes; ''')
-    #     conlog = None
-    # if not bjson:
-    #     print('camadasRede-fim: ' + time.ctime())
-    #     return len(camadasIds)
-    #cnpjs = set([c[3:] for c in setOrigDest if c.startswith('PJ_')])
-    #print('nosids', nosids)
     for c in camadasIds:
         if c.startswith('PJ_'):
             cnpjs.add(c[3:])
-        else:
-            if c.startswith('PF_'):
-                nome = c[15:] #supõe 'PF_12345678901-nome'
-                no = {'id': c, 'descricao':nome, 
-                       'camada': camadasIds[c], 
-                       'situacao_ativa': True, 
-                       'logradouro':'',
-                       'municipio': '', 'uf': ''} 
-            else: #elif c.startswith('EN_'):
-                no = {'id': c, 'descricao':'', 
-                       'camada': camadasIds[c], 
-                       'situacao_ativa': True, 
-                       'logradouro':'',
-                       'municipio': '', 'uf': ''} 
-            nosaux.append(copy.deepcopy(no))
-    # for c in cnpjs:
-    #     camadasIds[c] = camadasIds['PJ_'+c]
+        # else:
+        #     if c.startswith('PF_'):
+        #         nome = c[15:] #supõe 'PF_12345678901-nome'
+        #         no = {'id': c, 'descricao':nome, 
+        #                 'camada': camadasIds[c], 
+        #                 'situacao_ativa': True, 
+        #                 'logradouro':'',
+        #                 'municipio': '', 'uf': ''} 
+        #     # elif c.startswith('ID_'):
+        #     #     
+        #     else: #elif c.startswith('EN_'):
+        #         no = {'id': c, 'descricao':'', 
+        #                 'camada': camadasIds[c], 
+        #                 'situacao_ativa': True, 
+        #                 'logradouro':'',
+        #                 'municipio': '', 'uf': ''} 
+        #     nosaux.append(copy.deepcopy(no))
+
     if conCNPJ:
         conCNPJaux =conCNPJ
     else:
-        conCNPJaux = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+        conCNPJaux = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     cnpjs = cnpjs.difference(cnpjsInicial)
-    nos = dadosDosNosCNPJs(conCNPJaux, cnpjs, nosaux, dicRazaoSocial, camadasIds)
-    textoJson={'no': nos, 'ligacao':ligacoes, 'mensagem':mensagem} 
+    #nos = dadosDosNosCNPJs(conCNPJaux, cnpjs, nosaux, dicRazaoSocial, camadasIds)
+    dadosDosNosCNPJs(conCNPJaux, cnpjs, nosaux, dicRazaoSocial, camadasIds)
+    for c in camadasIds:
+        if c.startswith('PJ_'):
+            continue
+        if c.startswith('PF_'):
+            nome = c[15:] #supõe 'PF_12345678901-nome'
+            no = {'id': c, 'descricao':nome, 
+                    'camada': camadasIds[c], 
+                    'situacao_ativa': True, 
+                    'logradouro':'',
+                    'municipio': '', 'uf': ''} 
+        # elif c.startswith('ID_'):
+        #      
+        else: #elif c.startswith('EN_'):
+            no = {'id': c, 'descricao':'', 
+                    'camada': camadasIds[c], 
+                    'situacao_ativa': True, 
+                    'logradouro':'',
+                    'municipio': '', 'uf': ''} 
+        nosaux.append(copy.deepcopy(no))    
+    dadosDosNosBaseLocal(nosaux, camadasIds)
+    nosaux=ajustaLabelIcone(nosaux)
+    textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem} 
     con = None
     if conCNPJ:
         conCNPJaux = None
@@ -873,20 +920,23 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, valorMinimo
 #.def camadaLink
 
 def apagaLog():
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     con.execute('DROP TABLE IF EXISTS log_cnpjs;')
     con.execute('DROP TABLE IF EXISTS log_cpfnomes;')
     con = None
                 
-def jsonDados(cpfcnpjIn, bLista=False):    
+def jsonDados(cpfcnpjIn, listaIds=False):
     #print('INICIANDO-------------------------')
     #dados de cnpj para popup de Dados
     #print('jsonDados-inicio: ' + time.ctime())
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}",execution_options=gEngineExecutionOptions)
     cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn)    
+    if outrosIdentificadores:
+        return jsonBaseLocal(cpfcnpjIn=cpfcnpjIn, listaIds=listaIds)
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable['grupo']=''
     dftmptable['camada']=0
+
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}",execution_options=gEngineExecutionOptions)
     dftmptable.to_sql('tmp_cnpjs1', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
 
     query = '''
@@ -925,19 +975,96 @@ def jsonDados(cpfcnpjIn, bLista=False):
         d['municipio'] = d['municipio_texto']
         d['opcao_mei'] = d['opcao_mei'] if  d['opcao_mei']  else ''
         d['uf'] = d['pais_'] if d['uf']=='EX' else d['uf']
-        if not bLista:
+        if not listaIds:
             break #só pega primeiro
         dlista.append(copy.deepcopy(d))
     else:
         d = None
     con = None
     #print('jsonDados-fim: ' + time.ctime())   
-    if not bLista:
+    if not listaIds:
         return d
     else:
         return dlista
 #.def jsonDados
 
+def jsonBaseLocal(cpfcnpjIn=None, listaIds=None):    
+    if not caminhoDBBaseLocal:
+        return
+    if not listaIds and not cpfcnpjIn:
+        return
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}",execution_options=gEngineExecutionOptions)
+    if not listaIds:
+        #dftmptable = pd.DataFrame({'id' : list(cpfcnpjIn.upper().split(';'))})
+        dftmptable = pd.DataFrame({'id' : list(cpfcnpjIn.split(';'))})
+    else:
+        dftmptable = pd.DataFrame({'id' : list(listaIds)})
+
+    dftmptable.to_sql('tmp_idsj', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+
+    query = '''
+        select tj.id, tj.json
+        from tmp_idsj t
+        inner join dadosjson tj on tj.id = t.id
+            '''
+    dlista = []
+    dicLista = {}
+    for k in con.execute(query):
+        try:
+            #d = {k['id']:json.loads(k['json'])} #dict(k)  
+            d = json.loads(k['json']) #dict(k)  
+        except:
+            d = {k['id']:'erro na base'}
+        if not listaIds:
+            break #só pega primeiro
+        dlista.append(copy.deepcopy(d))
+        dicLista[k['id']]=copy.deepcopy(d)
+    else:
+        d = None
+    con.execute('Drop table if exists tmp_idsj')
+    con = None
+    #print('jsonDados-fim: ' + time.ctime())   
+    if not listaIds:
+        return d
+    else:
+        return dicLista #dlista
+#.def jsonBaseLocal
+
+def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
+    if not caminhoDBBaseLocal:
+        return
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}",execution_options=gEngineExecutionOptions)
+    
+    listaNo = []
+    for dados in nosLigacoes['no']:
+        dic = {key:valor for key,valor in dados.items() if key!='id'}
+        #print(dic)
+        try:
+            texto = json.dumps(dic, default=str)
+            dadosid = dados['id'].upper()
+            listaNo.append([dadosid, texto, comentario])
+        except:
+            print('erro...', dic)
+       
+    listaLigacao = []
+    for lig in nosLigacoes['ligacao']:
+        #dic = {key:valor for key,valor in dados if key!='id'}
+        try:
+            listaLigacao.append([lig['origem'].upper(), lig['destino'].upper(), lig.get('tipoDescricao','')+':'+ lig.get('label',''),'', comentario])      
+        except:
+            print('erro...', lig)
+  
+    dftmptable = pd.DataFrame(listaNo, columns = ['id', 'json', 'comentario'])
+
+    dftmptable.to_sql('dadosjson', con=con, if_exists='append', index=False, dtype=sqlalchemy.types.VARCHAR)
+
+    dftmptable = pd.DataFrame(listaLigacao, columns = ['id1', 'id2', 'descricao','valor', 'comentario'])
+
+    dftmptable.to_sql('links', con=con, if_exists='append', index=False, dtype=sqlalchemy.types.VARCHAR)
+
+    con = None
+
+#.def carregaJSONemBaseLocal
 
 def ajustaValor(valor, tipoInteiro=False):
     if not valor:
@@ -964,7 +1091,7 @@ def ajustaData(d): #aaaammdd
 
 def dadosParaExportar(dados):    
     #print('dadosParaExportar-inicio: ' + time.ctime())
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     sids = set()
     for item in dados['no']:
         sids.add(item['id'])
@@ -1031,7 +1158,7 @@ def dadosParaExportar(dados):
     dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False)
 
     dfs=pd.read_sql_query(querysocios, con)
-    #xxx dfs['cod_qualificacao'] =  dfs['cod_qualificacao'].apply(lambda x:x + '-' + gdic.dicQualificacao_socio.get(int(x),''))
+    #dfs['cod_qualificacao'] =  dfs['cod_qualificacao'].apply(lambda x:x + '-' + gdic.dicQualificacao_socio.get(int(x),''))
     dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False)
 
     #dfin = pd.DataFrame(listaCpfCnpjs, columns=['cpfcnpj'])    
@@ -1089,14 +1216,16 @@ def ajustaLabelIcone(nosaux):
                 imagem = 'icone-grafo-empresa.png'
         elif prefixo=='PE':
             imagem = 'icone-grafo-empresa.png'
+        elif prefixo=='ID':
+            imagem = 'folder-o.png'
         else:
             imagem = 'icone-grafo-desconhecido.png' #caso genérico
         #no['imagem'] = '/rede/static/imagem/' + imagem
-        no['imagem'] = imagem
-        no['cor'] = ''
+        no['imagem'] = no.get('imagem', imagem)
+        no['cor'] =  no.get('cor', '')
         if not no['camada']:
             no['cor'] = 'orange'
-        no['nota'] = ''
+        no['nota'] =  no.get('nota', '')
         nos.append(copy.deepcopy(no))
     return nos 
 #.def ajustaLabelIcone
@@ -1111,9 +1240,11 @@ def provavelSexo(nome):
         sexo = 0
     return sexo
 
-def numeroDeEmpresasNaBase(): #nome tem que ser completo. Com Teste, pega item randomico
+def numeroDeEmpresasNaBase(): 
     #pega qtde de registros na tabela _referencia para acelerar o início da rotina
-    con = sqlalchemy.create_engine(f"sqlite:///{camDbSqlite}", execution_options=gEngineExecutionOptions)
+    if not caminhoDBReceita:
+        return 0
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     try:
         res = con.execute('select valor from _referencia where referencia="cnpj_qtde"').fetchone()[0]
         r = int(res)

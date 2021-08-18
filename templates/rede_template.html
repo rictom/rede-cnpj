@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 
-projeto disponível em https://github.com/rictom/rede-cnpj' 
+projeto disponível em https://github.com/rictom/rede-cnpj
 
 utilizando os seguintes códigos e recursos:
 https://github.com/anvaka/VivaGraphJS
@@ -37,7 +37,8 @@ var gparam = {};
 	
 	gparam.nodeSize = 20; //24
 	gparam.tamanhoFonte = 10;
-	gparam.corLigacaoLink = 'seagreen',
+	gparam.corLigacaoLink = 'seagreen';
+	gparam.bMostraLigacao = true;
 	gparam.kligacoes = 0;
 	gparam.btextoEmbaixoIcone = gparam.inicio.btextoEmbaixoIcone; 
 	//gparam.idLigacoes = {};
@@ -177,10 +178,21 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 			}
 		}
 	} else if (node.id.startsWith('ID_')) {
-		if (node.id.includes('__')) {
-			texto = node.id.split('__')[0] + '...' + LF + LF + node.id.substr(node.id.indexOf('__')+2);
+		if (node.id.includes('__')) { 
+			texto = node.id.split('__')[0] + '...' + LF + node.id.substr(node.id.indexOf('__')+2);
 		} 
+		if (node.data.descricao) {
+			texto += '\r' + node.data.descricao;
+		}
+	} else { //outros tipos
+		if (node.data.descricao) {
+			texto += '\r' + node.data.descricao;
+		}	
 	}
+	if (node.data.nota) {
+		texto += '\r' + node.data.nota;
+	}
+
 	return texto;
 }//.function textoTooltip
 
@@ -224,7 +236,7 @@ function iconeF(idno) {
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	let ui = Viva.Graph.svg('g');
-	let urlImagem = node.data.imagem;
+	let urlImagem = node.data.imagem ? node.data.imagem: 'icone-grafo-id.png';
 	if (!urlImagem.includes(base)) {
 		urlImagem = base + 'static/imagem/' + urlImagem;
 	}
@@ -335,8 +347,8 @@ graphics.node(function(node) {
 			event.preventDefault();
 			if (node.id.startsWith('AR_') || node.id.startsWith('LI_')) {
 				menu_abrirNovaAba(node.id);
-			} else if (node.id.startsWith('ID_')) {
-			
+			} else if (node.id.startsWith('ID_') && (!gparam.inicio.bBaseLocal)) {
+				//
 			} else {
 				selecionaNoid(node.id, false);
 				menu_incluirCamada(node.id, 1);
@@ -444,7 +456,8 @@ graphics.link(function(link){
 			}
 			elemento.attr("transform","rotate(" + parseFloat(angulo) + " " + parseInt((from.x + to.x) / 2) + "," 
 				+ parseInt((from.y + to.y) / 2) + ") translate(0," + baseline + ")")
-			.attr('text-anchor','middle');
+			.attr('text-anchor','middle')
+			.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');
 		}
 })//.graphics.link(function(link)
 
@@ -964,26 +977,41 @@ function menu_dados(bNovaJanela, idNo) {
 		idin = idNo; 
 	}
 	if (!idin) return;
-	var noData = graph.getNode(idin).data;
-	if (!idin.startsWith('PJ_')) {
-		//alertify.error('Este comando funciona apenas para Pessoa Jurídica. Sem dados disponíveis para ' + gparam.idnoSelecionado);
-		var ht = '';
-		ht += "<b>ID:</b> " + idin + "<br>";
-		if (noData.descricao) { 
-			ht += "<b>Descrição:</b> "+ noData.descricao + "<br>";
-		}
-		if (noData.nota) {
-			ht += "<b>Nota:</b> "+ noData.nota + "<br>";
-		}
+	function mostraResultado(idin, ht) {
 		if (bNovaJanela) { 
-			var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=200, width=400');
-			win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + ht + "</body></html>";
+				//var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+				var win = window.open('', idin,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+				win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + ht + "</body></html>";
 		} else {
-			alertify.alert("Dados de "+gparam.idnoSelecionado, ht, function(){});
-		}		
-		
-		return;
+			alertify.alert("Dados de "+idin, ht, function(){});
+		}	
 	}
+	var noData = graph.getNode(idin).data;
+	var ht = '';
+	if (!idin.startsWith('PJ_')) {
+		if (idin.startsWith('PF_')) {
+			ht += "<b>ID: </b> " + idin + "<br>";
+			if (noData.descricao) { 
+				ht += "<b>Descrição: </b> "+ noData.descricao + "<br>";
+			}
+			if (noData.nota) {
+				ht += "<b>Nota: </b> "+ noData.nota + "<br>";
+			}
+		} else {
+			for (const [key, value] of Object.entries(noData)) {
+				if (!['camada', 'situacao_ativa', 'posicao', 'pinado'].includes(key)) {
+					if (value) {
+						ht += "<b>" + key + ": </b> "+ value+ "<br>";
+					}
+				}
+			}
+		}
+		if (!gparam.inicio.bBaseLocal) {
+			mostraResultado(idin, ht);
+			return;
+		}
+	}
+
 	var url = base + 'dadosjson/' + idin ;
 	fetch(url, {method: 'get', cache: "no-store"}) //, mode: 'cors',})
 	  .then(
@@ -993,24 +1021,24 @@ function menu_dados(bNovaJanela, idNo) {
 			alertify.error('Aconteceu um erro (' +  response.status + ')');
 			return;
 		  }
-		  // Examine the text in the response
 		  response.json().then(function(data) {
-			//console.log(data);
 			var texto = "";
 			gparam.json = data;
 
 			if (data) {
-				//document.getElementById("corpo").disabled = true; 
-				if (bNovaJanela) { 
-					//var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
-					var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
-					win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + dadosEmHtmlPJ(data, noData) + "</body></html>";
+				if (idin.startsWith('PJ_')) {
+					ht = dadosEmHtmlPJ(data, noData) 
 				} else {
-					alertify.alert("Dados de "+gparam.idnoSelecionado, dadosEmHtmlPJ(data, noData), function(){});
+					//ht += noData;
+					ht +=  "<b>--------------</b> "+ "<br>"
+					for (const [key, value] of Object.entries(data)) {
+						if (value) {
+							ht += "<b>" + key + ": </b> "+ value+ "<br>";
+						}
+					}							
 				}
-			} else {
-				alertify.success('Sem dados disponíveis para ' + idin);
-			}
+			} 
+			mostraResultado(idin, ht);
 		  });
 		}
 	  )
@@ -1019,6 +1047,37 @@ function menu_dados(bNovaJanela, idNo) {
 		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 	  });
 }//.function menu_dados
+
+function menu_listaSelecao(bNovaJanela) {
+	if (!gparam.idNosSelecionados) { 
+		return; 
+	}
+	var ht = '';
+	for (let n of gparam.idNosSelecionados) {
+		var noData = graph.getNode(n).data;
+		ht += "<b>ID: </b> " + noData.id;
+		if (noData.descricao && (!noData.id.includes(noData.descricao))) { 
+			ht += " ("+ noData.descricao + ")<br>";
+		} else {
+			ht += "<br>";
+		}
+		if (noData.nota) {
+			ht += "<b>Nota: </b> "+ noData.nota + "<br>";
+		}
+	}
+	if (ht) {
+		//document.getElementById("corpo").disabled = true; 
+		if (bNovaJanela) { 
+			//var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+			var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
+			win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>Itens Selecionados</title></head><body  >" + ht + "</body></html>";
+		} else {
+			alertify.alert("Itens selecionados: \n" + ht, function(){});
+		}
+	} 
+
+}//.function menu_lista_selecao
+
 
 function menu_importarJsonArquivo(evt, tipo) {
 	menuOnClick();
@@ -1040,7 +1099,13 @@ function menu_importarJsonArquivo(evt, tipo) {
 					console.log(contents);
 				} else if (f.name.endsWith('.json')){
 					//importaJSON(contents);
-					inserirJson(JSON.parse(contents), 'Leitura de arquivo. ');
+					try {
+						var content_parse = JSON.parse(contents);
+						gparam.debug = contents;
+						inserirJson(content_parse, 'Leitura de arquivo. ');
+					} catch (e) {
+						alertify.error('Aconteceu um erro ' + e);
+					}
 				} else if (f.name.endsWith('.py')){
 					//importaJSON(contents);
 					inserir_lista('_>p\n' + contents);
@@ -1073,15 +1138,72 @@ function menu_importarJsonArquivo(evt, tipo) {
 	}
 }//.function menu_importarJsonArquivo
 
-function menu_exportaJSONServidor(idArquivoServidor) {
+function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acaoAlternativa ) {
+	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
+	var jsonDados = getRedeNosLigacoes(bSoSelecionados);
+	var url;
+	if (acaoAlternativa) {
+		url = base + 'envia_json/' + acaoAlternativa;
+	} else {
+		if (!comentario) {
+			comentario =  prompt('Digite um comentário para os dados inseridos na base local:', 'rede');
+		}
+		if (!comentario) {
+			return;
+		}
+		url = base + 'json_para_base/' + encodeURIComponent(comentario);
+	} 
+	
+	fazFetch(url, jsonDados); 
+	function fazFetch(url) {
+		document.body.style.cursor = 'wait';
+		fetch(url, {method: 'post', body:JSON.stringify(jsonDados), headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+		    .then(
+			function(response) {
+				if (response.status !== 200) {
+				document.body.style.cursor = 'default';
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+				}
+				// Examine the text in the response
+				response.json().then(function(data) {
+					document.body.style.cursor = 'default';
+					if (acaoAlternativa) {
+						if (data.retorno=='ok') {
+							alertify.success('Dados enviados.');
+						} else {
+						
+						}
+					} else {
+						if (data.retorno) {
+							alert('Os dados foram inseridos na base local.');
+						} else {
+							alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
+						}
+					}
+			    });
+			}
+		)
+		  .catch(function(err) {
+			document.body.style.cursor = 'default';
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		  });
+	}
+}//.function menu_exportaJSONServidorParaBaseLocal
+
+function menu_exportaJSONServidor(bSoSelecionados, idArquivoServidor ) {
+	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
+	var jsonDados = getRedeNosLigacoes(bSoSelecionados);
 	if (!idArquivoServidor) {
-		idArquivoServidor =  prompt('Digite o nome do arquivo no JSON para exportar.\nO servidor adicionará um sufixo:', 'rede');
+		idArquivoServidor =  prompt('Digite um comentário para os dados inseridos na base local:', 'rede');
 	}
 	if (!idArquivoServidor) {
 		return;
 	}
-	var jsonDados = getRedeNosLigacoes();
-	var url = base + 'arquivos_json_upload/' + idArquivoServidor;
+	var url = base + 'arquivos_json_upload/' + encodeURIComponent(idArquivoServidor);
+
 	fazFetch(url, jsonDados); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
@@ -1402,6 +1524,9 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	if (teclaShift) {
 		return menu_ligar_novo();
 	}
+	if (!gparam.inicio.bBaseReceita) {
+		return menu_ligar_novo();
+	}
 	var camada = 0;
 	ativaAtalhos(false);
 	var itensDefault = gparam.inserirDefault;
@@ -1586,6 +1711,16 @@ function menu_rotulosCompletos(bTipo) {
 	});
 }//.function menu_rotulosCompletos
 
+function menu_ligacoesExibe(bTipo) { 
+	if (bTipo===null) {
+		gparam.bMostraLigacao = !gparam.bMostraLigacao;
+	} else if (bTipo) {
+		gparam.bMostraLigacao= true;
+	} else {
+		gparam.bMostraLigacao= false;
+	}
+}//.function menu_ligacoesExibe
+
 function menu_rotulosPosicao(bTipo) { 
 	if (bTipo===null) {
 		
@@ -1713,6 +1848,67 @@ function sv(texto) {
 	return texto? texto:'';
 }
 
+function removeGalhos(bExibeMensagem) {
+	var quantidadeLigacoes;	
+	var sNosRemover;	
+	var contagem=0;
+	if (!confirm('Deseja simplificar o gráfico, mantendo apenas os itens com mais de uma ligação ou que tenha alguma anotação ou cor? Não será possível reverter!!')) {
+		return;
+	}
+	while (true) {
+		sNosRemover = new Set();	
+		graph.forEachNode(function(node) {
+			if (node) {
+				quantidadeLigacoes = 0 + graph.getLinks(node.id).length;
+				if ((quantidadeLigacoes <= 1) && (node.data.camada != 0) && (!node.data.cor) && (!node.data.nota)) {
+					sNosRemover.add(node.id);
+				}
+			}
+		});
+		contagem += sNosRemover.size;
+		if (sNosRemover.size==0) {
+			break;
+		}
+		sNosRemover.forEach(removeIdNo);
+	}
+	if (bExibeMensagem) {
+		if (contagem>0) {
+			alertify.success('Foram removidos ' + contagem + ' items.');
+		} else {
+			alertify.success('Não foram localizados itens para remover.');
+		}
+	}
+} //.function removeGalhos
+
+function removeIsolados(bExibeMensagem) {
+	var quantidadeLigacoes;	
+	var sNosRemover;	
+	var contagem=0;
+	if (!confirm('Deseja remover os itens sem ligação? Não será possível reverter!!')) {
+		return;
+	}
+	sNosRemover = new Set();	
+	graph.forEachNode(function(node) {
+		if (node) {
+			quantidadeLigacoes = 0 + graph.getLinks(node.id).length;
+			if (quantidadeLigacoes == 0) {
+				sNosRemover.add(node.id);
+			}
+		}
+	});
+	contagem = sNosRemover.size;
+	if (sNosRemover.size) {
+		sNosRemover.forEach(removeIdNo);
+	}
+	if (bExibeMensagem) {
+		if (contagem>0) {
+			alertify.success('Foram removidos ' + contagem + ' items.');
+		} else {
+			alertify.success('Não foram localizados itens isolados para remover.');
+		}
+	}
+} //.function removeIsolados
+
 function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados) {
 	/*
 	var no = {'id': idNovo,
@@ -1776,7 +1972,7 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
 		ativaAtalhos(true); 
 		var camposTexto = dlgItem.getElementsByClassName('ajs-input');
-		idNovo = camposTexto[0].value;
+		idNovo = camposTexto[0].value.toUpperCase().trim();
 		descricaoNovo = camposTexto[1].value;
 		var tnota = camposTexto[2].value;
 		var tligacao = camposTexto[3].value;
@@ -1885,7 +2081,7 @@ function tipoPresumido(id) {
 	if (!id) {
 		return '';
 	}
-	if ((id.length>3) && (id.substr(2,1) == '_') && (!isNumeric(id.substr(0,2)))) { 
+	if ((id.length>3) && (id.substr(2,1) == '_') && (id.substr(0,2)==id.substr(0,2).toUpperCase()) && (!isNumeric(id.substr(0,2)))) { 
 		return id.trim(); 
 	}
 	//var digitos = soDigitos(id); //problema em usar soDigitos, pode ter letra + 14 ou 11 numeros
@@ -1915,6 +2111,9 @@ function alterarItens(dadosNos) {//altera dados do item a partir de lista de dad
 			node.data[chave] = valorAux;
 			if (chave=='nota') {
 				ui.getElementsByTagName('tspan')[2].text(valorAux);
+				if (ui.children[0].tagName=='title') {
+					ui.children[0].textContent = textoTooltip(node, true);
+				}
 			} else if (chave=='cor') {
 				try {
 					ui.getElementsByTagName('rect')[0].setAttribute('fill',valor);
@@ -2431,6 +2630,9 @@ function menu_editarNota(noid){
 			if (texto) { 
 				ui.getElementsByTagName('tspan')[2].text(texto);
 				graph.getNode(noid).data.nota = texto;
+				try {
+					ui.children[0].textContent = textoTooltip(graph.getNode(noid), true);
+				} catch (e){; };
 			}
 			menu_rendererAtivarParar(true, false);
 			ativaAtalhos(true);
@@ -2510,7 +2712,7 @@ function menu_exportaExcel(bSoSelecionados) {
 	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
 }//.function menu_exportaExcel
 
-function getRedeNosLigacoes() {	
+function getRedeNosLigacoes(bSoSelecionados) {	
 	//return dojo.toJson({'no':listaNoInicial, 'ligacao':listaLigacaoInicial});
 	//return JSON.stringify({'no':listaNoInicial, 'ligacao':listaLigacaoInicial}, filtroDeMembros);
 	var nosAux=[], ligacoesAux=[];
@@ -2520,7 +2722,9 @@ function getRedeNosLigacoes() {
 			var nodedata = JSON.parse(JSON.stringify(node.data));
 			nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
 			nodedata['pinado'] = gparam.layout.isNodePinned(node);
-			nosAux.push(nodedata);						
+			if ((!bSoSelecionados) || gparam.idNosSelecionados.has(node.id)) {
+				nosAux.push(nodedata);			
+			}
 		}
 	);
 	graph.forEachLink(function(link){
@@ -2533,13 +2737,15 @@ function getRedeNosLigacoes() {
 			"label": link.data.label
 			}
 		); */
-		ligacoesAux.push(JSON.parse(JSON.stringify(link.data)));		
+		if ((!bSoSelecionados) || (gparam.idNosSelecionados.has(link.fromId) && gparam.idNosSelecionados.has(link.toId))) {
+			ligacoesAux.push(JSON.parse(JSON.stringify(link.data)));	
+		}
 	}); 
 	return {'no':nosAux, 'ligacao':ligacoesAux};
 }//.function getRedeNosLigacoes
 
 function menu_exportaJsonArquivo(bSoSelecionados) {
-	var rede = getRedeNosLigacoes();
+	var rede = getRedeNosLigacoes(bSoSelecionados);
 	saveTextAsFile(JSON.stringify(rede), 'rede.json', {type:"application/json"});
 }//.function menu_exportaJsonArquivo
 
@@ -2977,18 +3183,20 @@ function ativaAtalhos(bcaptura) {
 
 function evento_teclasDown(e) {
 	function testa(keyIn, pressShift, pressCtrl) {
+		//não dá para usar alt key, porque isso abre o menu do navegador
 		if (keyIn!=e.code) {
 			return false;
 		} else if (pressShift!=e.shiftKey) {
 			return false;
 		} else if (pressCtrl!=e.ctrlKey) {
 			return false;
-		}
+		} 
 		return true;
 	}
+	
 	if (e.code.startsWith('Digit') && (e.code.length==6)) {
 		if (gparam.idnoSelecionado) {
-			if (['ID_', 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) {
+			if (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) || ((gparam.idnoSelecionado.substr(0,3)=='ID_') && !gparam.inicio.bBaseLocal))  {
 				menu_abrirNovaAba(gparam.idnoSelecionado);
 				return;
 			}
@@ -3021,6 +3229,8 @@ function evento_teclasDown(e) {
 		menu_dados(false, gparam.idNoOnHover);
 	} else if (testa('KeyD', true, false)) { 
 		menu_dados(true, gparam.idNoOnHover);
+	} else if (testa('KeyD', false, true)) { 
+		menu_listaSelecao(true);
 	} else if (testa('KeyA', false, false)) { 
 		menu_abrirNovaAba(gparam.idnoSelecionado);
 	} else if (testa('KeyA', true, false)) { 
@@ -3071,6 +3281,8 @@ function evento_teclasDown(e) {
 		menu_teclaUp(false);
 	} else if (testa('ArrowDown', false, false)) { 
 		menu_teclaDown(false);	
+	} else if (testa('Enter', false, false)) { 
+		menu_exportaJSONServidorParaBaseLocal(true, '', 'enter' );
 	} else {
 		return;
 	} 
@@ -3172,8 +3384,10 @@ function ajustaAmbiente() {
 		document.getElementById("drop_area").style.display = "none"; //esconde área de drop em mobile
 		document.getElementById('div_referencia').textContent=""; //apaga referencia
 	} else { //desktop
-		document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
-		document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";
+		try {
+			document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
+			document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";
+		} catch (e) {;}
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
 		ajustaAmbiente_adicionarListaIconesAoMenu();
@@ -3272,7 +3486,7 @@ function main() {
 <div id="block_container">
 	<div id='div_botoes'>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>&nbsp;&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir CNPJ ou CPF do Banco de Dados (Tecla I)'><i class="fa fa-user-plus"></i></button>&nbsp;
+		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>&nbsp;
@@ -3280,8 +3494,10 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i> </button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'>&nbsp;+&nbsp;</button>&nbsp;
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'>&nbsp;-&nbsp;</button>
+		{% if parametros.bBaseReceita %}
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>&nbsp;&nbsp;
 		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
+		{% endif %}
 	</div>
 	<div id='div_referencia' title="{{ parametros.referenciaBD }}">&nbsp;{{ parametros.referenciaBDCurto }}&nbsp;</div>
 	<div id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
@@ -3338,8 +3554,8 @@ function main() {
 	<span class="menu-text" title="Inclui outros vínculos na tabela links (ver documentação no github)">Incluir outras Ligacões (SHIFT+1)</span> </button>
 	</li>
 	<li class="menu-item">
-	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserir();" title="Digite CNPJ para inserir com informações do Banco de Dados"> 
-	<i class="fa fa-user-plus"></i> <span class="menu-text">Inserir CNPJ ou CPF (I)...</span> 
+	<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_inserir();" title="Inserir Item no gráfico com informações do Banco de Dados"> 
+	<i class="fa fa-user-plus"></i> <span class="menu-text">Inserir {% if parametros.bBaseReceita %}CNPJ ou CPF {% endif %}(I)...</span> 
 	</button>
 	</li>
 	<li class="menu-item">
@@ -3351,7 +3567,7 @@ function main() {
 	<button type="button" class="menu-btn" title="Inserir Ligações que não constam do Banco de Dados"><i class="fa fa-link"></i><span class="menu-text">Ligar</span> </button>
 	<menu class="menu">
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo();" title="Liga itens selecionados para um Item a ser criado. O item a ser criado não pode ser CNPJ."> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo();" title="Liga itens selecionados para um Item a ser criado."> 
 		<span class="menu-text">Para Novo Item (U)...</span> 
 		</button>
 		</li>      
@@ -3416,6 +3632,11 @@ function main() {
 			<i class="fa fa-tag"></i><span class="menu-text">Embaixo do ìcone</span> 
 			</button>
 			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligacoesExibe(null);"> 
+			<i class="fa fa-tag"></i><span class="menu-text">Exibe/Oculta Texto de Ligações</span> 
+			</button>
+			</li>			
 		</menu>
 		</li>
 		<li class="menu-item">
@@ -3470,7 +3691,7 @@ function main() {
 	<menu class="menu">
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza(false);" title="Procura por palavra nos itens exibidos do gráfico"> 
-		<i class="fa fa-search"></i><span class="menu-text">Localizar CNPJ ou CPF (F)</span> 
+		<i class="fa fa-search"></i><span class="menu-text">Localizar (F)</span> 
 		</button>
 		</li>
 		<li class="menu-item">
@@ -3511,7 +3732,7 @@ function main() {
 	</menu>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn" title="Exporta dados para o Excel, JSON, SVG ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Exportar/Importar</span> </button>
+	<button type="button" class="menu-btn" title="Salva dados para o Excel, JSON, SVG ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Salvar/Abrir</span> </button>
 	<menu class="menu">
 		<!--
 		<li class="menu-item">
@@ -3521,22 +3742,22 @@ function main() {
 		</li> -->
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
-		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel</span> 
+		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel</span> 
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaSVG()" title="Salva imagem escalável em formato SVG" >
-		<i class="fa fa-save"></i><span class="menu-text" >Exportar Imagem SVG</span>
+		<i class="fa fa-save"></i><span class="menu-text" >Salvar Imagem SVG</span>
 		</button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo()" title="Salva arquivo JSON com os itens e ligações, que pode ser aberto pela opção Importar JSON">
-		<i class="fa fa-save"></i> <span class="menu-text">Exportar Arquivo Json</span>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(false)" title="Salva arquivo JSON com os itens e ligações de todo o gráfico, que pode ser aberto pela opção Importar JSON">
+		<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json</span>
 		</button>
-		</li>  
+		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" id="menu_botao_importaJsonArquivo" disabled title="Importa dados de um arquivo JSON salvo pela opção Exportar Arquivo JSON"> 
-		<i class="fa fa-folder-open"></i><span class="menu-text">Importar Arquivo Json</span>
+		<button type="button" class="menu-btn" id="menu_botao_importaJsonArquivo" disabled title="Abre dados de um arquivo JSON salvo pela opção Salvar Arquivo JSON"> 
+		<i class="fa fa-folder-open"></i><span class="menu-text">Abrir Arquivo Json</span>
 		<input value="Importar" type="file" id="fileImportJSON" title="Adiciona grafico no formato JSON" />
 		</button>
 		<script>
@@ -3544,15 +3765,46 @@ function main() {
 		</script>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor()" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
-		<i class="fa fa-upload"></i><span class="menu-text">Exportar ao Servidor</span>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false)" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
+		<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor</span>
 		</button>
 		</li>  
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_importaJSONServidor()" title="Carrega um arquivo de visualização exportado ao servidor.">
-		<i class="fa fa-download"></i> <span class="menu-text">Importar do Servidor</span>
+		<i class="fa fa-download"></i> <span class="menu-text">Importar JSON do Servidor</span>
 		</button>
 		</li>  
+
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Salva seleção para JSON ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Seleção</span> </button>
+		<menu class="menu">
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(true)" title="Salva arquivo JSON com os itens e ligações somente dos itens selecionados, que pode ser aberto pela opção Importar JSON">
+			<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json</span>
+			</button>
+			</li>  
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(true)" title="Salva as informações dos itens selecionados no servidor, o link poderá ser compartilhado e aberto em uma nova aba.">
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor</span>
+			</button>
+			</li>  		
+		</menu>
+		{% if parametros.bBaseLocal %}
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Opções para exportar para Banco de Dados"> <i class="fa fa-file-export"></i> <span class="menu-text">Banco de Dados</span> </button>
+		<menu class="menu">
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidorParaBaseLocal(false)" title="Salva as informações da visualização no Banco de Dados Local SQLITE no Servidor">
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar ao Servidor</span>
+			</button>
+			</li>  	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidorParaBaseLocal(true)" title="Salva as informações da visualização no Banco de Dados Local SQLITE no Servidor">
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar Seleção</span>
+			</button>
+			</li>  	
+		</menu>		
+		{% endif %}
 	</menu>
 	</li>
 
@@ -3575,6 +3827,16 @@ function main() {
 		<i class="fa fa-trash"></i> <span class="menu-text">Excluir Nó mantendo Link</span> 
 		</button>
 		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:removeGalhos(true);" title="Simplifica o gráfico, mantendo apenas itens com mais de uma ligação."> 
+		<i class="fa fa-trash"></i><span class="menu-text">Simplifica Gráfico</span> 
+		</button>
+		</li>		
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:removeIsolados(true);" title="Remove itens sem ligação."> 
+		<i class="fa fa-trash"></i><span class="menu-text">Excluir itens isolados</span> 
+		</button>
+		</li>	
 	</menu>
 	</li>
 	<li class="menu-separator"></li>
@@ -3611,14 +3873,15 @@ function main() {
 		<span class="menu-text">Tamanho do Ícone</span> 
 		</button>
 		</li>
-
 	</menu>
 	</li>	
+	{% if parametros.bBaseReceita %}
 	<li class="menu-item">
 	<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj'); "> 
 	<i class="fa fa-info-circle"></i><span class="menu-text">Sobre...</span> 
 	</button>
 	</li>
+	{% endif %}
 </menu>
 
 <iframe id="iframeAuxiliarDownload" src="" onload="" style="display:none"></iframe>
