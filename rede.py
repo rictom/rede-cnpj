@@ -7,13 +7,13 @@ Created on set/2020
 from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
 
 from werkzeug.utils import secure_filename
-import os, sys, json, secrets, copy
+import os, sys, json, secrets, copy, io
 import rede_config as config, rede_relacionamentos
 import pandas as pd
 
 from requests.utils import unquote
 
-try: #define alguma atividade quando é chamado por /rede/envia_json
+try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
     import rede_acao
 except:
     pass
@@ -87,14 +87,16 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     elif not cpfcnpj and not idArquivoServidor: #define cpfcnpj inicial, só para debugar.
         cpfcnpj = config.par.cpfcnpjInicial
         numeroEmpresas = gp['numeroDeEmpresasNaBase']
-        tnumeroEmpresas = format(numeroEmpresas,',').replace(',','.')
-        if  config.par.bExibeMensagemInicial:
-            if numeroEmpresas>40000000: #no código do template, dois pontos será substituida por .\n
-                mensagemInicial = f'''LEIA ANTES DE PROSSEGUIR.\n\nTodos os dados exibidos são públicos, provenientes da página de dados públicos da Secretaria da Receita Federal.\nO autor não se responsibiliza pela utilização desses dados, pelo mau uso das informações ou incorreções.\nA base tem {tnumeroEmpresas} empresas.\n''' + config.referenciaBD
-            else:
-                #mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas fictícias.\nPara inserir um novo elemento digite TESTE (CNPJ REAL NÃO SERÁ LOCALIZADO)"
-                mensagemInicial = f"A base sqlite de TESTE tem {tnumeroEmpresas} empresas de pessoas politicamente expostas, conforme dados do Portal da Transparência da CGU.\nPara inserir um novo elemento digite TESTE ou nome do político."
-                inserirDefault =' TESTE'        
+        if numeroEmpresas:
+            tnumeroEmpresas = format(numeroEmpresas,',').replace(',','.')
+            if  config.par.bExibeMensagemInicial:
+                mensagemInicial = config.config['INICIO'].get('mensagem_advertencia','').replace('\\n','\n')
+                if numeroEmpresas>40000000: #no código do template, dois pontos será substituida por .\n
+                    mensagemInicial += f'''\nA base tem {tnumeroEmpresas} empresas.\n''' + config.referenciaBD
+                else:
+                    inserirDefault =' TESTE'     
+        else:
+            config.par.bMenuInserirInicial = False
     
     if config.par.tipo_lista:
         if config.par.tipo_lista.startswith('_>'):
@@ -195,9 +197,20 @@ def serve_arquivos_json(arquivopath):
     extensao = os.path.splitext(filename)[1]
     if not extensao:
         filename += '.json'
-        return send_from_directory(local_file_dir, filename)
-    elif extensao =='.json':
-        return send_from_directory(local_file_dir, filename)
+        extensao = '.json'
+    if extensao =='.json':
+        if filename.startswith('temporario'): #se for temporário, apaga depois de copiar dados para stream
+            return_data = io.BytesIO()
+            caminho = os.path.join(local_file_dir,filename)
+            if not os.path.exists(caminho):
+                return Response("Arquivo não localizado", status=400)
+            with open(caminho, 'rb') as fo:
+                return_data.write(fo.read())
+            return_data.seek(0)
+            os.remove(caminho)
+            return send_file(return_data, mimetype='application/json', attachment_filename=arquivopath)            
+        else:
+            return send_from_directory(local_file_dir, filename)
     else:
         return Response("Solicitação não autorizada", status=400)
 
@@ -236,8 +249,11 @@ def serve_envia_json_acao(acao=''):
         return jsonify({'mensagem':{'lateral':'', 'popup':'Opção apenas disponível para usuário local', 'confirmar':''}})
     nosLigacoes = request.get_json()
     #print(nosLigacoes)
-    r = rede_acao.rede_acao(acao, nosLigacoes)
-    return jsonify({'retorno':'ok'})
+    try:
+        r = rede_acao.rede_acao(acao, nosLigacoes)
+        return jsonify({'retorno':'ok'})
+    except:
+        return jsonify({'mensagem':{'lateral':'', 'popup':'Servidor não foi configurada para esta ação', 'confirmar':''}})
 # @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
 # def serve_arquivos_download(arquivopath):
 #     if not config.par.bArquivosDownload:

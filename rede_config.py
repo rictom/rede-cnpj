@@ -8,7 +8,7 @@ config = configparser.ConfigParser()
 
 confPadrao = 'rede.ini'
 if (os.path.exists(confPadrao)):
-    config.read(confPadrao) #, encoding='utf8')
+    config.read(confPadrao, encoding='utf8')
 else:
     print('O arquivo de configuracao ' + confPadrao + ' não foi localizado. Parando...')
     sys.exit(1)
@@ -48,7 +48,7 @@ def runParser():
 par = runParser()
 #if (par.conf_file): #se foi fornecido arquivo de configuracao pela linha de comando, recarrega configparser
 if (os.path.exists(par.conf_file)):
-    config.read(par.conf_file)
+    config.read(par.conf_file, encoding='utf8')
     par = runParser()
 else:
     print('O arquivo de configuracao ' + par.conf_file + ' não existe. Parando...')

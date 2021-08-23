@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 
-projeto disponível em https://github.com/rictom/rede-cnpj
+projeto disponível em https://github.com/rictom/rede-cnpj' 
 
 utilizando os seguintes códigos e recursos:
 https://github.com/anvaka/VivaGraphJS
@@ -157,7 +157,7 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	var LF = String.fromCharCode(10);
 	var texto = node.id;
 	if (node.id.startsWith('PJ_')) {
-		texto += LF + node.data.descricao + LF + sv(node.data.logradouro) + LF + sv(node.data.municipio) + '/' + sv(node.data.uf);
+		texto += LF + node.data.descricao + LF + sv(node.data.logradouro) + LF + junta(node.data.municipio, '/', node.data.uf); //sv(node.data.municipio) + '/' + sv(node.data.uf);
 	} else if (node.id.startsWith('PF_')) {	
 	
 	} else if (node.id.startsWith('LI_')) {
@@ -325,8 +325,8 @@ graphics.node(function(node) {
 	ui.onmousedown = function(event) {  //estava onmouseup, assim dá pra congelar após click
 		if (event.which == 1) {
 			if (event.altKey) {
-				event.preventDefault();	
-				menu_abrirNovaAba(gparam.idnoSelecionado);			
+				event.preventDefault();		
+				menu_abrirNovaAba(node.id);			
 				return;
 			}
 			if (!event.ctrlKey) {
@@ -441,7 +441,8 @@ graphics.link(function(link){
 		var data = 'M' + from.x + ',' + from.y + 'L' + to.x + ',' + to.y;
 		linkUI.attr("d", data);
 		var elemento = document.getElementById('link_label_'+linkUI.attr('id'));
-		elemento.attr("x", (from.x + to.x) / 2).attr("y", (from.y + to.y) / 2);
+		elemento.attr("x", (from.x + to.x) / 2).attr("y", (from.y + to.y) / 2)
+			.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');;
 		// se for grande, deixa o texto do link na horizontal, se for menor alinha com a ligacao.
 		if  (elemento.textContent.length <= 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
 			// calcula o angulo para exibir o rótulo inclinado
@@ -456,8 +457,8 @@ graphics.link(function(link){
 			}
 			elemento.attr("transform","rotate(" + parseFloat(angulo) + " " + parseInt((from.x + to.x) / 2) + "," 
 				+ parseInt((from.y + to.y) / 2) + ") translate(0," + baseline + ")")
-			.attr('text-anchor','middle')
-			.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');
+				.attr('text-anchor','middle')
+				.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');
 		}
 })//.graphics.link(function(link)
 
@@ -584,6 +585,11 @@ gparam.AreaSelecaoRetangular = {
 			if (e.which === 17 && !multiSelectOverlay) { // ctrl key
 				multiSelectOverlay = gparam.AreaSelecaoRetangular.startMultiSelect(graph, gparam.renderer, gparam.layout);
 			}
+			if (e.which != 17 && multiSelectOverlay) { // pressionou outro botão (corrige problema quando se pressiona CTRL+botão para outro comando, que o tipo de cursor não mudava para o padrão
+				multiSelectOverlay.destroy();
+				multiSelectOverlay = null;
+			}
+
 		});
 		document.addEventListener('keyup', function(e) {
 			if (e.which === 17 && multiSelectOverlay) {
@@ -749,26 +755,37 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 			}
 		}
 	});
+	return selecionaSet(idNosLocalizados, primeiroNoid);
+}//.function localizaNo
+
+function selecionaSet(idNosLocalizados, primeiroNoid) {
+	//seleciona um set de ids, se primeiroNoid for informado, centraliza nesse id
 	if (idNosLocalizados.size) {
 		selecionaNoid(null, false); //apaga seleção primeiro
 		for (let n of idNosLocalizados) {
 			selecionaNoid(n, true);
 		}
-		gparam.idnoSelecionado = primeiroNoid;
-		//ajustaMenuContextual(gparam.idnoSelecionado);
-		//var position = gparam.renderer.getLayout().getNodePosition(gparam.idnoSelecionado);
-		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
-		gparam.renderer.moveTo(position.x, position.y);
+		if (primeiroNoid) {
+			if (gparam.idNosSelecionados.has(primeiroNoid)) {
+				gparam.idnoSelecionado = primeiroNoid;
+				//ajustaMenuContextual(gparam.idnoSelecionado);
+				//var position = gparam.renderer.getLayout().getNodePosition(gparam.idnoSelecionado);
+				var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+				gparam.renderer.moveTo(position.x, position.y);
+			} else {
+				alertify.error('erro na funcao selecionaSet');
+			}
+		}
 		return gparam.idNosSelecionados.size;
 	} else {
 		return 0;
 	}
-}//.function localizaNo
+}//.function selecionaSet
 
 function menu_localiza(bFiltroNosSelecionados) {
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
 	ativaAtalhos(false);
-	menu_rendererAtivarParar(false);
+	var brenderer = menu_rendererAtivarParar(false, false);
 	var tmensagem = bFiltroNosSelecionados? 'Filtrar nos itens selecionados':'Localizar item na tela'; 
 	alertify.prompt( tmensagem, 'Digite partes do Nome, CNPJ ou CPF. Utilize ponto e vírgula (;) como separador para buscar mais de um termo.', ''
 	   , function(evt, texto) { 
@@ -780,25 +797,25 @@ function menu_localiza(bFiltroNosSelecionados) {
 					alertify.error('Não localizou ' + texto);
 				};
 			}
-			menu_rendererAtivarParar(true);
+			menu_rendererAtivarParar(brenderer, false);
 			ativaAtalhos(true);
 		}, function() { 
 			ativaAtalhos(true);
-			menu_rendererAtivarParar(true);
+			menu_rendererAtivarParar(brenderer, false);
 		});
 }//.function menu_localiza
 
 function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
 	//ativaAtalhos(false);
-	menu_rendererAtivarParar(false);
+	var brenderer = menu_rendererAtivarParar(false, false);
 	var idNosLocalizados = new Set();
 	for (let noId of gparam.idNosSelecionados) {
 		graph.forEachLinkedNode(noId, function(nodeaux, link){
 			idNosLocalizados.add(nodeaux.id);
 		});	
 	}
-	menu_rendererAtivarParar(true);
+	menu_rendererAtivarParar(brenderer, false);
 	if (idNosLocalizados.size) {
 		//selecionaNoid(null, false); //apaga seleção primeiro
 		for (let n of idNosLocalizados) {
@@ -813,7 +830,96 @@ function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 	}
 }//.function menu_localiza_adjacentes
 
+function menu_localiza_componente() {
+	var brenderer = menu_rendererAtivarParar(false, false);
+	var idNosLocalizados = new Set(gparam.idNosSelecionados);
+	var tamanhoAnterior = -1;
+	while (true) {
+		var idNosLocalizadosFor = new Set(idNosLocalizados);
+		//var idNosLocalizados = new Set();
+		for (let noId of idNosLocalizadosFor) {
+			graph.forEachLinkedNode(noId, function(nodeaux, link){
+				idNosLocalizados.add(nodeaux.id);
+			});	
+		}
+		if (tamanhoAnterior==idNosLocalizados.size) {
+			break;
+		}
+		tamanhoAnterior = idNosLocalizados.size;
+	}
+	menu_rendererAtivarParar(brenderer, false);
+	if (idNosLocalizados.size) {
+		//selecionaNoid(null, false); //apaga seleção primeiro
+		for (let n of idNosLocalizados) {
+			//graphics.getNodeUI(n).getElementsByTagName('rect')[1].setAttribute('visibility', 'visible'); 
+			//gparam.idNosSelecionados.add(n);
+			selecionaNoid(n, true, true); 
+		}
+		if (gparam.idNosSelecionados.size == graph.getNodesCount()) { 
+			alertify.success('Todo o gráfico foi selecionado, com '+ idNosLocalizados.size + ' itens');
+		} else {
+			alertify.success('Localizou '+ idNosLocalizados.size + ' adjacentes');
+		}
+		return idNosLocalizados.size;
+	} else {
+		return 0;
+	}
+
+}//.function menu_localiza_componente
+
+function menu_localiza_itensComMaisLigacoes() {
+	var dcontagem = {};
+	var bMudou = false;
+	graph.forEachLink(function(link){
+		dcontagem[link.fromId] = dcontagem[link.fromId] ? dcontagem[link.fromId]+1 : 1;
+		dcontagem[link.toId] = dcontagem[link.toId] ? dcontagem[link.toId]+1 : 1;
+	});
+	listaESeleciona(dcontagem, 'Itens com mais ligações');
+}//.function menu_localiza_itensComMaisLigacoes
+
+function listaESeleciona(dcontagem, texto) {
+	/*
+	var listaIdContagem = [];
+	for (const [k,v] of Object.entries(dcontagem)) {
+		listaIdContagem.push([k, v]);
+	}
+	listaIdContagem.sort(function(a, b) {
+		return b[1] - a[1];
+	}); */
+	const listaIdContagem = Object.entries(dcontagem).sort(([,a],[,b]) => b-a);
+	var tmaiores = texto + '\n\nN - ID: CONTAGEM\n\n';
+	var k=0;
+	var listaIds = [];
+	for (const element of listaIdContagem) {
+		k += 1;
+		if (k<=15) {
+			tmaiores += '' + k + ' - ' + element[0] + ': ' + element[1] + '\n';
+		}
+		listaIds.push(element[0]);
+		if (k>=100) break;
+	}
+	tmaiores += '\n\nDeseja selecionar quantos itens?';
+	var nids = prompt(tmaiores, Math.min(k,15));
+	nids = parseInt(nids);
+	if (!nids) return;
+	selecionaSet(new Set(listaIds.slice(0,nids))); //, listaIds[0]);
+	alertify.success('Os itens ' + listaIds.slice(0,nids) + ' foram selecionados');
+}//.listaESeleciona
+
+function menu_localiza_itensLigadosAColoridos() {
+	var dcontagem = {};
+	var bMudou = false;
+	graph.forEachLink(function(link){
+		var corFrom = graph.getNode(link.fromId).data.cor ? 1: 0;
+		var corTo = graph.getNode(link.toId).data.cor? 1:0 ;
+		dcontagem[link.fromId] = dcontagem[link.fromId] ? dcontagem[link.fromId]+corTo : corTo;
+		dcontagem[link.toId] = dcontagem[link.toId] ? dcontagem[link.toId]+corFrom : corFrom;
+	});
+	listaESeleciona(dcontagem, 'Ligados a itens marcados');
+}//.function menu_localiza_itensLigadosAColoridos
+
 function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
+	var estadoAnterior = gparam.bRenderAtivado;
 	if (!bAtivar) {
 		gparam.renderer.pause();
 		if (bMostraMensagem && gparam.bRenderAtivado) {
@@ -826,6 +932,7 @@ function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 		}
 	}
 	gparam.bRenderAtivado = bAtivar;
+	return estadoAnterior;
 }//.function menu_rendererAtivarParar
 
 function pausarLayout(milissegundos) {
@@ -1058,6 +1165,7 @@ function menu_listaSelecao(bNovaJanela) {
 		ht += "<b>ID: </b> " + noData.id;
 		if (noData.descricao && (!noData.id.includes(noData.descricao))) { 
 			ht += " ("+ noData.descricao + ")<br>";
+			ht += " ("+ noData.descricao + ")<br>";
 		} else {
 			ht += "<br>";
 		}
@@ -1169,19 +1277,15 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 				// Examine the text in the response
 				response.json().then(function(data) {
 					document.body.style.cursor = 'default';
-					if (acaoAlternativa) {
-						if (data.retorno=='ok') {
+					if (data.retorno) {
+						if (acaoAlternativa) {
 							alertify.success('Dados enviados.');
 						} else {
-						
+							alert('Os dados foram inseridos na base local.');
 						}
 					} else {
-						if (data.retorno) {
-							alert('Os dados foram inseridos na base local.');
-						} else {
-							alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
-						}
-					}
+						alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
+					}					
 			    });
 			}
 		)
@@ -1193,11 +1297,22 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 	}
 }//.function menu_exportaJSONServidorParaBaseLocal
 
-function menu_exportaJSONServidor(bSoSelecionados, idArquivoServidor ) {
+function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServidor, setNos, nomeNovaAba) {
+	//abre nova aba exportando dados para o servidor
 	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
-	var jsonDados = getRedeNosLigacoes(bSoSelecionados);
-	if (!idArquivoServidor) {
-		idArquivoServidor =  prompt('Digite um comentário para os dados inseridos na base local:', 'rede');
+	//se setNos especificado, usa esses itens para exportar
+	//se setNos = null, usa todos os itens do gráfico se bSoSelecionados=false ou só selecionados se bSoSelecionados=true
+	var jsonDados;
+	var novaJanela;
+	if (setNos) {
+		jsonDados = getRedeNosLigacoes(null, setNos);
+	} else {
+		jsonDados = getRedeNosLigacoes(bSoSelecionados);
+	}
+	if (bMostraAlerta) {
+		if (!idArquivoServidor) {
+			idArquivoServidor =  prompt('Digite um comentário para os dados inseridos na base local:', 'rede');
+		}
 	}
 	if (!idArquivoServidor) {
 		return;
@@ -1221,8 +1336,13 @@ function menu_exportaJSONServidor(bSoSelecionados, idArquivoServidor ) {
 				//console.log(data);
 				document.body.style.cursor = 'default';
 				if (data.nomeArquivoServidor) {
-					alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.');
+					if (bMostraAlerta) {
+						alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.');
+					};
 					var novaJanela=window.open(base + "grafico_no_servidor/" + data.nomeArquivoServidor);
+					/*if (nomeAbaNova) {
+						novaJanela.document.title = nomeAbaNova; //isto causa erro
+					}*/
 				} else {
 					alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
 				}
@@ -1235,6 +1355,7 @@ function menu_exportaJSONServidor(bSoSelecionados, idArquivoServidor ) {
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
 	}
+	//return novaJanela; novaJanela só retorna null
 }//.function menu_exportaJSONServidor
 
 function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
@@ -1244,7 +1365,8 @@ function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 	if (!idArquivoServidor) {
 		return;
 	}
-	var url = base + 'arquivos_json/' + idArquivoServidor ;
+	var url = base + 'arquivos_json/' + idArquivoServidor;
+	//se idArquivoServidor=temporario, o arquivo será apagado do servidor após de ser servido
 	fazFetch(url, idArquivoServidor); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
@@ -1255,7 +1377,7 @@ function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 			  if (response.status !== 200) {
 				document.body.style.cursor = 'default';
 				console.log('Looks like there was a problem. Status Code: ' +  response.status);
-				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				alertify.error('Não conseguiu carregar o arquivo ' + idArquivoServidor + '. Aconteceu um erro (' +  response.status + ')');
 				return;
 			  }
 			  // Examine the text in the response
@@ -1282,15 +1404,23 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	var idNosInseridos = new Set();
 	var idNosCamadaZero = new Set();
 	var kNosAInserir = 0;
+	/* isto dá um valor muito maior que o real (há nós duplicados no json??)
 	for (let noaux of Object.values(no)) { //verifica quantos nós serão inseridos
 		if (!graph.hasNode(noaux.id)) { 
 			kNosAInserir += 1;
 		}
-	}
+	}*/
+	var sNosInserir = new Set();
+	for (let noaux of Object.values(no)) { //verifica quantos nós serão inseridos
+		if (!graph.hasNode(noaux.id)) { 
+			sNosInserir.add(noaux.id);
+		}
+	}	
+	kNosAInserir = sNosInserir.size;
 	if (!bNaoConfirma) {
 		if (kNosAInserir > gparam.confirmaAntesDeInserirNNos) {
 			let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?';
-			if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.';
+			if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.\nApós carregar o gráfico, utilize a rotina no menu "Visualização>Quebrar o gráfico em partes"';
 			var resp = confirm(mensagem);
 			if (!resp) {
 				return;
@@ -1586,11 +1716,15 @@ function menu_GoogleMaps() {
 	}
 }//.function menu_GoogleMaps
 
-function menu_abrirNovaAba(idno) {
+function menu_abrirNovaAba(idno, bNosSelecionados) {
 	var novaJanela=null;
-	if (!idno) {
+	if ((!idno)&&(!bNosSelecionados)) {
 		novaJanela=window.open(base + '?pula_mensagem=sim');
 		novaJanela.focus(); 
+		return;
+	}
+	if ((!idno)&&bNosSelecionados) { //abre numa nova aba os nós selecionados
+		menu_exportaJSONServidor(true, false, 'temporario')	
 		return;
 	}
 	if (idno.startsWith('LI_')) {
@@ -1823,29 +1957,85 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 	return true;
 }//.function menu_ligar_selecionados
 
-function menu_desligar_selecionados() {
+function menu_desligar_selecionados(bRemoverTodasLigacoes) {
+	//se bRemoverTodasLigacoes=false, só remove se a ligação for entre DOIS itens selecionados
+	var resp;
 	if (!gparam.idNosSelecionados.size) {
 		alertify.alert('Remover ligação', 'Não há itens selecionados. Selecione e tente novamente.', function(){ ; });
 		return;
 	}
+	if (bRemoverTodasLigacoes) {
+		resp = confirm('Deseja remover TODAS as ligações dos itens selecionados? Não será possível reverter.');
+		if (!resp) return;
+	}
+	/*
 	for (let n1 of gparam.idNosSelecionados) {
 		graph.forEachLinkedNode(n1, function(n2, link){
 			//console.log(n1 + '->' + n2.id);
-			if (gparam.idNosSelecionados.has(n2.id)) {
+			if (bRemoverTodasLigacoes || gparam.idNosSelecionados.has(n2.id) ) { //
 				var linkUIaux=null;
 				try {
 					linkUIaux = graphics.getLinkUI(link.id);
 					element=document.getElementById('link_label_'+linkUIaux.attr('id'));
 					element.parentNode.removeChild(element);
-					graph.removeLink(link);
+					graph.removeLink(link); //remover dentro do loop pode causar alguma inconsistência?
 				} catch (e){; };
 			}
 		});
+	} */
+	var slinkIds = new Set();
+	while (true) { //loop, primeiro tenta apagar link ENTRE os selecionados, se não achar ligação, tenta apagar todas as ligações dos selecionados
+		graph.forEachLink(function(link){
+			if (link) {
+				if ( (gparam.idNosSelecionados.has(link.fromId) && gparam.idNosSelecionados.has(link.toId)) ||
+					 ( bRemoverTodasLigacoes && (gparam.idNosSelecionados.has(link.fromId) || gparam.idNosSelecionados.has(link.toId)) ) ) {
+						slinkIds.add(link); 
+				}
+			}
+		});
+		if (slinkIds.size) {
+			break;
+		}
+		if (bRemoverTodasLigacoes) {
+			if (!slinkIds.size) {
+				alertify.success('Não há ligações a remover.');
+				return;
+			}
+			break;
+		} else {
+			if (!slinkIds.size) {
+				resp = confirm('Não há ligações ENTRE os itens selecionados. Deseja remover TODAS as ligações dos itens selecionados?');
+				if (!resp) {
+					return;
+				}
+				bRemoverTodasLigacoes = true;	
+			}
+		}
 	}
-}//.function menu_desligar_selecionados
+	for (let link of slinkIds) {
+		var linkUIaux=null;
+		try {
+			linkUIaux = graphics.getLinkUI(link.id);
+			element=document.getElementById('link_label_'+linkUIaux.attr('id'));
+			element.parentNode.removeChild(element);
+			graph.removeLink(link);
+		} catch (e){; };		
+	}
+}//menu_desligar_selecionados
 
 function sv(texto) {
 	return texto? texto:'';
+}
+
+function junta(a, separador, b) {
+	if (a && b) {
+		return ''+ a + separador + b;
+	} else if (a) {
+		return ''+a;
+	} else if (b) {
+		return ''+b;
+	}	
+	return ''
 }
 
 function removeGalhos(bExibeMensagem) {
@@ -1879,6 +2069,150 @@ function removeGalhos(bExibeMensagem) {
 		}
 	}
 } //.function removeGalhos
+
+function menu_quebraGraficoEmPartes(){
+	var ngrupos = prompt('Deseja quebrar este gráfico em outras abas em partes menores? Especifique a quantidade aproximada de novas abas (máximo de 10)', 4);
+	ngrupos = parseInt(ngrupos);
+	if (!ngrupos) {
+		return;
+	}
+	if (ngrupos>10) {
+		alertify.error('Escolha uma quantidade menor de novas abas.'); 
+		return;
+	}
+	var tamanho = Math.floor(graph.getNodesCount()/ngrupos)+1;
+	console.log(tamanho);
+	var conjuntos = separaGrupos(tamanho);
+	var k = 1;
+	if (conjuntos.length==1) {
+		alert('O gráfico não pode ser separado.');
+		return;
+	}
+	for (let conj of conjuntos) {
+		var sconj = new Set(conj);
+		//este alert serve para criar um delay entre as requisições... Se não houver pausa o servidor tenta criar arquivos json com nome repetido o que vai dar erro depois.
+		resp = confirm('Deseja criar uma nova aba com ' + conj.length + ' elementos?'); 
+		if (resp) {
+			menu_exportaJSONServidor(null, null, 'temporario', sconj, k);
+		} else {
+			resp = confirm('Deseja abrir outras abas?');
+			if (!resp) {
+				break;
+			}
+		}
+	}
+	alertify.success('Foram inseridas ' + k + ' novas abas');
+}//function menu_quebraGraficoEmPartes
+
+function separaGrupos(tamanhoGrupo) {
+	//pega os nos do gráfico e separa em grupos até tamanhoGrupo, mantendo os itens conectados juntos
+	//se tamanhoGrupo=0, retorna os subcomponentes (árvores, regiões conectadas) do grafico, listaGrupos = lista de sets = [set(componente1), set(componente2)...]
+	//se tamanhoGrupo<>0, retorna lista de conjuntos = [[conjunto1], [conjunto2],..]
+	var di = {};
+	var bMudou = false;
+	var contagemAnterior = -1;
+	//inicializa di com id, o loop while irá fazer que di[elemento] seja o menor para os que estão ligados
+	graph.forEachLink(function(link){
+		di[link.fromId] = link.fromId;
+		di[link.toId] = link.toId;
+	});
+	graph.forEachNode(function(node){
+		di[node.id] = node.id;
+	});
+	var sgrupos = null;
+	while (1) {
+		bMudou = false;
+		graph.forEachLink(function(link){
+			var menor = (di[link.fromId]<=di[link.toId]) ? di[link.fromId] : di[link.toId] ;
+			if (di[link.fromId] != di[link.toId]) {
+				bMudou = true;
+			}
+			di[link.fromId] = menor;
+			di[link.toId] = menor;
+		});
+		
+		sgrupos = new Set(Object.values(di));
+		if ((sgrupos.size==contagemAnterior)&&(!bMudou)) {
+			break;
+		}
+		contagemAnterior = sgrupos.size;
+		//console.log(sgrupos.size);
+		//break;
+	}
+	//dgrupo associa o menor valor do grupo com um set com os elementos do grupo
+	var dgrupo = {};
+	for (const [k, v] of Object.entries(di)) {
+		var value = dgrupo[v];
+		if (value == null) {
+			dgrupo[v] = new Set();
+		}
+		dgrupo[v].add(k);	
+	}
+
+	//cada elemento de listaGrupos é set com itens conectados
+	var listaGrupos = [];
+	for (const v of Object.values(dgrupo)) {
+		listaGrupos.push(v);
+	}
+
+	listaGrupos.sort(function(a,b){
+	  return b.size - a.size; //ordem decrescente, size porque os elementos são sets
+	});
+	if (!tamanhoGrupo) {
+		return listaGrupos; //[ set1, set2,...]
+	}
+	//conjuntos, tenta separar os conjuntos com no máximo tamanhoGrupo, preservando as ligações
+	//se o grupo conexo já for maior que tamanhoGrupo, coloca sem quebrá-lo
+	
+	var conjuntos = [];
+	var tamanhoAux = 0;
+	var caux = []; //new Set();
+	for (const v of listaGrupos) {
+		if ((caux.length==0)||((v.size+caux.length)<tamanhoGrupo)) {
+			Array.prototype.push.apply(caux, Array.from(v));
+		} else {
+			conjuntos.push(JSON.parse(JSON.stringify(caux)));
+			caux = Array.from(v);
+		}
+		if (caux.length>=tamanhoGrupo) {
+			conjuntos.push(JSON.parse(JSON.stringify(caux)));
+			caux = []; //new Set();
+		}
+	}
+	if (caux.length) {
+		conjuntos.push(JSON.parse(JSON.stringify(caux)));
+	}
+	return conjuntos; //[ lista1, lista2,..]
+} //separaGrupos
+
+function menu_selecionaGruposComDuasCores(){ 
+	//seleciona os grupos com duas cores (entradas e alvos)
+	var conjuntos = separaGrupos(0);
+	var k = 1;
+	if (conjuntos.length==1) {
+		alert('O gráfico só tem um grupo conexo.');
+		return;
+	}
+	var lista = [];
+	for (let sconj of conjuntos) {
+		var cores = new Set();
+		for (let idin of sconj) {
+			var noData = graph.getNode(idin).data;
+			if (noData.cor) {
+				cores.add(noData.cor);
+			}
+		}
+		if (cores.size>=2) {
+			Array.prototype.push.apply(lista, Array.from(sconj));
+		}
+	}
+	selecionaSet(new Set(lista));
+	if (lista.length) {
+		alertify.success('Os grupos com cores diferentes foram selecionados, no total de '+lista.length+' elementos');
+	} else {
+		alertify.error('Não há grupos com cores diferentes');
+	}
+}//function menu_selecionaGruposComDuasCores
 
 function removeIsolados(bExibeMensagem) {
 	var quantidadeLigacoes;	
@@ -2624,7 +2958,7 @@ function menu_editarNota(noid){
 	var nota = graph.getNode(noid).data.nota;
 	nota = nota? nota: '';
 	ativaAtalhos(false);
-	menu_rendererAtivarParar(false, false);
+	var brenderer = menu_rendererAtivarParar(false, false);
 	alertify.prompt( 'Editar Nota', 'Digite texto de anotação:', nota
 	   , function(evt, texto) { 
 			if (texto) { 
@@ -2634,11 +2968,11 @@ function menu_editarNota(noid){
 					ui.children[0].textContent = textoTooltip(graph.getNode(noid), true);
 				} catch (e){; };
 			}
-			menu_rendererAtivarParar(true, false);
+			menu_rendererAtivarParar(brenderer, false);
 			ativaAtalhos(true);
 		}, function() { 
 			ativaAtalhos(true);
-			menu_rendererAtivarParar(true, false);
+			menu_rendererAtivarParar(brenderer, false);
 	});
 }//.function menu_editarNota
 
@@ -2712,7 +3046,9 @@ function menu_exportaExcel(bSoSelecionados) {
 	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
 }//.function menu_exportaExcel
 
-function getRedeNosLigacoes(bSoSelecionados) {	
+function getRedeNosLigacoes(bSoSelecionados, setNos) {	
+	//se setNos=null, pega todos os itens do gráfico ou apenas ou selecionados
+	//se setNos for especificado, pega esses da lista
 	//return dojo.toJson({'no':listaNoInicial, 'ligacao':listaLigacaoInicial});
 	//return JSON.stringify({'no':listaNoInicial, 'ligacao':listaLigacaoInicial}, filtroDeMembros);
 	var nosAux=[], ligacoesAux=[];
@@ -2722,8 +3058,14 @@ function getRedeNosLigacoes(bSoSelecionados) {
 			var nodedata = JSON.parse(JSON.stringify(node.data));
 			nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
 			nodedata['pinado'] = gparam.layout.isNodePinned(node);
-			if ((!bSoSelecionados) || gparam.idNosSelecionados.has(node.id)) {
-				nosAux.push(nodedata);			
+			if (setNos) { 
+				if (setNos.has(node.id)) {
+					nosAux.push(nodedata);	
+				}
+			} else {
+				if ((!bSoSelecionados) || gparam.idNosSelecionados.has(node.id)) {
+					nosAux.push(nodedata);			
+				}
 			}
 		}
 	);
@@ -2737,8 +3079,14 @@ function getRedeNosLigacoes(bSoSelecionados) {
 			"label": link.data.label
 			}
 		); */
-		if ((!bSoSelecionados) || (gparam.idNosSelecionados.has(link.fromId) && gparam.idNosSelecionados.has(link.toId))) {
-			ligacoesAux.push(JSON.parse(JSON.stringify(link.data)));	
+		if (setNos) { 
+			if (setNos.has(link.fromId) && setNos.has(link.toId)) {
+				ligacoesAux.push(link.data);	
+			}		
+		} else {
+			if ((!bSoSelecionados) || (gparam.idNosSelecionados.has(link.fromId) && gparam.idNosSelecionados.has(link.toId))) {
+				ligacoesAux.push(JSON.parse(JSON.stringify(link.data)));	
+			}
 		}
 	}); 
 	return {'no':nosAux, 'ligacao':ligacoesAux};
@@ -3221,6 +3569,10 @@ function evento_teclasDown(e) {
 		menu_localiza();
 	} else if (testa('KeyJ', false, false)) { 
 		menu_localiza_adjacentes();
+	} else if (testa('KeyJ', true, false)) { 
+		menu_localiza_componente();
+	} else if (testa('KeyJ', false, true)) { 
+		menu_localiza_itensComMaisLigacoes();
 	} else if (testa('KeyI', false, false)) { 
 		menu_inserir();
 	} else if (testa('KeyU', false, false)) { 
@@ -3232,21 +3584,23 @@ function evento_teclasDown(e) {
 	} else if (testa('KeyD', false, true)) { 
 		menu_listaSelecao(true);
 	} else if (testa('KeyA', false, false)) { 
-		menu_abrirNovaAba(gparam.idnoSelecionado);
+		menu_abrirNovaAba(null, true);
 	} else if (testa('KeyA', true, false)) { 
 		menu_abrirNovaAba(null);
 	} else if (testa('KeyA', false, true)) { 
 		menu_selecionarTudo();
+	} else if (testa('KeyQ', false, false)) {
+		menu_quebraGraficoEmPartes();
 	} else if (testa('KeyE', false, false)) { 
 		menu_editar_no();
 	} else if (testa('KeyG', false, false)) { 
 		menu_buscaEmSite('https://www.google.com/search?q=');;
 	} else if (testa('KeyG', true, false)) { 
 		menu_GoogleMaps();;
-	} else if (testa('KeyJ', false, false)) { 
-		menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');;
 	} else if (testa('KeyN', false, false)) { 
 		menu_rotulosCompletos(null);
+	} else if (testa('KeyN', true, false)) { 
+		menu_ligacoesExibe(null);
 	} else if (testa('KeyF', false, false)) { 
 		menu_localiza();
 	} else if (testa('KeyF', true, false)) { 
@@ -3254,7 +3608,7 @@ function evento_teclasDown(e) {
 	} else if (testa('KeyL', false, false)) { 
 		menu_ligar_selecionados(true);
 	} else if (testa('KeyL', true, false)) { 
-		menu_desligar_selecionados();
+		menu_desligar_selecionados(false);
 	} else if (testa('KeyK', false, false)) { 
 		menu_ligar_selecionados(false);
 	} else if (testa('Delete', false, false)) { 
@@ -3269,10 +3623,8 @@ function evento_teclasDown(e) {
 		menu_colorir();
 	} else if (testa('KeyC', true, false)) { 
 		menu_colorir('transparent');
-	} else if (testa('KeyQ', false, false) || testa('Space', false, false)) { 
+	} else if (testa('Space', false, false)) { 
 		menu_rendererAtivarParar(!gparam.bRenderAtivado, true);
-	} else if (testa('KeyQ', true, false)) { 
-		menu_rendererAtivarParar(true, true);
 	} else if (testa('ArrowLeft', false, false)) { 
 		menu_teclaLeft(false);
 	} else if (testa('ArrowRight', false, false)) { 
@@ -3281,8 +3633,8 @@ function evento_teclasDown(e) {
 		menu_teclaUp(false);
 	} else if (testa('ArrowDown', false, false)) { 
 		menu_teclaDown(false);	
-	} else if (testa('Enter', false, false)) { 
-		menu_exportaJSONServidorParaBaseLocal(true, '', 'enter' );
+	} else if (testa('KeyO', false, false)) { 
+		menu_exportaJSONServidorParaBaseLocal(true, '', 'operacao' );
 	} else {
 		return;
 	} 
@@ -3582,8 +3934,13 @@ function main() {
 		</button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados();" title="Remove ligações entre os itens selecionados"> 
-		<span class="menu-text">Remover (SHIFT+L)</span> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(false);" title="Remove ligações entre os itens selecionados"> 
+		<span class="menu-text">Remover Entre(SHIFT+L)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(true);" title="Remove todas as ligações dos itens selecionados"> 
+		<span class="menu-text">Remover Ligações</span> 
 		</button>
 		</li>
 	</menu>
@@ -3592,7 +3949,10 @@ function main() {
 	<button type="button" class="menu-btn" title="Opções diversas para exibição: colorir, exibição de rótulos..."><i class="fa fa-eye"></i><span class="menu-text">Visualização</span> </button>
 	<menu class="menu">
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(gparam.idnoSelecionado)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(null, true)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_quebraGraficoEmPartes()"> <i class="fa fa-external-link-alt"></i> <span class="menu-text" alt="Se o gráfico for grande, divide em pedaços e abre em outras abas.">Quebrar o gráfico em abas (Q)</span> </button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo(null);"> 
@@ -3664,8 +4024,11 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(true)" title="Exibe Dados em nova Janela do navegador">
-		<i class="fa fa-folder-open"></i><span class="menu-text">Dados em Janela (Shift+D)</span>
-		</button>
+		<i class="fa fa-folder-open"></i><span class="menu-text">Dados em Janela (Shift+D)</span></button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(true)" title="Exibe Dados em nova Janela do navegador">
+		<i class="fa fa-folder-open"></i><span class="menu-text">Lista dados da seleção (Ctrl+D)</span></button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); gparam.renderer.reset();"> 
@@ -3674,12 +4037,12 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(false, true);"> 
-		<i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Espaço ou Q)</span> 
+		<i class="fa fa-stop"></i> <span class="menu-text">Leiaute: Parar (Espaço)</span> 
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_rendererAtivarParar(true, true);"> 
-		<i class="fa fa-play"></i> <span class="menu-text">Leiaute: Continuar (Shift+Q)</span> 
+		<i class="fa fa-play"></i> <span class="menu-text">Leiaute: Continuar (Espaço)</span> 
 		</button>
 		</li>  
 	</menu>
@@ -3704,6 +4067,26 @@ function main() {
 		<i class="fa fa-search"></i><span class="menu-text">Adjacentes (J)</span> 
 		</button>
 		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_componente();" title="Adiciona itens conexos (árvore) aos selecionados."> 
+		<i class="fa fa-search"></i><span class="menu-text">Conexos (SHIFT+J)</span> 
+		</button>
+		</li>		
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_itensComMaisLigacoes();" title="Seleciona itens com mais Ligações."> 
+		<i class="fa fa-search"></i><span class="menu-text">Itens com mais ligações (CTRL+J)</span> 
+		</button>
+		</li>	
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_itensLigadosAColoridos();" title="Selecione itens ligados a outros itens marcados com cores."> 
+		<i class="fa fa-search"></i><span class="menu-text">Itens ligados a coloridos</span> 
+		</button>
+		</li>	
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_selecionaGruposComDuasCores();" title="Seleciona os itens de grupos que tenham pelo menos duas cores"> 
+		<i class="fa fa-search"></i><span class="menu-text">Grupos com duas cores</span> 
+		</button>
+		</li>	
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Abre aba com busca em sites"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
 		<menu class="menu">
@@ -3719,7 +4102,7 @@ function main() {
 			</li>
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
-			<i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil (J)</span> 
+			<i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil</span> 
 			</button>
 			</li>
 			<li class="menu-item">
@@ -3765,7 +4148,7 @@ function main() {
 		</script>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false)" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false, true)" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
 		<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor</span>
 		</button>
 		</li>  
@@ -3784,7 +4167,7 @@ function main() {
 			</button>
 			</li>  
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(true)" title="Salva as informações dos itens selecionados no servidor, o link poderá ser compartilhado e aberto em uma nova aba.">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(true, true)" title="Salva as informações dos itens selecionados no servidor, o link poderá ser compartilhado e aberto em uma nova aba.">
 			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor</span>
 			</button>
 			</li>  		

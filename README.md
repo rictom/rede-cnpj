@@ -57,30 +57,60 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - U - Criar item novo (que não seja PF ou PJ) e ligar aos itens selecionados;
 - E - Editar dados do item (que não seja PF ou PJ) selecionado;
 - CRTL+Z – Desfaz Inserção;
+
+- SubMenu Ligar:
+- U - Ligar para novo item;
 - L - Ligar itens selecionados, ligação tipo estrela (o primeiro ligado aos demais);
 - SHIFT+L - Remover ligação entre os itens selecionados;
+- Remover Ligacoes - Remove todas as ligações dos itens selecionados;
 - K - Ligar itens selecionados, ligação tipo fila (o primeiro ligado ao segundo, o segundo ao terceiro, etc);
-- D – Abre um popup com dados de CNPJ;
-- SHIFT+D – Abre numa nova aba com Dados;
-- Exportar dados em Excel (somente itens selecionados ou toda a rede);
-- Exportar imagem em formato SVG;
-- Exportar/Importar dados do gráfico em formato JSON;
-- Exportar json para o servidor;
-- Importar json do servidor;
-- F – Localizar na Tela Nome, CNPJ ou CPF;
-- G – Abre o nó numa aba do site Google;
-- SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
-- J – Abre o nó numa aba do site Jusbrasil;
-- N - Rótulo - Exibe apenas o primeiro nome;
-- A - Gráfico em Nova Aba;
+
+- SubMenu Visualização:
+- A - Gráfico em Nova Aba - Abre aba com os itens selecionados;
 - SHIFT+A - Abre uma nova Aba vazia;
-- C - Colorir os nós selecionados;
+- Dividar o gráfico em partes;
 - P - Fixar o nó na posição;
+
+- SubMenu Visualização>Rótulos:
+- N - Rótulo - Exibe apenas o primeiro nome;
+
+- Alterar Ícone;
+- C - Colorir os nós selecionados;
+- Escolher Cor;
+- D – Abre um popup com dados;
+- SHIFT+D – Abre numa nova aba com Dados;
+- CTRL+D – Lista ids dos itens selecionados;
 - Escala Inicial - Coloca a exibição sem zoom, na escala inicial.
 - Barra de Espaço - Parar/reiniciar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
+
+- F - Localizar - Localizar na Tela Nome, CNPJ ou CPF;
+- SHIFT+F - Localizar apenas na seleção;
+- J – Seleciona itens adjacentes;
+- SHIFT+J – Seleciona árvores dos itens selecionados;
+- Itens com mais ligações - Opção para selecionar os itens do gráfico com mais ligações;
+- SubMenu - Busca em sites:
+- G – Abre o nó numa aba do site Google;
+- SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
+- Jusbrasil - Busca no site Jusbrasil
+- Portal da Transparência - Busca no Portal da Transparência;
+
+- SubMenu Salvar/Abrir:
+
+- Salvar dados em Excel;
+- Salvar imagem em formato SVG;
+- Salvar Arquivo Json - salva dados do gráfico no formato json;
+- Abrir Arquivo Json;
+- Exportar/Importar JSON ao Servidor - Exportar ou importar dados do gráfico em formato JSON carregados no servidor;
+
+- SubMenu Excluir
+
 - DEL – Excluir itens selecionados.
 - SHIFT+DEL – Excluir todos os itens.
-Os comandos valem para o último nó Selecionado, que fica com um retângulo preto em volta do ícone. 
+- Excluir Nó mantendo Link;
+- Simplifica Gráfico - Remove itens nas bordas do gráfico que não tenham destaque;
+- Excluir itens isolados - Remove itens sem ligação.
+
+Os comandos valem para o último nó selecionado ou nós selecionados, que ficam em destaque com a animação no contorno ods ícones.
 Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão ou para Expansão de vínculos.
 Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrastar arquivos csv ou json.
 
@@ -101,6 +131,21 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+
+versão 0.7.1 (agosto/2021)
+- opção para dividir gráficos em outras abas (tecla Q);
+- correção de erro quando se apertava tecla CTRL;
+- opção para selecionar itens adjacentes aos selecionados (tecla J);
+- opção para selecionar árvore que contém o item (tecla SHIFT+J);
+- opção para listar itens com mais links (tecla CTRL+J)
+- opção para selecionar itens com mais ligações para ícones coloridos;
+- opção "Nova Aba" (tecla A) abre nova aba com mais de um item selecionado;
+- troca de nomes no menu de exportar json para salvar json;
+- opção para exportar dados para banco de dados local (só funciona na máquina local);
+- opção para exportar para json apenas itens selecionados;
+- opção para ocultar rótulos de ligações (SHIFT+N);
+- opção para remover todas as ligações dos itens selecionados;
+- opção simplifica gráfico (remove itens que não são coloridos ou com comentário que tem apenas uma ligação).
 
 versão 0.6.3 (julho/2021)
 - melhoria para dar clique duplo em ícones;
