@@ -61,18 +61,21 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - SubMenu Ligar:
 - U - Ligar para novo item;
 - L - Ligar itens selecionados, ligação tipo estrela (o primeiro ligado aos demais);
-- SHIFT+L - Remover ligação entre os itens selecionados;
+- SHIFT+L - Remover ligação entre itens selecionados;
 - Remover Ligacoes - Remove todas as ligações dos itens selecionados;
 - K - Ligar itens selecionados, ligação tipo fila (o primeiro ligado ao segundo, o segundo ao terceiro, etc);
 
 - SubMenu Visualização:
 - A - Gráfico em Nova Aba - Abre aba com os itens selecionados;
-- SHIFT+A - Abre uma nova Aba vazia;
-- Dividar o gráfico em partes;
+- Q - Quebrar o gráfico em abas - Divide o gráfico em partes menores, mantendo as ligações
 - P - Fixar o nó na posição;
-
+- SHIFT+P - Desfixar todos os nós do gráfico;
+- CTRL+P - Fixa um nó em cada grupo conexo (para evitar que o gráfico se expanda indefinidamente);
 - SubMenu Visualização>Rótulos:
+- E - Editar rótulo; 
 - N - Rótulo - Exibe apenas o primeiro nome;
+- SHIFT+N - Oculta/exibe texto da ligação;
+
 
 - Alterar Ícone;
 - C - Colorir os nós selecionados;
@@ -80,14 +83,20 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - D – Abre um popup com dados;
 - SHIFT+D – Abre numa nova aba com Dados;
 - CTRL+D – Lista ids dos itens selecionados;
+- Altera o nome da aba;
 - Escala Inicial - Coloca a exibição sem zoom, na escala inicial.
 - Barra de Espaço - Parar/reiniciar leiaute (se a tela tiver muitos nós, os comandos funcionam melhor se o leiaute estiver parado);
 
 - F - Localizar - Localizar na Tela Nome, CNPJ ou CPF;
 - SHIFT+F - Localizar apenas na seleção;
+- CTRL+F - Localiza por campo (como cor do item);
 - J – Seleciona itens adjacentes;
 - SHIFT+J – Seleciona árvores dos itens selecionados;
-- Itens com mais ligações - Opção para selecionar os itens do gráfico com mais ligações;
+- CTRL+J - Itens com mais ligações - Opção para selecionar os itens do gráfico com mais ligações;
+- Itens ligados a coloridos;
+- Grupos com duas cores;
+- CTRL+A - Seleciona todos os itens;
+- CTRL+SHIFT+A - Inverte seleção;
 - SubMenu - Busca em sites:
 - G – Abre o nó numa aba do site Google;
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
@@ -101,6 +110,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - Salvar Arquivo Json - salva dados do gráfico no formato json;
 - Abrir Arquivo Json;
 - Exportar/Importar JSON ao Servidor - Exportar ou importar dados do gráfico em formato JSON carregados no servidor;
+- Banco de Dados - Exporta dados para banco de dados sqlite (só para usuário local);
 
 - SubMenu Excluir
 
@@ -131,6 +141,10 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+versão 0.7.2 (setembro/2021)
+- opção para alterar o nome da aba;
+- opção para selecionar todos os itens;
+- opção para inverter seleção;
 
 versão 0.7.1 (agosto/2021)
 - opção para dividir gráficos em outras abas (tecla Q);

@@ -8,7 +8,7 @@ json a partir da tabela sqlite
 Não fazer Create table ou criar índice para uma tabela a ser criada ou modificada pelo pandas 
 """
 import os, sys, glob
-import time, copy, re, string, unicodedata, collections, json
+import time, copy, re, string, unicodedata, collections, json, secrets
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
 '''
@@ -25,18 +25,20 @@ except:
     sys.exit('o arquivo sqlite não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto.')
 if not caminhoDBReceita: #se não houver db da receita, carrega um template para evitar erros nas consultas
     caminhoDBReceita = 'base_cnpj_vazia.db'
-caminhoDBReceitaFTS = config.config['BASE'].get('base_receita_fulltext','')
-caminhoDBEnderecoNormalizado = config.config['BASE'].get('base_endereco_normalizado', '')
-caminhoDBLinks = config.config['BASE'].get('base_links', '')
+caminhoDBReceitaFTS = config.config['BASE'].get('base_receita_fulltext','').strip()
+caminhoDBEnderecoNormalizado = config.config['BASE'].get('base_endereco_normalizado', '').strip()
+caminhoDBLinks = config.config['BASE'].get('base_links', '').strip()
 
-caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '')
+caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '').strip()
 
 #logAtivo = True if config['rede']['logAtivo']=='1' else False #registra cnpjs consultados
 logAtivo = config.config['ETC'].getboolean('logativo',False) #registra cnpjs consultados
 #    ligacaoSocioFilial = True if config['rede']['ligacaoSocioFilial']=='1' else False #registra cnpjs consultados
 ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
+kLimiteCamada = config.config['ETC'].getboolean('limite_registros_camada', 10000)
 
 gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'pool_size':1} #poll_size=1 força usar só uma conexão??
+#'isolation_level':'AUTOCOMMIT'
 
 class DicionariosCodigosCNPJ():
     def __init__(self):
@@ -60,6 +62,9 @@ class DicionariosCodigosCNPJ():
         #self.dicSituacaoCadastral = {'1':'Nula', '2':'Ativa', '3':'Suspensa', '4':'Inapta', '8':'Baixada'}
         self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
 
+def tabelaTemp():
+    ''' tabela temporaria com numero aleatorio para evitar colisão '''
+    return 'tmp' #'tmp_' + secrets.token_hex(4)
 
 gdic = DicionariosCodigosCNPJ()
 
@@ -83,13 +88,25 @@ def timeit(method):
         return result    
     return timed
 
-def apagaTabelasTemporarias():
+# def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp'):
+#     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
+#     #con.execute('DROP TABLE if exists tmp_cnpjs')
+#     tmp = prefixo_tabela_temporaria
+#     con.execute(f'DROP TABLE if exists {tmp}_cpfpjnomes')
+#     con.execute(f'DROP TABLE if exists {tmp}_ids')
+#     con.execute(f'DROP TABLE if exists {tmp}_socios')
+#     con.execute(f'DROP TABLE if exists {tmp}_busca_nome')
+#     con = None
+
+def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp'):
+    '''apaga tabelas temporárias. Isto pode dar erro em ambiente com threads??
+    se prefixo_tabela_temporaria='', apaga TODAS as tabelas tmp_'''
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
-    #con.execute('DROP TABLE if exists tmp_cnpjs')
-    con.execute('DROP TABLE if exists tmp_cpfpjnomes')
-    con.execute('DROP TABLE if exists tmp_ids')
-    con.execute('DROP TABLE if exists tmp_socios')
-    con.execute('DROP TABLE if exists tmp_busca_nome')
+    insp = sqlalchemy.inspect(con)
+    tmp = prefixo_tabela_temporaria if prefixo_tabela_temporaria else 'tmp_'
+    tmp_tabelas = [t for t in insp.get_table_names() if t.startswith(tmp)]
+    for t in tmp_tabelas:
+        con.execute(f'Drop table if exists {t}')
     con = None
 
 apagaTabelasTemporarias() #apaga quando abrir o módulo
@@ -100,6 +117,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
     '''
     #remove acentos
     #se limite==-1, não havia @N no nome
+    tmp='tmp'
     nomeIn = nomeIn.strip().upper()
     nomeMatch = ''
     try:
@@ -142,10 +160,10 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
                 limit {limite*20}
             ''' 
          df_busca_nomesPF = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
-         df_busca_nomesPF.to_sql('tmp_busca_nomePF', con, if_exists='replace', index=None)
+         df_busca_nomesPF.to_sql(f'{tmp}_busca_nomePF', con, if_exists='replace', index=None)
          query = f'''
                     SELECT distinct cnpj_cpf_socio, nome_socio
-                    from tmp_busca_nomePF tn 
+                    from {tmp}_busca_nomePF tn 
                     left join socios ts on tn.nome=ts.nome_socio
                     where cnpj_cpf_socio not null and nome_socio<>"" and length(cnpj_cpf_socio)=11
                     limit {limite*2}       
@@ -166,7 +184,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
     #nomeMatch = nomeMatch.replace('"','')
     # print('query', query)
     contagemRegistros = 0
-    for r in cursor: #con.execute(query):
+    for r in cursor.fetchall(): #con.execute(query):
         if contagemRegistros>=limite:
             break
         if nomeMatch:
@@ -181,6 +199,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
         print('##TESTE com identificador aleatorio:', cjs, cps)    
         con = None
         return cjs, cps
+    con.execute(f'drop table if exists {tmp}_busca_nomePF')
     #pega cnpjs
     cursor = []
     if nomeMatch:
@@ -191,10 +210,10 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
                 limit {limite*20}
             ''' 
         df_busca_nomesPJ = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
-        df_busca_nomesPJ.to_sql('tmp_busca_nomePJ', con, if_exists='replace', index=None)
+        df_busca_nomesPJ.to_sql(f'{tmp}_busca_nomePJ', con, if_exists='replace', index=None)
         query = f'''
                     SELECT te.cnpj, t.razao_social
-                    from tmp_busca_nomePJ tn
+                    from {tmp}_busca_nomePJ tn
                     inner join empresas t on tn.nome = t.razao_social
                     left join estabelecimento te on te.cnpj_basico=t.cnpj_basico --inner join fica lento??
                     limit {limite*2}
@@ -210,7 +229,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
                     limit {limite}
                 '''        
         cursor = con.execute(query, {'nome':nome})
-    for r in cursor: #con.execute(query):
+    for r in cursor.fetchall(): #con.execute(query):
         if contagemRegistros>=limite:
             break
         if nomeMatch:
@@ -218,6 +237,7 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
                 continue
         cjs.add(r.cnpj)    
         contagemRegistros +=1
+    con.execute(f'drop table if exists {tmp}_busca_nomePJ')
     con = None
     return cjs, cps
 #.def buscaPorNome(
@@ -258,8 +278,9 @@ def busca_cnpj(cnpj_basico, limiteIn):
                     where t.cnpj_basico=\'{cnpj_basico}\' and te.matriz_filial is '1' 
                 ''' 
     r = con.execute(query).fetchall()
-    return {k[0] for k in r}
-
+    dicr = {k[0] for k in r}
+    con = None
+    return dicr
     
 def busca_cpf(cpfin):
     '''como a base não tem cpfs de sócios completos, faz busca só do miolo'''
@@ -274,6 +295,7 @@ def busca_cpf(cpfin):
     lista = []
     for c, n in con.execute(query).fetchall():
         lista.append((c,n))
+    con = None
     return lista
             
 def separaEntrada(cpfcnpjIn='', listaIds=None):
@@ -358,11 +380,15 @@ dtype_tmp_cpfpjnomes={'cpfpj':sqlalchemy.types.VARCHAR,
                        'grupo':sqlalchemy.types.VARCHAR,
                        'camada':sqlalchemy.types.INTEGER }
 
-def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo=''):
+def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefixo_tabela_temporaria=''):
     global gTable
-
-    apagaTabelasTemporarias()
-
+    if prefixo_tabela_temporaria:
+        tmp = prefixo_tabela_temporaria
+    else:
+        tmp = tabelaTemp()
+        
+    #xxx 
+    apagaTabelasTemporarias(tmp)
     if cpfcnpjIn:
         cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn=cpfcnpjIn)
     else:
@@ -378,7 +404,7 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo=''):
     dftmptable['camada'] = 0
     dftmptable['grupo'] = grupo
 
-    dftmptable.to_sql('tmp_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
+    dftmptable.to_sql(f'{tmp}_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
     #indice deixa a busca lenta!
     #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
     camadasIds = {i:0 for i in ids}
@@ -390,9 +416,9 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo=''):
     dftmptable['grupo'] = grupo
     dftmptable['camada'] = 0
     #con.execute('DELETE FROM tmp_cpfnomes')
-    dftmptable.to_sql('tmp_cpfpjnomes', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cpfpjnomes)       
+    dftmptable.to_sql(f'{tmp}_cpfpjnomes', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cpfpjnomes)       
     
-    return camadasIds, cnpjs, cpfnomes #, ids
+    return camadasIds, cnpjs, cpfnomes, tmp #, ids
 #.def criaTabelasTmpParaCamadas
 
 def cnpj2id(cnpj):
@@ -436,7 +462,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     #nosids = set()
     ligacoes = []
     #setOrigDest = set()
-    camadasIds, cnpjs, cpfnomes  = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo)
+    camadasIds, cnpjs, cpfnomes, tmp  = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo)
 
 
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
@@ -457,27 +483,27 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
                 #AND (length(cnpj_cpf_socio)<>14 OR substr(cnpj_cpf_socio, 9, 4)="0001")
 
         query = f''' 
-        DROP TABLE if exists tmp_socios;
+        DROP TABLE if exists {tmp}_socios;
         
-        CREATE TABLE tmp_socios AS
+        CREATE TABLE {tmp}_socios AS
         SELECT DISTINCT 
         * From (
         SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
         FROM socios t
-        INNER JOIN tmp_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
+        INNER JOIN {tmp}_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
         left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
         where tl.nome=''
         UNION
         SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
         FROM socios t
-        INNER JOIN tmp_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
+        INNER JOIN {tmp}_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
         left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio 
         where tl.nome=''
         {whereMatriz}
         UNION
         SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
         FROM socios t
-        INNER JOIN tmp_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
+        INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
         left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
         where tn.nome<>''
          {whereMatriz}
@@ -485,83 +511,87 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         ; 
         
         
-        Insert INTO tmp_socios (cnpj, cnpj_cpf_socio, nome_socio, cod_qualificacao) 
+        Insert INTO {tmp}_socios (cnpj, cnpj_cpf_socio, nome_socio, cod_qualificacao) 
         select  tm.cnpj, tp.cpfpj as cnpj_cpf_socio, "" as nome_socio, "filial" as cod_qualificacao
         from estabelecimento t
-        inner join tmp_cpfpjnomes tp on tp.cpfpj=t.cnpj
+        inner join {tmp}_cpfpjnomes tp on tp.cpfpj=t.cnpj
         left join estabelecimento tm on tm.cnpj_basico=t.cnpj_basico and tm.cnpj<>tp.cpfpj
         where tm.matriz_filial is "1" --is é mais rapido que igual (igual é muito lento)
         and tp.nome='';
         
         
-        Insert INTO tmp_cpfpjnomes (cpfpj, nome, grupo, camada) 
+        Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada) 
         select distinct ts.cnpj as cpfpj, "" as nome, "{grupo}" as grupo, {cam+1} as camada
-        From tmp_socios ts;                  
+        From {tmp}_socios ts;                  
         
-        Insert INTO tmp_cpfpjnomes (cpfpj, nome, grupo, camada)
+        Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada)
         select distinct cnpj_cpf_socio as cpfpj,"" as nome, "{grupo}" as grupo, {cam+1} as camada
-        From tmp_socios ts
+        From {tmp}_socios ts
         where length(cnpj_cpf_socio)=14;
         
-        Insert INTO tmp_cpfpjnomes (cpfpj, nome, grupo, camada)
+        Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada)
         select distinct cnpj_cpf_socio as cpfpj, nome_socio as nome, "{grupo}" as grupo, {cam+1} as camada
-        From tmp_socios ts
+        From {tmp}_socios ts
         where  length(cnpj_cpf_socio)<>14;
 
-        drop table if exists tmp_cpfpjnomes_aux;
+        drop table if exists {tmp}_cpfpjnomes_aux;
         
-        create table tmp_cpfpjnomes_aux AS
+        create table {tmp}_cpfpjnomes_aux AS
         select cpfpj, nome, min(grupo) as grupo, min(camada) as camada
-        from tmp_cpfpjnomes
+        from {tmp}_cpfpjnomes
         group by cpfpj, nome;
         
-        drop table if exists tmp_cpfpjnomes;
+        drop table if exists {tmp}_cpfpjnomes;
         
-        create table tmp_cpfpjnomes AS
+        create table {tmp}_cpfpjnomes AS
         select *
-        from tmp_cpfpjnomes_aux;        
+        from {tmp}_cpfpjnomes_aux;        
         
-        drop table if exists tmp_cpfpjnomes_aux;
+        drop table if exists {tmp}_cpfpjnomes_aux;
 
                     
-        Insert INTO tmp_ids (identificador, grupo, camada)
+        Insert INTO {tmp}_ids (identificador, grupo, camada)
         select distinct "PJ_" || t.cpfpj as identificador,  t.grupo, t.camada
-        From tmp_cpfpjnomes t
+        From {tmp}_cpfpjnomes t
         where t.nome='';
         
-        Insert INTO tmp_ids (identificador, grupo, camada)
+        Insert INTO {tmp}_ids (identificador, grupo, camada)
         select distinct "PF_" || t.cpfpj || "-" || t.nome  as identificador, t.grupo, t.camada
-        From tmp_cpfpjnomes t
+        From {tmp}_cpfpjnomes t
         where t.cpfpj<>"" and t.nome<>'';
         
-        Insert INTO tmp_ids (identificador, grupo, camada)
+        Insert INTO {tmp}_ids (identificador, grupo, camada)
         select distinct "PE_" || t.nome  as identificador, t.grupo, t.camada
-        From tmp_cpfpjnomes t
+        From {tmp}_cpfpjnomes t
         where t.cpfpj = "" and t.nome<>'';
         
-        drop table if exists tmp_ids_aux;
+        drop table if exists {tmp}_ids_aux;
         
-        create table tmp_ids_aux AS
+        create table {tmp}_ids_aux AS
         select identificador, min(grupo) as grupo, min(camada) as camada
-        from tmp_ids
+        from {tmp}_ids
         group by identificador;
         
-        drop table if exists tmp_ids;
+        drop table if exists {tmp}_ids;
         
-        create table tmp_ids AS
+        create table {tmp}_ids AS
         select *
-        from tmp_ids_aux;
+        from {tmp}_ids_aux;
         
-        drop table if exists tmp_ids_aux;
+        drop table if exists {tmp}_ids_aux;
         '''
 
         for sql in query.split(';'):
             con.execute(sql)
+        registros = con.execute(f'select count(*) from {tmp}_ids').fetchone()[0]
+        if registros>kLimiteCamada:
+            mensagem['popup'] = f'Alcançou apenas a camada {cam}, a camada {camada} não foi alcançada, por excesso de itens.'
+            break
     #.for cam in range(camada): 
     if camada==0:
         #gambiarra, em camada 0, não apaga a tabela tmp_socios, por isso pega dados de consulta anterior.
         query0 = ''' 
-        CREATE TABLE tmp_socios AS
+        CREATE TABLE {tmp}_socios AS
         SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
         FROM socios t
         left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
@@ -570,9 +600,9 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         con.execute(query0)
  
     
-    queryLertmp = '''
+    queryLertmp = f'''
         Select *
-        from tmp_ids
+        from {tmp}_ids
         where substr(identificador,1,3)='PF_' or substr(identificador,1,3)='PE_'
     '''
     for k in con.execute(queryLertmp):
@@ -589,9 +619,9 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
                 'municipio': '', 'uf': ''} 
         camadasIds[kid] = k['camada']
         nosaux.append(copy.deepcopy(no))         
-    querySocios = '''
+    querySocios = f'''
         select *
-        from tmp_socios
+        from {tmp}_socios
     '''
     for k in con.execute(querySocios):
         ksocio = k['cnpj_cpf_socio']
@@ -609,16 +639,16 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     if logAtivo or not bjson:
         conlog = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
         conlog.execute('create table if not exists log_cnpjs (cnpj text, grupo text, camada text)')
-        conlog.execute('''insert into log_cnpjs 
-            select * from tmp_cnpjs; ''')
+        conlog.execute(f'''insert into log_cnpjs 
+            select * from {tmp}_cnpjs; ''')
         conlog.execute('create table if not exists log_cpfnomes (cpf text, nome text, grupo text, camada text);')
-        conlog.execute('''insert into log_cpfnomes 
-            select cpf, nome, grupo, cast(camada as int) from tmp_cpfnomes; ''')
+        conlog.execute(f'''insert into log_cpfnomes 
+            select cpf, nome, grupo, cast(camada as int) from {tmp}_cpfnomes; ''')
         conlog = None
     if not bjson:
         con = None
         return len(camadasIds)
-    for k in con.execute('Select cpfpj as cnpj, camada from tmp_cpfpjnomes where nome="" '):
+    for k in con.execute(f'Select cpfpj as cnpj, camada from {tmp}_cpfpjnomes where nome="" '):
         kcnpj = k['cnpj']
         cnpjs.add(kcnpj)
         #camadasIds[kcnpj] = k['camada']
@@ -660,6 +690,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     #print(textoJson)
     #print(' fim: ' + time.ctime())
     #print(' fim: ' + ' '.join(str(time.ctime()).split()[3:]))
+    apagaTabelasTemporarias(tmp)
     return textoJson
 #.def camadasRede
 
@@ -682,20 +713,21 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
     dftmptable['grupo'] = ''
     dftmptable['camada'] = 0
     #con.execute('DELETE FROM tmp_cnpjs')
-    dftmptable.to_sql('tmp_cnpjsdados', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cnpjs)
-    query = '''
+    tmp = tabelaTemp()
+    dftmptable.to_sql(f'{tmp}_cnpjsdados', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cnpjs)
+    query = f'''
                 SELECT tt.cnpj, te.razao_social, tt.situacao_cadastral as situacao, tt.matriz_filial,
                 tt.tipo_logradouro, tt.logradouro, tt.numero, tt.complemento, tt.bairro,
                 ifnull(tm.descricao,tt.nome_cidade_exterior) as municipio, tt.uf as uf, tpais.descricao as pais_,
                 te.natureza_juridica as cod_nat_juridica
-                from tmp_cnpjsdados tp
+                from {tmp}_cnpjsdados tp
                 inner join estabelecimento tt on tt.cnpj = tp.cnpj
                 left join empresas te on te.cnpj_basico = tt.cnpj_basico --trocar por inner join deixa a consulta lenta...
                 left join municipio tm on tm.codigo=tt.municipio
                 left join pais tpais on tpais.codigo=tt.pais
             ''' #pode haver empresas fora da base de teste
     setCNPJsRecuperados = set()
-    for k in con.execute(query):
+    for k in con.execute(query).fetchall():
         listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
         logradouro = ', '.join(listalogradouro)
         no = {'id': cnpj2id(k['cnpj']), 'descricao': k['razao_social'], 
@@ -719,7 +751,7 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
     #nosaux=ajustaLabelIcone(nosaux)
     nos = nosaux #nosaux[::-1] #inverte, assim os nos de camada menor serao inseridas depois, ficando na frente
     nosaux = nos.sort(key=lambda n: n['camada'], reverse=True) #inverte ordem, porque os últimos icones vão aparecer na frente. Talvez na prática não seja útil.   
-    con.execute('DROP TABLE if exists tmp_cnpjsdados ') 
+    con.execute(f'DROP TABLE if exists {tmp}_cnpjsdados ') 
     #return nos
 #.def dadosDosNosCNPJs
 
@@ -738,7 +770,9 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         if not caminhoDBEnderecoNormalizado:
             #mensagem['popup'] = 'Não há tabela de enderecos configurada.'
             return {'no': [], 'ligacao':[], 'mensagem': mensagem} 
-
+    con = None
+    tabela = ''
+    tmp = tabelaTemp()
     if tipoLink=='link':
         if not caminhoDBLinks:
             mensagem['popup'] = 'Não há tabela de links configurada.'
@@ -749,22 +783,24 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         query = f''' SELECT * From (
                     SELECT t.id1, t.id2, t.descricao, t.valor
                     FROM {tabela} t
-                    INNER JOIN tmp_ids tl
+                    INNER JOIN {tmp}_ids tl
                     ON  tl.identificador = t.id1
                     UNION
                     SELECT t.id1, t.id2, t.descricao, t.valor
                     FROM {tabela} t
-                    INNER JOIN tmp_ids tl
+                    INNER JOIN {tmp}_ids tl
                     ON  tl.identificador = t.id2
                      ) ORDER by valor DESC
                     '''
     elif tipoLink=='endereco' or tipoLink=='base_local':
         if tipoLink=='endereco':
-            con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBEnderecoNormalizado}", execution_options=gEngineExecutionOptions)        
-            tabela = 'link_ete'
+            if caminhoDBEnderecoNormalizado:
+                con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBEnderecoNormalizado}", execution_options=gEngineExecutionOptions)        
+                tabela = 'link_ete'
         else:
-            con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}", execution_options=gEngineExecutionOptions)
-            tabela = 'links'       
+            if caminhoDBBaseLocal:
+                con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}", execution_options=gEngineExecutionOptions)
+                tabela = 'links'       
 
         valorMinimo=0
         valorMaximo=0
@@ -772,23 +808,25 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         bValorInteiro = True
 
         query = f''' SELECT distinct t.id1, t.id2, t.descricao, t.valor
-                     FROM tmp_ids tl
+                     FROM {tmp}_ids tl
                      INNER JOIN {tabela} t ON  tl.identificador = t.id1
                      UNION
                      SELECT t.id1, t.id2, t.descricao, t.valor
-                     FROM tmp_ids tl
+                     FROM {tmp}_ids tl
                      INNER JOIN {tabela} t ON  tl.identificador = t.id2
                      '''
-    else:
+    # else:
+    #     print('tipoLink indefinido')
+    #     return {'no': [], 'ligacao':[], 'mensagem':'erro, tipoLink indefinido'} 
+    if not con:
         print('tipoLink indefinido')
-        return {'no': [], 'ligacao':[], 'mensagem':'erro, tipoLink indefinido'} 
-        
+        return {'no': [], 'ligacao':[], 'mensagem':'erro, tipoLink indefinido'}         
     grupo = str(grupo)
     nosaux = []
     #nosids = set()
     ligacoes = []
     setLigacoes = set()
-    camadasIds, cnpjs, cpfnomes = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo)
+    camadasIds, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp)
     #print( 'nosids', nosids   )
     cnpjsInicial = copy.copy(cnpjs)
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
@@ -856,7 +894,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         #dftmptable['camada'] = dftmptable['cnpj'].map(camadasIds)
         #con.execute('DELETE from tmp_ids;')
         #dftmptable.set_index('identificador', inplace=True)
-        dftmptable.to_sql('tmp_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
+        dftmptable.to_sql('{tmp}_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
         #curioso, esse índice deixa a busca lenta!!!!
         #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
         limite = limite * numeroItens * 2
@@ -916,6 +954,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         conCNPJaux = None
     #print(' fim: ' + time.ctime())
     #print('camadaLink fim: ' + ' '.join(str(time.ctime()).split()[3:]))
+    apagaTabelasTemporarias(tmp)
     return textoJson
 #.def camadaLink
 
@@ -935,14 +974,14 @@ def jsonDados(cpfcnpjIn, listaIds=False):
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable['grupo']=''
     dftmptable['camada']=0
-
+    tmp = tabelaTemp()
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}",execution_options=gEngineExecutionOptions)
-    dftmptable.to_sql('tmp_cnpjs1', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+    dftmptable.to_sql(f'{tmp}_cnpjs1', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
 
-    query = '''
+    query = f'''
         select t.*, te.*, ifnull(tm.descricao,t.nome_cidade_exterior) as municipio_texto, tpais.descricao as pais_, tsimples.opcao_mei
         from estabelecimento t
-        inner join tmp_cnpjs1 tp on tp.cnpj=t.cnpj
+        inner join {tmp}_cnpjs1 tp on tp.cnpj=t.cnpj
         left join empresas te on te.cnpj_basico=t.cnpj_basico
         left join municipio tm on tm.codigo=t.municipio
         left join simples tsimples on tsimples.cnpj_basico=t.cnpj_basico
@@ -980,8 +1019,10 @@ def jsonDados(cpfcnpjIn, listaIds=False):
         dlista.append(copy.deepcopy(d))
     else:
         d = None
-    con = None
+
     #print('jsonDados-fim: ' + time.ctime())   
+    con.execute(f'Drop table if exists {tmp}_cnpjs1')
+    con = None
     if not listaIds:
         return d
     else:
@@ -999,12 +1040,13 @@ def jsonBaseLocal(cpfcnpjIn=None, listaIds=None):
         dftmptable = pd.DataFrame({'id' : list(cpfcnpjIn.split(';'))})
     else:
         dftmptable = pd.DataFrame({'id' : list(listaIds)})
+    
+    tmp = tabelaTemp()
+    dftmptable.to_sql(f'{tmp}_idsj', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
 
-    dftmptable.to_sql('tmp_idsj', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
-
-    query = '''
+    query = f'''
         select tj.id, tj.json
-        from tmp_idsj t
+        from {tmp}_idsj t
         inner join dadosjson tj on tj.id = t.id
             '''
     dlista = []
@@ -1021,7 +1063,7 @@ def jsonBaseLocal(cpfcnpjIn=None, listaIds=None):
         dicLista[k['id']]=copy.deepcopy(d)
     else:
         d = None
-    con.execute('Drop table if exists tmp_idsj')
+    con.execute(f'Drop table if exists {tmp}_idsj')
     con = None
     #print('jsonDados-fim: ' + time.ctime())   
     if not listaIds:
@@ -1096,13 +1138,13 @@ def dadosParaExportar(dados):
     for item in dados['no']:
         sids.add(item['id'])
     listaCpfCnpjs = list(sids)
-    criaTabelasTmpParaCamadas(con, listaIds=listaCpfCnpjs, grupo='')
-    querysocios = '''
+    camadasIds_, cnpjs_, cpfnomes_, tmp = criaTabelasTmpParaCamadas(con, listaIds=listaCpfCnpjs, grupo='')
+    querysocios = f'''
                 SELECT * from
 				(SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
                 FROM socios t
                 --INNER JOIN tmp_cnpjs tl ON  tl.cnpj = t.cnpj
-                INNER JOIN tmp_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
+                INNER JOIN {tmp}_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
                 left join estabelecimento tt on tt.cnpj=t.cnpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
                 left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
@@ -1110,7 +1152,7 @@ def dadosParaExportar(dados):
                 UNION
                 SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
                 FROM socios t
-                INNER JOIN tmp_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
+                INNER JOIN {tmp}_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
                 left join estabelecimento tt on tt.cnpj=t.cnpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
                 left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
@@ -1118,7 +1160,7 @@ def dadosParaExportar(dados):
                 UNION
                 SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
                 FROM socios t
-                INNER JOIN tmp_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
+                INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
                 left join estabelecimento tt on tt.cnpj=t.cnpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
                 left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
@@ -1127,9 +1169,9 @@ def dadosParaExportar(dados):
                 ORDER BY nome_socio
             '''
 
-    queryempresas = '''
+    queryempresas = f'''
                 SELECT te.*, tm.descricao as municipio_, tt.uf as uf_, pais.descricao as pais_, tt.*
-                FROM tmp_cpfpjnomes tp 
+                FROM {tmp}_cpfpjnomes tp 
                 left join estabelecimento tt on tt.cnpj=tp.cpfpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
                 left join municipio tm on tm.codigo=tt.municipio
@@ -1173,6 +1215,7 @@ def dadosParaExportar(dados):
      
     writer.close()
     output.seek(0)
+    apagaTabelasTemporarias(tmp)
     con = None
     return output
 
@@ -1265,3 +1308,7 @@ def imagensNaPastaF(bRetornaLista=False):
         return dic
         
 gdicImagens = imagensNaPastaF()
+
+if __name__ == '__main__':
+    apagaTabelasTemporarias('tmp_') #apaga todas as tabelas tmp_
+    

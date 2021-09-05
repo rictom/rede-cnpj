@@ -5,6 +5,8 @@ Created on set/2020
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
 from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
+#https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
+import flask_limiter #import Limiter
 
 from werkzeug.utils import secure_filename
 import os, sys, json, secrets, copy, io
@@ -19,6 +21,8 @@ except:
     pass
 
 app = Flask("rede")
+limiter = flask_limiter.Limiter(app, key_func=flask_limiter.util.get_remote_address) #, default_limits=["200 per day", "50 per hour"])
+limiter_param = '20 per minute'
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['numeroDeEmpresasNaBase'] = rede_relacionamentos.numeroDeEmpresasNaBase()
@@ -38,6 +42,13 @@ except:
     gUwsgiLock=False
     gLock = Lock() #prevenir erros de requisições seguidas. No servidor faz o esperado colocando só um thread no rede.wsgi.ini
 
+#sem usar lock, erro sqlite "database schema has changed"
+'''para remover o lock, necessita de um esquema para gerenciar tabelas temporárias.
+   foi colocado prefixos aleatórios às tabelas temporárias, mas em ambiente com thread provavelmente vai dar erro'''
+if False:
+    #gLock = contextlib.suppress() 
+    gLock = contextlib.nullcontext()
+    gUwsgiLock = False
 
 @app.route("/rede/")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
@@ -126,7 +137,10 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
 #.def serve_html_pagina
 
 @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
+@limiter.limit(limiter_param)
 def serve_rede_json_cnpj(cpfcnpj, camada=1):
+    # if request.remote_addr in ('189.6.12.35', '187.113.35.170','200.233.12.9'):
+    #     return jsonify({'acesso':'problema no acesso. favor não utilizar como api de forma intensiva, pois isso pode causar bloqueio para outros ips.'})        
     camada = min(gp['camadaMaxima'], int(camada))
     #cpfcnpj = cpfcnpj.upper().strip() #upper dá inconsistência com email, que está minusculo na base
     cpfcnpj = cpfcnpj.strip()
@@ -156,6 +170,7 @@ def serve_rede_json_cnpj(cpfcnpj, camada=1):
 #.def serve_rede_json_cnpj
 
 @app.route('/rede/grafojson/links/<int:camada>/<int:numeroItens>/<int:valorMinimo>/<int:valorMaximo>/<cpfcnpj>',  methods=['GET','POST'])
+@limiter.limit(limiter_param)
 def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, valorMaximo=0):
     r = None
     if gUwsgiLock:
@@ -174,11 +189,19 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
 #.def serve_rede_json_links
 
 @app.route('/rede/dadosjson/<cpfcnpj>')
+@limiter.limit("5 per minute")
 def serve_dados_detalhes(cpfcnpj):
-    r = rede_relacionamentos.jsonDados(cpfcnpj)
-    if r:
-        return jsonify(r)
-    return jsonify(rede_relacionamentos.jsonBaseLocal(cpfcnpj))
+    if gUwsgiLock:
+        uwsgi.lock()
+    try: 
+        with gLock:
+            r = rede_relacionamentos.jsonDados(cpfcnpj)
+            if r:
+                return jsonify(r)
+            return jsonify(rede_relacionamentos.jsonBaseLocal(cpfcnpj))
+    finally:
+        if gUwsgiLock:
+            uwsgi.unlock()    
 
 #https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 
@@ -251,7 +274,7 @@ def serve_envia_json_acao(acao=''):
     #print(nosLigacoes)
     try:
         r = rede_acao.rede_acao(acao, nosLigacoes)
-        return jsonify({'retorno':'ok'})
+        return jsonify({'retorno':'ok', 'mensagem':{'popup':r}})
     except:
         return jsonify({'mensagem':{'lateral':'', 'popup':'Servidor não foi configurada para esta ação', 'confirmar':''}})
 # @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])

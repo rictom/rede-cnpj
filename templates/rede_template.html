@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 
-projeto disponível em https://github.com/rictom/rede-cnpj' 
+projeto disponível em https://github.com/rictom/rede-cnpj
 
 utilizando os seguintes códigos e recursos:
 https://github.com/anvaka/VivaGraphJS
@@ -121,6 +121,7 @@ function labelsNo(node, tipoResumido) {
 	//antes se passava node.data.label, mas era redundante com id e descricao
 	var idno = node.data.id;
 	var descricao = node.data.descricao;
+	var nota = node.data.nota? node.data.nota: '';
 	if (idno.startsWith('PF_')) {
 		idno = idno.substr(3);
 		idno = idno.split('-')[0];
@@ -143,13 +144,13 @@ function labelsNo(node, tipoResumido) {
 		idno = idno.substr(3);
 	}
 	if (!tipoResumido) {
-		return [idno, descricao]
+		return [idno, descricao, nota]
 	} else if (tipoResumido==1) {
-		return [descricao, '']
+		return [descricao, '', nota]
 	} else if (tipoResumido==2) {
-		return [descricao.split(' ')[0],'']
+		return [descricao.split(' ')[0],'', nota]
 	} else {
-		return ['', '']
+		return ['', '', '']
 	}
 }//.function labelsNo
 
@@ -279,8 +280,8 @@ graphics.node(function(node) {
 	animateRect.attr('attributeName','stroke-dashoffset').attr('values','0;180;0').attr('dur', '60s').attr('repeatCount','indefinite');
 	rect.appendChild(animateRect);
 	*/
-	var [identificador, nome] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
-	var nota = node.data.nota? node.data.nota: '';
+	var [identificador, nome, nota] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
+	//var nota = node.data.nota? node.data.nota: '';
 	node.data.nota = nota;
 	
 	if (gparam.btextoEmbaixoIcone) { //textp embaixo do ícone
@@ -403,7 +404,7 @@ graphics.link(function(link){
 		.attr('id','link_label_'+link.data.id)
 		.attr('font-size',gparam.tamanhoFonte+'px')
 		.attr('fill',link.data.cor)
-		.text(String(link.data.label));
+		.text(filtraTextoLigacao(String(link.data.label)));
 	label.insertAdjacentHTML('beforeEnd','<title>' + String(link.data.label) + '</title>'); 
 	//gparam.idLigacoes[link.data.origem + '\n' + link.data.destino] = link.data.id;
 	graphics.getSvgRoot().childNodes[0].append(label);
@@ -461,6 +462,19 @@ graphics.link(function(link){
 				.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');
 		}
 })//.graphics.link(function(link)
+
+function filtraTextoLigacao(texto) {
+	//remove texto do link para o gráfico ficar mais limpo
+	var palavras = [];
+	for (let k of texto.split(';')){
+		var pedaco = (k.search(':')!=-1) ? k.split(':')[0] : k
+		if (['endereço','telefone','end','tel','email'].includes(pedaco.trim())) {
+			continue;
+		}
+		palavras.push(k);
+	}	
+	return palavras.join('; ');
+}//.filtraTextoLigacao
 
 function ajustaRetanguloAnimado(nodeid, bSeleciona) {
 	//ajusta posicao do retangulo para envolver o texto
@@ -561,20 +575,6 @@ function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	//ajustaMenuContextual(nodeid);
 	return;
 }//.function selecionaNoid
-
-/*
-function ajustaMenuContextual(nodeid) {
-	if (nodeid) {
-		if (nodeid.startsWith('PJ_')) {
-			var descricao = graph.getNode(nodeid).data.descricao;
-			document.getElementById('mc_titulo').label = nodeid + '-' + descricao.substr(0,30);
-		} else {
-			document.getElementById('mc_titulo').label = nodeid;
-		}
-	} else {
-		document.getElementById('mc_titulo').label = '';
-	}
-} */
 
 //gparam.AreaSelecaoRetangular
 gparam.AreaSelecaoRetangular = {
@@ -735,6 +735,28 @@ gparam.AreaSelecaoRetangular = {
 */
 //.gparam.AreaSelecaoRetangular
 
+// outra alteração no vivagraph.js: para renderizar os links atrás dos nós: (parece que não funciona)
+/*    function createSvgRoot() {
+        var svgRoot = svg("svg");
+		//https://github.com/gg4u/VivaGraphJS/commit/0547568448ea7e17e6558798fadbaa054ca4f104#diff-2ee351279fcef17bd76b6d9d4eef748e1a133b3fa07bd336c64778e64b9f61e7
+		//readability in svg : group nodes and links 
+        svgContainer = svg("g")
+              //.attr("buffered-rendering", "dynamic");
+              .attr("buffered-rendering", "dynamic").attr("id", "scene");
+
+        // group nodes and links for readability of elements  
+        svgNodes = svg("g").attr("id", "nodes");
+        svgEdges = svg("g").attr("id", "edges");
+
+        svgContainer.appendChild(svgEdges);
+        svgContainer.appendChild(svgNodes);
+		//.readability in svg : group nodes and links 
+        svgRoot.appendChild(svgContainer);
+
+        return svgRoot;
+    }
+*/
+
 function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localizados
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
 	var textoU = texto.toUpperCase(); 
@@ -758,11 +780,11 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 	return selecionaSet(idNosLocalizados, primeiroNoid);
 }//.function localizaNo
 
-function selecionaSet(idNosLocalizados, primeiroNoid) {
+function selecionaSet(sidNos, primeiroNoid) {
 	//seleciona um set de ids, se primeiroNoid for informado, centraliza nesse id
-	if (idNosLocalizados.size) {
+	if (sidNos.size) {
 		selecionaNoid(null, false); //apaga seleção primeiro
-		for (let n of idNosLocalizados) {
+		for (let n of sidNos) {
 			selecionaNoid(n, true);
 		}
 		if (primeiroNoid) {
@@ -804,6 +826,56 @@ function menu_localiza(bFiltroNosSelecionados) {
 			menu_rendererAtivarParar(brenderer, false);
 		});
 }//.function menu_localiza
+
+function menu_localizaPorCampo(bFiltroNosSelecionados) {
+	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
+	function localizaNoPorCampo(texto, bFiltroNosSelecionados) { //retorna n. de nos localizados
+		//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
+		var idNosLocalizados= new Set(); 
+		var primeiroNoid = null;
+		var comparacoes = texto.split(';');
+		graph.forEachNode(function(node){
+			var data = node.data;
+			var campo, valor, valorDif;
+			for (let comp of comparacoes) {
+				var [campo, valorDif] = comp.split('<>');
+				if (!valorDif) {
+					var [campo, valor] = comp.split('=');
+				}
+				valor = replaceAll(replaceAll(valor, '"', ''), "'", "");
+				if (data[campo]) {
+					if ( (Boolean(valor) && (data[campo]==valor)) ||
+						(Boolean(valorDif) && (data[campo]!=valorDif))) {
+						idNosLocalizados.add(node.id);
+						if (!primeiroNoid) {
+							primeiroNoid = node.id;
+						}
+					}
+				}
+			}
+		});
+		return selecionaSet(idNosLocalizados, primeiroNoid);
+	}//.function localizaNoPorCampo
+	ativaAtalhos(false);
+	var brenderer = menu_rendererAtivarParar(false, false);
+	var tmensagem = bFiltroNosSelecionados? 'Filtrar nos itens selecionados':'Localizar item na tela por campo'; 
+	alertify.prompt( tmensagem, 'Digite o nome do parâmetro do campo, por exemplo, cor="red"', ''
+	   , function(evt, texto) { 
+			if (texto) { 
+				contagem = localizaNoPorCampo(texto, bFiltroNosSelecionados);
+				if (contagem) {
+					alertify.success('Localizou '+ contagem + ' ocorrencias(s) de ' + texto);
+				} else {
+					alertify.error('Não localizou ' + texto);
+				};
+			}
+			menu_rendererAtivarParar(brenderer, false);
+			ativaAtalhos(true);
+		}, function() { 
+			ativaAtalhos(true);
+			menu_rendererAtivarParar(brenderer, false);
+		});
+}//.function menu_localizaPorCampo
 
 function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
@@ -1009,33 +1081,18 @@ function menu_excluirTudo() {
 }//.function menu_excluirTudo
 
 function excluirNoMantendoLinks() { 
-	let noid = gparam.idnoSelecionado;
-	let node = graph.getNode(noid);
-	var links = graph.getLinks(noid);
-	var nodeTo = null;
-	if (links.length!=2) {
-		if (links.lenght==1) {
-			alertify.error('O nó tem apenas uma ligação');
-		} else {
-			alertify.error('O nó tem mais de duas ligações');
-		}
+	if (gparam.idNosSelecionados.size!=3) {
+		alertify.error('Para usar esta rotina, deve haver três itens selecionados.');
 		return;
 	}
-	if (links[0].toId==noid) {
-		//graph.addLink(links[0].fromId, links[1].toId, {});
-		selecionaNoid(links[0].fromId, false, false);
-		selecionaNoid(links[1].toId, true, false);
-		nodeTo = links[1].toId;
-	} else {
-		//graph.addLink(links[1].fromId, links[0].toId, {});
-		selecionaNoid(links[1].fromId, false, false);
-		selecionaNoid(links[0].toId, true, false);
-		nodeTo = links[0].toId;
+	var listaNos = [...gparam.idNosSelecionados];
+	resp = confirm('Deseja remover o item ' + listaNos[1] + '?');
+	if (!resp) {
+		return;
 	}
+	removeIdNo(listaNos[1]);
+	selecionaSet(new Set([listaNos[0], listaNos[2]]));
 	menu_ligar_selecionados(false, '', true);
-	selecionaNoid(noid, false, false);
-	menu_excluirNosSelecionados(true);
-	selecionaNoid(nodeTo, false, false);
 }//.function excluirNoMantendoLinks
 
 function menu_inserirDesfazer() {
@@ -1183,7 +1240,6 @@ function menu_listaSelecao(bNovaJanela) {
 			alertify.alert("Itens selecionados: \n" + ht, function(){});
 		}
 	} 
-
 }//.function menu_lista_selecao
 
 
@@ -1279,10 +1335,13 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 					document.body.style.cursor = 'default';
 					if (data.retorno) {
 						if (acaoAlternativa) {
-							alertify.success('Dados enviados.');
+							//alertify.success('Dados enviados.');
+							var textoMensagem = 'Dados enviados.';
 						} else {
-							alert('Os dados foram inseridos na base local.');
-						}
+							//alert('Os dados foram inseridos na base local.');
+							var textoMensagem = 'Os dados foram inseridos na base local.';
+						}	
+						exibe_mensagem(textoMensagem, data.mensagem);
 					} else {
 						alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
 					}					
@@ -1319,7 +1378,7 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 	}
 	var url = base + 'arquivos_json_upload/' + encodeURIComponent(idArquivoServidor);
 
-	fazFetch(url, jsonDados); 
+	fazFetch(url, jsonDados, nomeNovaAba); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
 		fetch(url, {method: 'post', body:JSON.stringify(jsonDados), headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
@@ -1340,9 +1399,10 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 						alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.');
 					};
 					var novaJanela=window.open(base + "grafico_no_servidor/" + data.nomeArquivoServidor);
-					/*if (nomeAbaNova) {
-						novaJanela.document.title = nomeAbaNova; //isto causa erro
-					}*/
+					if (nomeNovaAba) {
+						//novaJanela.document.title = nomeAbaNova; //isto causa erro
+						setTimeout(function(){ novaJanela.document.title = nomeNovaAba; }, 3000); //se o gráfico for muito grande, o tempo pode não ser suficiente
+					}
 				} else {
 					alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
 				}
@@ -1476,7 +1536,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			let uniao = new Set([...conjLabel, ...conjNovo]);
 			uniao.delete('');
 			ligExistente.data.label = [...uniao].join(';')
-			document.getElementById('link_label_'+ligExistente.data.id).text(ligExistente.data.label);
+			document.getElementById('link_label_'+ligExistente.data.id).text(filtraTextoLigacao(ligExistente.data.label));
 		} else { //if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
 			ligaux.id = gparam.kligacoes;
 			if (1) { //((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino))) {
@@ -1513,6 +1573,8 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		}
 	}
 	if ((!kn) && (!kl)) textoMensagem += 'Não encontrou novos itens';
+	exibe_mensagem(textoMensagem, jsonIn.mensagem); 
+	/*
 	if (!jsonIn.mensagem) {
 		jsonIn.mensagem = {'lateral': '', 'popup': '', 'confirmar': ''};
 	}
@@ -1524,6 +1586,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	if (jsonIn.mensagem.lateral) {
 		alertify.success(jsonIn.mensagem.lateral);
 	}
+	*/
 	if (kn  && !gparam.bRenderAtivado) { //ativa leiaute por 1 segundo para exibir novos itens
 		gparam.renderer.resume();
 		setTimeout(
@@ -1535,6 +1598,20 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		);	
 	}
 }//.function inserirJson
+
+function exibe_mensagem(textoMensagem, mensagem) {
+	if (!mensagem) {
+		mensagem = {'lateral': '', 'popup': '', 'confirmar': ''};
+	}
+	if (mensagem.popup) {
+		alertify.alert('Alerta!', mensagem.popup, function(){ alertify.success(textoMensagem); });
+	} else {
+		alertify.success(textoMensagem);
+	}
+	if (mensagem.lateral) {
+		alertify.success(mensagem.lateral);
+	}
+}//.exibe_mensagem
 
 function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	//if idin='', manda dados dos nós selecionados
@@ -1669,7 +1746,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	} else {
 		textoPrompt += ' Não foi implementada busca parcial.';
 	}
-	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @n, por exemplo, FULANO@20,  para vinte registros. Para exibir Matriz e N filiais, digite apenas o Radical do CNPJ seguido de @N. Digite TESTE para visualizar um CNPJ aleatório.';
+	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @ e número, por exemplo, FULANO@20 para 20 registros. Para exibir Matriz e 10 filiais, digite apenas o Radical do CNPJ seguido de @10. Digite TESTE para visualizar um CNPJ aleatório.';
 	alertify.prompt( 'Inserir item no gráfico', textoPrompt , itensDefault
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;
@@ -1724,7 +1801,7 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 		return;
 	}
 	if ((!idno)&&bNosSelecionados) { //abre numa nova aba os nós selecionados
-		menu_exportaJSONServidor(true, false, 'temporario')	
+		menu_exportaJSONServidor(true, false, 'temporario', null, document.title + '-parcial')	
 		return;
 	}
 	if (idno.startsWith('LI_')) {
@@ -1765,6 +1842,7 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 
 		return;
 	}
+	/*
 	ativaAtalhos(false);
 	alertify.prompt( 'Abrir ' + idno+  ' em nova aba', 'Selecione camadas', '1', 
 		function(evt, cam) { 	
@@ -1774,17 +1852,40 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 			novaJanela.focus();} , 
 		function() { ativaAtalhos(true);}	
 	) ;
+	*/
 }//.function menu_abrirNovaAba
+
+function menu_nomeAba() {
+	var nome = prompt('Digite o nome para esta aba');
+	if (nome) {
+		document.title = nome;
+	}
+}//.menu_nomeAba
 
 function menu_selecionarTudo() {
 	graph.forEachNode(
 		function(node) {
-			var nodeUI = graphics.getNodeUI(node.id);
-				selecionaNoid(node.id, true, true);
+			//var nodeUI = graphics.getNodeUI(node.id);
+			selecionaNoid(node.id, true, true);
 		}	
 	);
 	alertify.success('Foram selecionados ' + graph.getNodesCount() + ' itens.');
 }//.function menu_selecionarTudo
+
+function menu_selecionarInverte() {
+	//inverte a seleção
+	var snos = new Set(gparam.idNosSelecionados);
+	selecionaNoid(null, false); //apaga seleção
+	graph.forEachNode(
+		function(node) {
+			if (!snos.has(node.id)) {
+				//var nodeUI = graphics.getNodeUI(node.id);
+				selecionaNoid(node.id, true, true);
+			}
+		}	
+	);
+	alertify.success('Foram selecionados ' + gparam.idNosSelecionados.size+ ' itens.');
+}//.function menu_selecionarInverte
 
 function menu_pinarNo(bfixar){
 	var layout = gparam.layout;
@@ -1801,6 +1902,29 @@ function menu_pinarNo(bfixar){
 //	var no = graph.getNode(gparam.idnoSelecionado);
 //	layout.pinNode(no, !layout.isNodePinned(no));
 }//.function menu_pinarNo
+
+function menu_pinarDesfazerTudo(){ 
+	var layout = gparam.layout;
+	graph.forEachNode(
+		function(node) {
+			gparam.layout.pinNode(node, false);
+		}	
+	);
+	alertify.success('Todos os nós foram desafixados.');
+}//.function menu_pinarDesfazerTudo
+
+function menu_pinarUmNoEmCadaGrupo(bfixar){ 
+	var listaGrupos = separaGrupos(0); //lista de sets 
+	var sfixados = new Set();
+	for (let sgrupo of listaGrupos) {
+		let nid = [...sgrupo][0];
+		let no = graph.getNode(nid);
+		gparam.layout.pinNode(no, true);
+		sfixados.add(nid);
+	}
+	selecionaSet(sfixados);
+	alertify.success('Cada grupo teve um nó fixado.');
+}//.function menu_pinarUmNoEmCadaGrupo
 
 function pinarNoTemp(milissegundos) {
 	var layout = gparam.layout;
@@ -1839,9 +1963,10 @@ function menu_rotulosCompletos(bTipo) {
 	}
 	graph.forEachNode( function(node) {
 		var ui=graphics.getNodeUI(node.id); 
-		var [identificador, nome] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
+		var [identificador, nome, nota] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
 		ui.getElementsByTagName('tspan')[0].text(identificador);
 		ui.getElementsByTagName('tspan')[1].text(nome);
+		ui.getElementsByTagName('tspan')[2].text(nota);
 	});
 }//.function menu_rotulosCompletos
 
@@ -2081,19 +2206,20 @@ function menu_quebraGraficoEmPartes(){
 		return;
 	}
 	var tamanho = Math.floor(graph.getNodesCount()/ngrupos)+1;
-	console.log(tamanho);
+	//console.log(tamanho);
 	var conjuntos = separaGrupos(tamanho);
-	var k = 1;
 	if (conjuntos.length==1) {
 		alert('O gráfico não pode ser separado.');
 		return;
 	}
+	var k = 0;
 	for (let conj of conjuntos) {
 		var sconj = new Set(conj);
 		//este alert serve para criar um delay entre as requisições... Se não houver pausa o servidor tenta criar arquivos json com nome repetido o que vai dar erro depois.
-		resp = confirm('Deseja criar uma nova aba com ' + conj.length + ' elementos?'); 
+		resp = confirm('Deseja criar uma nova aba com ' + sconj.size + ' elementos?'); 
 		if (resp) {
-			menu_exportaJSONServidor(null, null, 'temporario', sconj, k);
+			k += 1;
+			menu_exportaJSONServidor(null, null, 'temporario', sconj, document.title + '-' + k);
 		} else {
 			resp = confirm('Deseja abrir outras abas?');
 			if (!resp) {
@@ -2198,7 +2324,7 @@ function menu_selecionaGruposComDuasCores(){
 		var cores = new Set();
 		for (let idin of sconj) {
 			var noData = graph.getNode(idin).data;
-			if (noData.cor) {
+			if (noData && noData.cor) {
 				cores.add(noData.cor);
 			}
 		}
@@ -2224,7 +2350,12 @@ function removeIsolados(bExibeMensagem) {
 	sNosRemover = new Set();	
 	graph.forEachNode(function(node) {
 		if (node) {
-			quantidadeLigacoes = 0 + graph.getLinks(node.id).length;
+			
+			quantidadeLigacoes = 0 ;
+			getlinks = graph.getLinks(node.id);
+			if (getlinks) {
+				quantidadeLigacoes += getlinks.length;
+			}
 			if (quantidadeLigacoes == 0) {
 				sNosRemover.add(node.id);
 			}
@@ -2306,7 +2437,8 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
 		ativaAtalhos(true); 
 		var camposTexto = dlgItem.getElementsByClassName('ajs-input');
-		idNovo = camposTexto[0].value.toUpperCase().trim();
+		//idNovo = camposTexto[0].value.toUpperCase().trim();
+		idNovo = camposTexto[0].value.trim();
 		descricaoNovo = camposTexto[1].value;
 		var tnota = camposTexto[2].value;
 		var tligacao = camposTexto[3].value;
@@ -2320,6 +2452,10 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 			idNovo = 'AR_' + idNovo.slice(1,-1);
 		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\') || (idNovo.substr(1,2)==':\\')) { //isso só vai funcionar no windows
 			idNovo = 'AR_' + idNovo;
+		} else if (idNovo.startsWith('LI_') || idNovo.startsWith('AR_')) { //não por em maiuscula, senão link para url não funciona
+			//não faz nada
+		} else {
+			idNovo = idNovo.toUpperCase();
 		}
 		idNovo = tipoPresumido(idNovo);
 		if (graph.hasNode(idNovo)) {
@@ -3053,22 +3189,36 @@ function getRedeNosLigacoes(bSoSelecionados, setNos) {
 	//return JSON.stringify({'no':listaNoInicial, 'ligacao':listaLigacaoInicial}, filtroDeMembros);
 	var nosAux=[], ligacoesAux=[];
 	//pega dados apartir do vivagraph, assim não é preciso fazer ajustes em listaLigacaoInicial ou listaNoInicial
-	graph.forEachNode( 
-		function(node) {
-			var nodedata = JSON.parse(JSON.stringify(node.data));
-			nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
-			nodedata['pinado'] = gparam.layout.isNodePinned(node);
-			if (setNos) { 
-				if (setNos.has(node.id)) {
-					nosAux.push(nodedata);	
-				}
-			} else {
-				if ((!bSoSelecionados) || gparam.idNosSelecionados.has(node.id)) {
-					nosAux.push(nodedata);			
+	var setAux = setNos ? setNos : gparam.idNosSelecionados;
+	
+	if (!setNos && !bSoSelecionados) { // || setNos) {
+		graph.forEachNode( 
+			function(node) {
+				var nodedata = JSON.parse(JSON.stringify(node.data));
+				nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
+				nodedata['pinado'] = gparam.layout.isNodePinned(node);
+				if (setNos) { 
+					if (setNos.has(node.id)) {
+						nosAux.push(nodedata);	
+					}
+				} else {
+					if ((!bSoSelecionados) || gparam.idNosSelecionados.has(node.id)) {
+						nosAux.push(nodedata);			
+					}
 				}
 			}
+		);
+	} else { //!bSoSelecionados
+		for (let noid of setAux) {
+			var node = graph.getNode(noid);
+			if (node) {
+				var nodedata = JSON.parse(JSON.stringify(node.data));
+				nodedata['posicao'] = gparam.layout.getNodePosition(node.id);
+				nodedata['pinado'] = gparam.layout.isNodePinned(node);
+				nosAux.push(nodedata);				
+			}
 		}
-	);
+	}
 	graph.forEachLink(function(link){
 		/* ligacoesAux.push(
 			{"origem":link.fromId,
@@ -3099,7 +3249,11 @@ function menu_exportaJsonArquivo(bSoSelecionados) {
 
 function replaceAll(texto, textoAProcurar, textoASubstituir) {
 	//return texto.split(textoAProcurar).join(textoASubstituir);
-	return texto.replace(new RegExp(textoAProcurar,'g'), textoASubstituir); 
+	if (texto) {
+		return texto.replace(new RegExp(textoAProcurar,'g'), textoASubstituir); 
+	} else {
+		return '';
+	}
 }//.function replaceAll
 
 function getXMLdeSVG() {
@@ -3589,6 +3743,8 @@ function evento_teclasDown(e) {
 		menu_abrirNovaAba(null);
 	} else if (testa('KeyA', false, true)) { 
 		menu_selecionarTudo();
+	} else if (testa('KeyA', true, true)) { 
+		menu_selecionarInverte();
 	} else if (testa('KeyQ', false, false)) {
 		menu_quebraGraficoEmPartes();
 	} else if (testa('KeyE', false, false)) { 
@@ -3605,6 +3761,8 @@ function evento_teclasDown(e) {
 		menu_localiza();
 	} else if (testa('KeyF', true, false)) { 
 		menu_localiza(true);
+	} else if (testa('KeyF', false, true)) { 
+		menu_localizaPorCampo(false);
 	} else if (testa('KeyL', false, false)) { 
 		menu_ligar_selecionados(true);
 	} else if (testa('KeyL', true, false)) { 
@@ -3615,10 +3773,16 @@ function evento_teclasDown(e) {
 		menu_excluirNosSelecionados();
 	} else if (testa('Delete', true, false)) { 
 		menu_excluirTudo();
+	} else if (testa('Delete', false, true)) { 
+		removeIsolados(true);
 	} else if (testa('Backspace', true, false)) { 
 		excluirNoMantendoLinks();
 	} else if (testa('KeyP', false, false)) { 
 		menu_pinarNo(null);
+	} else if (testa('KeyP', true, false)) { 
+		menu_pinarDesfazerTudo();
+	} else if (testa('KeyP', false, true)) { 
+		menu_pinarUmNoEmCadaGrupo();		
 	} else if (testa('KeyC', false, false)) { 
 		menu_colorir();
 	} else if (testa('KeyC', true, false)) { 
@@ -3916,7 +4080,7 @@ function main() {
 	</button>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn" title="Inserir Ligações que não constam do Banco de Dados"><i class="fa fa-link"></i><span class="menu-text">Ligar</span> </button>
+	<button type="button" class="menu-btn"><i class="fa fa-link"></i><span class="menu-text">Ligar</span></button>
 	<menu class="menu">
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo();" title="Liga itens selecionados para um Item a ser criado."> 
@@ -3935,7 +4099,7 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(false);" title="Remove ligações entre os itens selecionados"> 
-		<span class="menu-text">Remover Entre(SHIFT+L)</span> 
+		<span class="menu-text">Remover Entre (SHIFT+L)</span> 
 		</button>
 		</li>
 		<li class="menu-item">
@@ -3946,19 +4110,36 @@ function main() {
 	</menu>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn" title="Opções diversas para exibição: colorir, exibição de rótulos..."><i class="fa fa-eye"></i><span class="menu-text">Visualização</span> </button>
+	<button type="button" class="menu-btn"><i class="fa fa-eye"></i><span class="menu-text">Visualização</span></button>
 	<menu class="menu">
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(null, true)"> <i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(null, true)" title="Abre itens selecionados em nova aba"> 
+		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_quebraGraficoEmPartes()"> <i class="fa fa-external-link-alt"></i> <span class="menu-text" alt="Se o gráfico for grande, divide em pedaços e abre em outras abas.">Quebrar o gráfico em abas (Q)</span> </button>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_quebraGraficoEmPartes()" title="Divide o gráfico em partes menores exibindo em outras abas."> 
+		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Quebrar o gráfico em abas (Q)</span> </button>
 		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo(null);"> 
-		<i class="fa fa-thumbtack"></i> <span class="menu-text" alt="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós">Fixar o Nó (P)</span> 
-		</button>
-		</li>
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn"><i class="fa fa-thumbtack"></i><span class="menu-text">Fixar</span></button>
+		<menu class="menu">		
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo(null);" title="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós"> 
+			<i class="fa fa-thumbtack"></i> <span class="menu-text">Nós Selecionados (P)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarDesfazerTudo();" title="Deixa todos os nós desafixados"> 
+			<i class="fa fa-thumbtack"></i> <span class="menu-text">Desfixar Todos (SHIFT+P)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarUmNoEmCadaGrupo();" title="Fixa pelo menos um nó em cada Grupo"> 
+			<i class="fa fa-thumbtack"></i> <span class="menu-text">Fixar nos Grupos (CTRL+P)</span> 
+			</button>
+			</li>	
+		</menu>
+		</li>			
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn"><i class="fa fa-tags"></i><span class="menu-text">Rótulos</span> </button>
 		<menu class="menu">
@@ -3994,14 +4175,14 @@ function main() {
 			</li>
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligacoesExibe(null);"> 
-			<i class="fa fa-tag"></i><span class="menu-text">Exibe/Oculta Texto de Ligações</span> 
+			<i class="fa fa-tag"></i><span class="menu-text">Exibe/Oculta de Ligação (SHIFT+N)</span> 
 			</button>
 			</li>			
 		</menu>
 		</li>
 		<li class="menu-item">
-			<button type="button" class="menu-btn"
-			  onchange="javascript:menu_alterarIcone('icone');"><i class="fa fa-tags"></i><span class="menu-text">Alterar Ícone &nbsp;&nbsp;</span>
+			<button type="button" class="menu-btn" onchange="javascript:menu_alterarIcone('icone');">
+			<i class="fa fa-tags"></i><span class="menu-text">Alterar Ícone &nbsp;&nbsp;</span>
 			<select id="menu_selecao_icone_options" class="dropdown" style='max-width:100px'>
                 <option value="0">Selecione</option>
 			</select>
@@ -4031,8 +4212,12 @@ function main() {
 		<i class="fa fa-folder-open"></i><span class="menu-text">Lista dados da seleção (Ctrl+D)</span></button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); gparam.renderer.reset();"> 
-		<i class="fa fa-compress"></i> <span class="menu-text" alt="Reinicia escala">Escala Inicial</span> 
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_nomeAba()" title="Altera nome da Aba">
+		<i class="fa fa-tags"></i><span class="menu-text">Nome da Aba</span></button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); gparam.renderer.reset();" title="Reinicia escala"> 
+		<i class="fa fa-compress"></i> <span class="menu-text">Escala Inicial</span> 
 		</button>
 		</li>
 		<li class="menu-item">
@@ -4048,20 +4233,23 @@ function main() {
 	</menu>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn" title="Opções para Filtrar ou Localizar itens no Gráfico e Busca no Google.">
-	<i class="fa fa-search"></i><span class="menu-text">Filtrar/Localizar</span>
-	</button>
+	<button type="button" class="menu-btn" ><i class="fa fa-search"></i><span class="menu-text">Filtrar/Localizar</span></button>
 	<menu class="menu">
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza(false);" title="Procura por palavra nos itens exibidos do gráfico"> 
-		<i class="fa fa-search"></i><span class="menu-text">Localizar (F)</span> 
+		<i class="fa fa-search"></i><span class="menu-text">Localizar (F) ...</span> 
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza(true);" title="Procura por palavra nos itens selecionados do gráfico "> 
-		<i class="fa fa-search"></i><span class="menu-text">Filtra na Seleção (SHIFT+F)</span> 
+		<i class="fa fa-search"></i><span class="menu-text">Filtra na Seleção (SHIFT+F) ...</span> 
 		</button>
 		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localizaPorCampo(false);" title="Procura por campo nos itens do gráfico"> 
+		<i class="fa fa-search"></i><span class="menu-text">Localizar Por Campo (CTRL+F) ...</span> 
+		</button>
+		</li>		
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_adjacentes();" title="Adiciona itens com ligação aos selecionados."> 
 		<i class="fa fa-search"></i><span class="menu-text">Adjacentes (J)</span> 
@@ -4074,12 +4262,12 @@ function main() {
 		</li>		
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_itensComMaisLigacoes();" title="Seleciona itens com mais Ligações."> 
-		<i class="fa fa-search"></i><span class="menu-text">Itens com mais ligações (CTRL+J)</span> 
+		<i class="fa fa-search"></i><span class="menu-text">Itens com mais ligações (CTRL+J) ...</span> 
 		</button>
 		</li>	
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_itensLigadosAColoridos();" title="Selecione itens ligados a outros itens marcados com cores."> 
-		<i class="fa fa-search"></i><span class="menu-text">Itens ligados a coloridos</span> 
+		<i class="fa fa-search"></i><span class="menu-text">Itens ligados a coloridos ...</span> 
 		</button>
 		</li>	
 		<li class="menu-item">
@@ -4087,6 +4275,16 @@ function main() {
 		<i class="fa fa-search"></i><span class="menu-text">Grupos com duas cores</span> 
 		</button>
 		</li>	
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_selecionarTudo();" title="Seleciona tudo"> 
+		<i class="fa fa-search"></i><span class="menu-text">Seleciona Tudo (CTRL+A)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_selecionarInverte();" title="Inverte seleção"> 
+		<i class="fa fa-search"></i><span class="menu-text">Inverte Seleção (CTRL+SHIFT+A)</span> 
+		</button>
+		</li>
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Abre aba com busca em sites"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
 		<menu class="menu">
@@ -4097,7 +4295,7 @@ function main() {
 			</li>
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();"> 
-			<i class="fab fa-google"></i><span class="menu-text">Google Maps(Shift+G)</span> 
+			<i class="fab fa-google"></i><span class="menu-text">Google Maps (Shift+G)</span> 
 			</button>
 			</li>
 			<li class="menu-item">
@@ -4115,7 +4313,7 @@ function main() {
 	</menu>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn" title="Salva dados para o Excel, JSON, SVG ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Salvar/Abrir</span> </button>
+	<button type="button" class="menu-btn"> <i class="fa fa-file-export"></i> <span class="menu-text">Salvar/Abrir</span> </button>
 	<menu class="menu">
 		<!--
 		<li class="menu-item">
@@ -4125,22 +4323,22 @@ function main() {
 		</li> -->
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
-		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel</span> 
+		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel...</span> 
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaSVG()" title="Salva imagem escalável em formato SVG" >
-		<i class="fa fa-save"></i><span class="menu-text" >Salvar Imagem SVG</span>
+		<i class="fa fa-save"></i><span class="menu-text" >Salvar Imagem SVG...</span>
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(false)" title="Salva arquivo JSON com os itens e ligações de todo o gráfico, que pode ser aberto pela opção Importar JSON">
-		<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json</span>
+		<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json...</span>
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" id="menu_botao_importaJsonArquivo" disabled title="Abre dados de um arquivo JSON salvo pela opção Salvar Arquivo JSON"> 
-		<i class="fa fa-folder-open"></i><span class="menu-text">Abrir Arquivo Json</span>
+		<i class="fa fa-folder-open"></i><span class="menu-text">Abrir Arquivo Json...</span>
 		<input value="Importar" type="file" id="fileImportJSON" title="Adiciona grafico no formato JSON" />
 		</button>
 		<script>
@@ -4149,12 +4347,12 @@ function main() {
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false, true)" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
-		<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor</span>
+		<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor...</span>
 		</button>
 		</li>  
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_importaJSONServidor()" title="Carrega um arquivo de visualização exportado ao servidor.">
-		<i class="fa fa-download"></i> <span class="menu-text">Importar JSON do Servidor</span>
+		<i class="fa fa-download"></i> <span class="menu-text">Importar JSON do Servidor...</span>
 		</button>
 		</li>  
 
@@ -4163,12 +4361,12 @@ function main() {
 		<menu class="menu">
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(true)" title="Salva arquivo JSON com os itens e ligações somente dos itens selecionados, que pode ser aberto pela opção Importar JSON">
-			<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json</span>
+			<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json...</span>
 			</button>
 			</li>  
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(true, true)" title="Salva as informações dos itens selecionados no servidor, o link poderá ser compartilhado e aberto em uma nova aba.">
-			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor</span>
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor...</span>
 			</button>
 			</li>  		
 		</menu>
@@ -4178,12 +4376,12 @@ function main() {
 		<menu class="menu">
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidorParaBaseLocal(false)" title="Salva as informações da visualização no Banco de Dados Local SQLITE no Servidor">
-			<i class="fa fa-upload"></i><span class="menu-text">Exportar ao Servidor</span>
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar ao Servidor...</span>
 			</button>
 			</li>  	
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidorParaBaseLocal(true)" title="Salva as informações da visualização no Banco de Dados Local SQLITE no Servidor">
-			<i class="fa fa-upload"></i><span class="menu-text">Exportar Seleção</span>
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar Seleção...</span>
 			</button>
 			</li>  	
 		</menu>		
@@ -4206,20 +4404,21 @@ function main() {
 		</button>
 		</li>
 		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:removeIsolados(true);" title="Remove itens sem ligação."> 
+		<i class="fa fa-trash"></i><span class="menu-text">Excluir itens isolados (CTRL+Del)</span> 
+		</button>
+		</li>	
+		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:excluirNoMantendoLinks()"> 
 		<i class="fa fa-trash"></i> <span class="menu-text">Excluir Nó mantendo Link</span> 
 		</button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:removeGalhos(true);" title="Simplifica o gráfico, mantendo apenas itens com mais de uma ligação."> 
-		<i class="fa fa-trash"></i><span class="menu-text">Simplifica Gráfico</span> 
+		<i class="fa fa-trash"></i><span class="menu-text">Simplifica Gráfico...</span> 
 		</button>
 		</li>		
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:removeIsolados(true);" title="Remove itens sem ligação."> 
-		<i class="fa fa-trash"></i><span class="menu-text">Excluir itens isolados</span> 
-		</button>
-		</li>	
+
 	</menu>
 	</li>
 	<li class="menu-separator"></li>
