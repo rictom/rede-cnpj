@@ -32,11 +32,11 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e 
 Esta versão antiga executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
 ## Como utilizar o Banco de dados públicos de cnpj:
-A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 16/7/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de agosto/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
 base_receita = CNPJ.db<br>
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
-A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj em formato csv. 
+A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj  ou http://200.152.38.155/CNPJ/ em formato csv. 
 Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive.<br>
 Em https://github.com/rictom/cnpj-sqlite coloquei um script em python para converter os arquivos zipados do site da Receita para sqlite, para ser utilizado neste projeto.<br>
 
