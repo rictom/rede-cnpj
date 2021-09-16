@@ -247,7 +247,8 @@ graphics.node(function(node) {
 	img.attr('width', gparam.nodeSize)
 		.attr('height', gparam.nodeSize)
 		.link(urlImagem); 
-	if (!node.data.situacao_ativa) {
+	//if (!node.data.situacao_ativa) {
+	if (node.data.situacao_ativa==false) {
 		img.attr('filter','url(#filtroPB)');
 	};	
 	let corFundo = node.data.cor ? node.data.cor:'transparent';
@@ -468,7 +469,7 @@ function filtraTextoLigacao(texto) {
 	var palavras = [];
 	for (let k of texto.split(';')){
 		var pedaco = (k.search(':')!=-1) ? k.split(':')[0] : k
-		if (['endereço','telefone','end','tel','email'].includes(pedaco.trim())) {
+		if (['endereço','telefone','end','tel','email','link'].includes(pedaco.trim())) {
 			continue;
 		}
 		palavras.push(k);
@@ -1132,6 +1133,14 @@ function dadosEmHtmlPJ(d, noData) {
 	if (noData.nota) {
 		ht += "<br><b>Nota:</b> "+ noData.nota + "<br>";
 	}
+	camposPJ = ['cnpj', 'matriz_filial', 'razao_social', 'nome_fantasia', 'data_inicio_atividades', 'situacao_cadastral',
+				'data_situacao_cadastral', 'motivo_situacao_cadastral', 'natureza_juridica', 'cnae_fiscal', 'porte_empresa', 'opcao_mei',
+				'endereco', 'municipio', 'uf', 'cep', 'nm_cidade_exterior', 'nome_pais', 'nm_cidade_exterior', 'nome_pais',
+				'ddd1', 'telefone1', 'ddd2', 'telefone2', 'ddd_fax', 'fax', 'correio_eletronico', 'capital_social'
+				];
+	for (let k of camposPJ) {
+		d[k] = '';
+	}
 	return ht;
 }//.dadosEmHtmlPJ
 
@@ -1192,15 +1201,21 @@ function menu_dados(bNovaJanela, idNo) {
 			if (data) {
 				if (idin.startsWith('PJ_')) {
 					ht = dadosEmHtmlPJ(data, noData) 
-				} else {
+				} // else {
 					//ht += noData;
-					ht +=  "<b>--------------</b> "+ "<br>"
-					for (const [key, value] of Object.entries(data)) {
-						if (value) {
-							ht += "<b>" + key + ": </b> "+ value+ "<br>";
-						}
-					}							
+				htadicional = ''
+				for (const [key, value] of Object.entries(data)) {
+					if (['id'].includes(key)) {
+						continue;
+					}
+					if (value) {
+						htadicional += "<b>" + key + ": </b> "+ value+ "<br>";
+					}
 				}
+				if (htadicional) {
+					ht +=  "<b>--------------</b> "+ "<br>" + htadicional;
+				}
+				//}
 			} 
 			mostraResultado(idin, ht);
 		  });
@@ -1978,6 +1993,9 @@ function menu_ligacoesExibe(bTipo) {
 	} else {
 		gparam.bMostraLigacao= false;
 	}
+	//zoom in e out para dar um refresh na tela
+	gparam.renderer.zoomIn();
+	gparam.renderer.zoomOut();
 }//.function menu_ligacoesExibe
 
 function menu_rotulosPosicao(bTipo) { 
@@ -2391,7 +2409,7 @@ function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados) {
 	nodados.descricao = descricaoNovo;
 	nodados.nota = nota;
 	nodados.camada = nodados.camada ? nodados.camada : 0;
-	nodados.situacao_ativa = nodados.situacao_ativa ? nodados.situacao_ativa : true;
+	//nodados.situacao_ativa = nodados.situacao_ativa ? nodados.situacao_ativa : true;
 	nodados.imagem = nodados.imagem ? nodados.imagem : iconeF(idNovo);
 	nodados.cor = nodados.cor ? nodados.cor : 'yellow';
 	
@@ -2958,7 +2976,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 				nos.push({'id': id1,
 			   'descricao': descricaoaux, //linha[3],
 			   'camada': 0,
-			   'situacao_ativa': true,
+			   //'situacao_ativa': true,
 			   'imagem': iconeF(id1), //'icone-grafo-id.png',
 			   'cor': 'yellow'});
 			}
@@ -2973,7 +2991,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 				nos.push({'id': id2,
 			   'descricao': descricaoaux, //linha[4],
 			   'camada': 0,
-			   'situacao_ativa': true,
+			   //'situacao_ativa': true,
 			   'imagem': iconeF(id2), //'icone-grafo-id.png',
 			   'cor': 'yellow'});
 			}
@@ -3352,7 +3370,7 @@ function menu_zoomout(teclaShift, teclaCtrl) {
 	}
 	var vezes = gparam.mobile?6:2;
 	for(var k=0; k<vezes; k++) {
-		var escala = gparam.renderer.zoomOut();;
+		var escala = gparam.renderer.zoomOut();
 	}
 }//.function menu_zoomout
 

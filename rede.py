@@ -198,7 +198,7 @@ def serve_dados_detalhes(cpfcnpj):
             r = rede_relacionamentos.jsonDados(cpfcnpj)
             if r:
                 return jsonify(r)
-            return jsonify(rede_relacionamentos.jsonBaseLocal(cpfcnpj))
+            return jsonify({}) #jsonify(rede_relacionamentos.jsonDadosBaseLocal(cpfcnpj))
     finally:
         if gUwsgiLock:
             uwsgi.unlock()    

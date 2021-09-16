@@ -98,10 +98,10 @@ def timeit(method):
 #     con.execute(f'DROP TABLE if exists {tmp}_busca_nome')
 #     con = None
 
-def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp'):
+def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp', caminhoDB=caminhoDBReceita):
     '''apaga tabelas temporárias. Isto pode dar erro em ambiente com threads??
     se prefixo_tabela_temporaria='', apaga TODAS as tabelas tmp_'''
-    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
+    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDB}", execution_options=gEngineExecutionOptions)
     insp = sqlalchemy.inspect(con)
     tmp = prefixo_tabela_temporaria if prefixo_tabela_temporaria else 'tmp_'
     tmp_tabelas = [t for t in insp.get_table_names() if t.startswith(tmp)]
@@ -590,7 +590,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     #.for cam in range(camada): 
     if camada==0:
         #gambiarra, em camada 0, não apaga a tabela tmp_socios, por isso pega dados de consulta anterior.
-        query0 = ''' 
+        query0 = f''' 
         CREATE TABLE {tmp}_socios AS
         SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
         FROM socios t
@@ -612,11 +612,11 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         else: #'PE_'
             descricao = '(EMPRESA SÓCIA NO EXTERIOR)'
         no = {'id': kid, 'descricao':descricao, 
-                'camada': k['camada'], 
-                'situacao_ativa': True, 
-                #'empresa_situacao': 0, 'empresa_matriz': 1, 'empresa_cod_natureza': 0, 
-                'logradouro':'',
-                'municipio': '', 'uf': ''} 
+                'camada': k['camada'] } #, 
+                # 'situacao_ativa': True, 
+                # #'empresa_situacao': 0, 'empresa_matriz': 1, 'empresa_cod_natureza': 0, 
+                # 'logradouro':'',
+                # 'municipio': '', 'uf': ''} 
         camadasIds[kid] = k['camada']
         nosaux.append(copy.deepcopy(no))         
     querySocios = f'''
@@ -697,7 +697,7 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
 def dadosDosNosBaseLocal(nosInOut, camadasIds):
     if not caminhoDBBaseLocal:
         return 
-    dicDados = jsonBaseLocal(listaIds=list(camadasIds)) 
+    dicDados = jsonDadosBaseLocal(listaIds=list(camadasIds)) 
     nosaux = []
     for n in nosInOut: 
         if n['id'] in dicDados:
@@ -933,18 +933,18 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         if c.startswith('PF_'):
             nome = c[15:] #supõe 'PF_12345678901-nome'
             no = {'id': c, 'descricao':nome, 
-                    'camada': camadasIds[c], 
-                    'situacao_ativa': True, 
-                    'logradouro':'',
-                    'municipio': '', 'uf': ''} 
+                    'camada': camadasIds[c]} #, 
+                    # 'situacao_ativa': True, 
+                    # 'logradouro':'',
+                    # 'municipio': '', 'uf': ''} 
         # elif c.startswith('ID_'):
         #      
         else: #elif c.startswith('EN_'):
             no = {'id': c, 'descricao':'', 
-                    'camada': camadasIds[c], 
-                    'situacao_ativa': True, 
-                    'logradouro':'',
-                    'municipio': '', 'uf': ''} 
+                    'camada': camadasIds[c]} #, 
+                    # 'situacao_ativa': True, 
+                    # 'logradouro':'',
+                    # 'municipio': '', 'uf': ''} 
         nosaux.append(copy.deepcopy(no))    
     dadosDosNosBaseLocal(nosaux, camadasIds)
     nosaux=ajustaLabelIcone(nosaux)
@@ -969,8 +969,8 @@ def jsonDados(cpfcnpjIn, listaIds=False):
     #dados de cnpj para popup de Dados
     #print('jsonDados-inicio: ' + time.ctime())
     cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn)    
-    if outrosIdentificadores:
-        return jsonBaseLocal(cpfcnpjIn=cpfcnpjIn, listaIds=listaIds)
+    # if outrosIdentificadores: #pegar o jsonDadosBaseLocal sempre
+    #     return jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn, listaIds=listaIds)
     dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
     dftmptable['grupo']=''
     dftmptable['camada']=0
@@ -988,6 +988,11 @@ def jsonDados(cpfcnpjIn, listaIds=False):
         left join pais tpais on tpais.codigo=t.pais
         
             '''
+    camposPJ = ['cnpj', 'matriz_filial', 'razao_social', 'nome_fantasia', 'data_inicio_atividades', 'situacao_cadastral', 
+				'data_situacao_cadastral', 'motivo_situacao_cadastral', 'natureza_juridica', 'cnae_fiscal', 'porte_empresa', 'opcao_mei',
+				'endereco', 'municipio', 'uf', 'cep', 'nm_cidade_exterior', 'nome_pais', 'nm_cidade_exterior', 'nome_pais',
+				'ddd1', 'telefone1', 'ddd2', 'telefone2', 'ddd_fax', 'fax', 'correio_eletronico', 'capital_social'
+				]
     dlista = []
     for k in con.execute(query):
         d = dict(k)  
@@ -1014,26 +1019,40 @@ def jsonDados(cpfcnpjIn, listaIds=False):
         d['municipio'] = d['municipio_texto']
         d['opcao_mei'] = d['opcao_mei'] if  d['opcao_mei']  else ''
         d['uf'] = d['pais_'] if d['uf']=='EX' else d['uf']
+
+        d = {k:v for k,v in d.items() if k in camposPJ}
+        d['id'] = 'PJ_'+ d['cnpj']
+        dlista.append(copy.deepcopy(d))
         if not listaIds:
             break #só pega primeiro
-        dlista.append(copy.deepcopy(d))
     else:
         d = None
-
-    #print('jsonDados-fim: ' + time.ctime())   
     con.execute(f'Drop table if exists {tmp}_cnpjs1')
+    if caminhoDBBaseLocal:
+        dicDados = jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn) #xxx
+        if dicDados:
+            nosaux = []
+            for n in dlista: 
+                if n['id'] in dicDados:
+                    daux = copy.deepcopy(dicDados[n['id']])
+                    for q,v in daux.items():
+                        n[q] = v
+                nosaux.append(copy.deepcopy(n))
+            dlista = nosaux
+    #print('jsonDados-fim: ' + time.ctime())   
+
     con = None
     if not listaIds:
-        return d
+        return dlista[0] if dlista else {}
     else:
         return dlista
 #.def jsonDados
 
-def jsonBaseLocal(cpfcnpjIn=None, listaIds=None):    
+def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):    
     if not caminhoDBBaseLocal:
-        return
+        return {}
     if not listaIds and not cpfcnpjIn:
-        return
+        return {}
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}",execution_options=gEngineExecutionOptions)
     if not listaIds:
         #dftmptable = pd.DataFrame({'id' : list(cpfcnpjIn.upper().split(';'))})
@@ -1049,7 +1068,7 @@ def jsonBaseLocal(cpfcnpjIn=None, listaIds=None):
         from {tmp}_idsj t
         inner join dadosjson tj on tj.id = t.id
             '''
-    dlista = []
+    #dlista = []
     dicLista = {}
     for k in con.execute(query):
         try:
@@ -1057,20 +1076,27 @@ def jsonBaseLocal(cpfcnpjIn=None, listaIds=None):
             d = json.loads(k['json']) #dict(k)  
         except:
             d = {k['id']:'erro na base'}
-        if not listaIds:
-            break #só pega primeiro
-        dlista.append(copy.deepcopy(d))
-        dicLista[k['id']]=copy.deepcopy(d)
+        # if not listaIds:
+        #     break #só pega primeiro
+        #dlista.append(copy.deepcopy(d))
+        if k['id'] not in dicLista:
+            dicLista[k['id']]=copy.deepcopy(d)
+        else: #já havia registro de dados com id, sobrepoe os campos novos
+            daux = copy.deepcopy(dicLista[k['id']])
+            for q,v in d.items():
+                daux[q] = v
+            dicLista[k['id']]=copy.deepcopy(daux)
     else:
         d = None
     con.execute(f'Drop table if exists {tmp}_idsj')
     con = None
     #print('jsonDados-fim: ' + time.ctime())   
-    if not listaIds:
-        return d
-    else:
-        return dicLista #dlista
-#.def jsonBaseLocal
+    return dicLista
+    # if not listaIds:
+    #     return d
+    # else:
+    #     return dicLista #dlista
+#.def jsonDadosBaseLocal
 
 def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
     if not caminhoDBBaseLocal:
