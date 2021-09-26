@@ -31,14 +31,13 @@ Para iniciar a versão executável, primeiro descompacte o arquivo [rede-cnpj-ex
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e um console do DOS. Para parar a execução, feche o console.<br>
 Esta versão antiga executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
-## Como utilizar o Banco de dados públicos de cnpj:
-A pasta contém um arquivo CNPJ_teste.db, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base CNPJ.db em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de agosto/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
-base_receita = CNPJ.db<br>
+## Como utilizar o Banco de dados públicos completo de CNPJs:
+A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 11/09/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+<b>base_receita = cnpj.db</b><br>
+O projeto https://github.com/rictom/cnpj-sqlite faz a conversão dos arquivos zipados do site da Receita para sqlite e gera o arquivo <b>cnpj.db</b> que está no Google Drive.<br>
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
-A partir de 2021 os dados da Receita Federal estão disponíveis no link https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj  ou http://200.152.38.155/CNPJ/ em formato csv. 
-Observação: A versão antiga utilizava um arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full). A versão atual só vai funcionar com o CNPJ.db que está no Google Drive.<br>
-Em https://github.com/rictom/cnpj-sqlite coloquei um script em python para converter os arquivos zipados do site da Receita para sqlite, para ser utilizado neste projeto.<br>
+Até 2020 este script utilizava o arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full), mas não funciona mais porque o layout das tabelas mudou.<br>
 
 ## Opções:
 
@@ -127,9 +126,8 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 ## Fonte dos dados:
 
 Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
-https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj<br>
-
-Arquivo CNPJ.db completo, referência agosto/2021, já no formato sqlite, dividido em seis blocos, foi copiado no Google Drive:<br>
+https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou ou http://200.152.38.155/CNPJ/ em formato csv<br>
+Arquivo CNPJ.db completo, referência 11/09/2021, já no formato sqlite, dividido em blocos, foi copiado no Google Drive:<br>
 https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing <br>
 Para juntar os blocos, abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem 24GB.<br>
 
