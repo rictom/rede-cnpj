@@ -469,10 +469,15 @@ function filtraTextoLigacao(texto) {
 	var palavras = [];
 	for (let k of texto.split(';')){
 		var pedaco = (k.search(':')!=-1) ? k.split(':')[0] : k
-		if (['endereço','telefone','end','tel','email','link'].includes(pedaco.trim())) {
+		//if (['endereço','telefone','end','tel','email','link'].includes(pedaco.trim())) {
+		if (['endereço','telefone','end','tel','email'].includes(pedaco.trim())) {
 			continue;
 		}
-		palavras.push(k);
+		if (pedaco=='link') {
+			palavras.push(k.replaceAll('link:',''));
+		} else {
+			palavras.push(k);
+		}
 	}	
 	return palavras.join('; ');
 }//.filtraTextoLigacao
@@ -2078,7 +2083,7 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 						   'destino': destino,
 						   'cor': gparam.corLigacaoLink, //'green',
 						   'camada': 1,		   
-						   'tipoDescricao': 'link',
+						   'tipoDescricao': '', //'link',
 						   'label': label});
 			if (!bEstrela) {
 				anterior = destino;
@@ -2092,7 +2097,7 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 								   'destino': inicial,
 								   'cor': gparam.corLigacaoLink, //'green',
 								   'camada': 1,		   
-								   'tipoDescricao': 'link',
+								   'tipoDescricao': '', //'link',
 								   'label': label});
 	} */ 
 	var noLigacoes = {'no':[], 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
@@ -3001,7 +3006,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 			   'destino': id2,
 			   'cor': gparam.corLigacaoLink, //'green',
 			   'camada': 1,
-			   'tipoDescricao': 'link',
+			   'tipoDescricao': '', //'link',
 			   'label': linha[2]});
 		}
 	}

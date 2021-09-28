@@ -387,7 +387,6 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefix
     else:
         tmp = tabelaTemp()
         
-    #xxx 
     apagaTabelasTemporarias(tmp)
     if cpfcnpjIn:
         cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn=cpfcnpjIn)
@@ -665,7 +664,8 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
             prefixo = ''
             try: #se for cpfnome, é tuple e não consigo separar o pedaço.
                 prefixo = item[:3]
-                if prefixo[2]=='_' and prefixo!='PF_':
+                #if prefixo[2]=='_' and prefixo!='PF_':                
+                if prefixo[2]=='_':
                     ids.add(item)
             except:
                 continue
@@ -676,7 +676,8 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
             elif tipo=='base_local':
                  if not caminhoDBBaseLocal:
                     continue               
-            jsonEnderecosBanco = camadaLink(cpfcnpjIn='', conCNPJ=con, camada=1 if tipo=='endereco' else camada,  grupo=grupo,  listaIds=ids, tipoLink=tipo)
+            #jsonEnderecosBanco = camadaLink(cpfcnpjIn='', listaIds=ids, conCNPJ=con, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
+            jsonEnderecosBanco = camadaLink(cpfcnpjIn='', listaIds=ids, conCNPJ=None, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
             for item in jsonEnderecosBanco['no']:
                 if item['id'] not in camadasIds:
                     nosaux.append(item)
@@ -827,7 +828,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
     ligacoes = []
     setLigacoes = set()
     camadasIds, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp)
-    #print( 'nosids', nosids   )
+
     cnpjsInicial = copy.copy(cnpjs)
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
     limite = numeroItens #15
@@ -877,9 +878,9 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
                            "cor": "silver" if  tipoLink=='endereco' else "gold", #"cor":"gray", 
                            "camada":cam+1, "tipoDescricao":'link'} #"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
 
-
                 if tipoLink=='base_local':
                     ligacao['label'] = k['descricao'] 
+                    ligacao['tipoDescricao'] = 'base_local'
                 else:
                     ligacao['label'] = k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)
                 ligacoes.append(copy.deepcopy(ligacao))
@@ -894,7 +895,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         #dftmptable['camada'] = dftmptable['cnpj'].map(camadasIds)
         #con.execute('DELETE from tmp_ids;')
         #dftmptable.set_index('identificador', inplace=True)
-        dftmptable.to_sql('{tmp}_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
+        dftmptable.to_sql(f'{tmp}_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
         #curioso, esse índice deixa a busca lenta!!!!
         #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
         limite = limite * numeroItens * 2
@@ -1029,7 +1030,7 @@ def jsonDados(cpfcnpjIn, listaIds=False):
         d = None
     con.execute(f'Drop table if exists {tmp}_cnpjs1')
     if caminhoDBBaseLocal:
-        dicDados = jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn) #xxx
+        dicDados = jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn) 
         if dicDados:
             nosaux = []
             for n in dlista: 
@@ -1086,8 +1087,8 @@ def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):
             for q,v in d.items():
                 daux[q] = v
             dicLista[k['id']]=copy.deepcopy(daux)
-    else:
-        d = None
+    # else:
+    #     d = None
     con.execute(f'Drop table if exists {tmp}_idsj')
     con = None
     #print('jsonDados-fim: ' + time.ctime())   
@@ -1102,37 +1103,39 @@ def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
     if not caminhoDBBaseLocal:
         return
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}",execution_options=gEngineExecutionOptions)
-    
     listaNo = []
     for dados in nosLigacoes['no']:
         dic = {key:valor for key,valor in dados.items() if key!='id'}
-        #print(dic)
         try:
             texto = json.dumps(dic, default=str)
             dadosid = dados['id'].upper()
             listaNo.append([dadosid, texto, comentario])
         except:
             print('erro...', dic)
-       
     listaLigacao = []
     for lig in nosLigacoes['ligacao']:
         #dic = {key:valor for key,valor in dados if key!='id'}
         try:
-            listaLigacao.append([lig['origem'].upper(), lig['destino'].upper(), lig.get('tipoDescricao','')+':'+ lig.get('label',''),'', comentario])      
+            tdescricao = junta(lig.get('tipoDescricao',''), ':', lig.get('label',''))
+            listaLigacao.append([lig['origem'].upper(), lig['destino'].upper(), tdescricao, '', comentario])      
         except:
             print('erro...', lig)
-  
     dftmptable = pd.DataFrame(listaNo, columns = ['id', 'json', 'comentario'])
-
     dftmptable.to_sql('dadosjson', con=con, if_exists='append', index=False, dtype=sqlalchemy.types.VARCHAR)
-
     dftmptable = pd.DataFrame(listaLigacao, columns = ['id1', 'id2', 'descricao','valor', 'comentario'])
-
     dftmptable.to_sql('links', con=con, if_exists='append', index=False, dtype=sqlalchemy.types.VARCHAR)
-
     con = None
-
 #.def carregaJSONemBaseLocal
+
+def junta(a, separador, b):
+    if a and b:
+        return a + ':' + b
+    elif a:
+        return a
+    elif b:
+        return b
+    else:
+        return ''
 
 def ajustaValor(valor, tipoInteiro=False):
     if not valor:

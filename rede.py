@@ -196,9 +196,7 @@ def serve_dados_detalhes(cpfcnpj):
     try: 
         with gLock:
             r = rede_relacionamentos.jsonDados(cpfcnpj)
-            if r:
-                return jsonify(r)
-            return jsonify({}) #jsonify(rede_relacionamentos.jsonDadosBaseLocal(cpfcnpj))
+            return jsonify(r)
     finally:
         if gUwsgiLock:
             uwsgi.unlock()    

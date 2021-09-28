@@ -139,6 +139,9 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+versão 0.7.3 (setembro/2021)
+- correção de erro em ligação em banco de dados local.
+
 versão 0.7.2 (setembro/2021)
 - opção para alterar o nome da aba;
 - opção para selecionar todos os itens;
