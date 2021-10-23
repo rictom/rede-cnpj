@@ -12,14 +12,14 @@ gstep = 1000000 #quantidade de registros por loop
 offsetGlobal='0' #offset do sql, string
 rodaSo1bloco=False
 caminhobase = '' #alterar caminho
-caminhoarquivolog = 'logimportarenderecos.txt' #r"C:\Users\tomita\Documents\logimportarenderecos.txt"
+caminhoarquivolog = 'logimportarenderecos.txt' 
 
 camDbSqliteBaseCompleta = "cnpj.db" #aqui precisa ser a tabela completa
 
 camDBSaida = 'cnpj_links_ete.db'
 
 def soCaracteres(data):
-    '''remove acentuacao e mantÈm sÛ os caracteres'''
+    '''remove acentuacao e mant√©m s√≥ os caracteres'''
     if data is None:
         return ''
     t=''.join(x for x in unicodedata.normalize('NFKD', data) if x in string.printable)
@@ -150,7 +150,7 @@ dicAbreviaturas = {
         "VLA":"VIELA",
         "VLE":"VALE",
         "VRT":"VARIANTE",
-        #termos que n„o est„o na tabela logradouro cnpj
+        #termos que n√£o est√£o na tabela logradouro cnpj
         "ALM":"ALMIRANTE",
         "AND":"ANDAR",
         "AP":"APARTAMENTO",
@@ -215,16 +215,16 @@ dicAbreviaturas = {
     }
 
 def normalizaEndereco(enderecoIn, ignoraEnderecoSoComNumeros = True, ignoraEnderecoSemNumeros = True):
-    '''ajusta endereco, removendo ponto de n˙meros, removendo s/n, expandindo siglas comuns
+    '''ajusta endereco, removendo ponto de n√∫meros, removendo s/n, expandindo siglas comuns
        como R, AV. No final, ordena o resultado'''
-    #junta n˙meros com ponto, por exemplo, 3.222 fica 3222
-    enderecoAux = re.sub('([0-9]+)[.]([0-9]+)', '\\1\\2', enderecoIn).upper() #remove ponto de n˙mero
-    enderecoAux = re.sub('([A-Z])(\d)', '\\1 \\2', enderecoAux) #separa letra de dÌgito
+    #junta n√∫meros com ponto, por exemplo, 3.222 fica 3222
+    enderecoAux = re.sub('([0-9]+)[.]([0-9]+)', '\\1\\2', enderecoIn).upper() #remove ponto de n√∫mero
+    enderecoAux = re.sub('([A-Z])(\d)', '\\1 \\2', enderecoAux) #separa letra de d√≠gito
     enderecoAux = re.sub('(\d)([A-Z])', '\\1 \\2', enderecoAux) #separa digito de letra
     enderecoAux = ' ' + enderecoAux.upper() + ' '
     enderecoAux = " %s " %(soCaracteres(enderecoAux))
     enderecoAux = enderecoAux.replace(' S N ',' ')
-    # remove zeros e zeros ‡ esquerda
+    # remove zeros e zeros √† esquerda
     #enderecoAux = re.sub(' 0+([^ ]*) ', ' \\1 ', enderecoAux)
     lendereco = enderecoAux.split()
     if len(lendereco)==0:
@@ -241,24 +241,24 @@ def normalizaEndereco(enderecoIn, ignoraEnderecoSoComNumeros = True, ignoraEnder
     for k,pedaco in enumerate(lendereco):
         pedacoAjustado = pedaco
         if pedaco in dicAbreviaturas:
-            if len(pedaco)>1 or k<=1: #alguns casos como R ou Q sÛ se for no comeÁo do nome
+            if len(pedaco)>1 or k<=1: #alguns casos como R ou Q s√≥ se for no come√ßo do nome
                 pedacoAjustado = dicAbreviaturas[pedaco]
         if pedacoAjustado !='':
             if pedacoAjustado.isdigit():
-                #pedacoAjustado = re.sub('0+([^ ]*)', '\\1', pedacoAjustado) #remove zero ‡ esquerda (d· erro)
-                pedacoAjustado = pedacoAjustado.lstrip('0') #remove zero ‡ esquerda
+                #pedacoAjustado = re.sub('0+([^ ]*)', '\\1', pedacoAjustado) #remove zero √† esquerda (d√° erro)
+                pedacoAjustado = pedacoAjustado.lstrip('0') #remove zero √† esquerda
                 if pedacoAjustado != '':
                     numeros.append(pedacoAjustado)
             else:
                 palavras.add(pedacoAjustado)
-    palavrasOrdenadas = sorted(list(palavras)) #<---------------------OrdenaÁ„o, pode ser removido
-    if ignoraEnderecoSemNumeros: #h· muitos endereÁos sem n˙mero
+    palavrasOrdenadas = sorted(list(palavras)) #<---------------------Ordena√ß√£o, pode ser removido
+    if ignoraEnderecoSemNumeros: #h√° muitos endere√ßos sem n√∫mero
         if not numeros:
             return ''
     palavrasOrdenadas.extend(numeros)
     endereco = ' '.join(palavrasOrdenadas)
     if ignoraEnderecoSoComNumeros:
-        if endereco.translate(tremovenumerosespacos) == '': #remove numeros e espaÁo
+        if endereco.translate(tremovenumerosespacos) == '': #remove numeros e espa√ßo
             return ''
         else:
             return endereco
@@ -346,7 +346,7 @@ def ajustaTelefone(telefoneIn):
     if telefoneIn is None or telefoneIn=='' or telefoneIn == '0 0' or \
        telefoneIn[-7:] in ('0000000','1111111','2222222','3333333','4444444','5555555','6666666','7777777','8888888','9999999'):
         return ''
-    telefoneIn = ' '.join(telefoneIn.split()).strip() #remove espaÁos duplicados
+    telefoneIn = ' '.join(telefoneIn.split()).strip() #remove espa√ßos duplicados
     if ' ' in telefoneIn:
         pos = telefoneIn.find(' ')
         ddd,t = telefoneIn[:pos], re.sub(' ','',telefoneIn[pos:]) #telefoneIn.split(' ')
@@ -355,7 +355,7 @@ def ajustaTelefone(telefoneIn):
         if len(t)<4: #muito curto, deve estar errado
             return ''
         return ddd + ' ' + t
-    #else: #as vezes o cnpj retorna o telefone junto com o ddd - nesse caso n„o faz ajuste nenhum
+    #else: #as vezes o cnpj retorna o telefone junto com o ddd - nesse caso n√£o faz ajuste nenhum
     elif len(telefoneIn)<9: #muito curto, deve estar errado
         return ''
     else:
@@ -369,7 +369,7 @@ def baixa_telefone_cnpj(bpergunta=True):
     queryBase = '''
                 SELECT cnpj, situacao_cadastral as situacao, ddd1, telefone1, ddd2, telefone2, ddd_fax, fax --, email
                 FROM estabelecimento t
-                -- where situacao='02' -- sÛ ativas -- <>'08'ignora baixa
+                -- where situacao='02' -- s√≥ ativas -- <>'08'ignora baixa
             ''' #pode haver empresas fora da base de teste
             
     inicio = 0
@@ -433,7 +433,7 @@ def baixa_email_cnpj(bpergunta=True):
                 SELECT cnpj, situacao_cadastral as situacao, -- ddd_1, telefone_1, ddd_2, telefone_2, ddd_fax, num_fax --,
                 correio_eletronico as email
                 FROM estabelecimento t
-                -- where situacao='02' -- sÛ ativas -- <>'08'ignora baixa
+                -- where situacao='02' -- s√≥ ativas -- <>'08'ignora baixa
             ''' #pode haver empresas fora da base de teste
             
     inicio = 0
@@ -497,7 +497,7 @@ def agrupa_cnpj_por_tipo(tipo):
         prefixo = 'EM_'
         prefixoNomeid = 'PJ_'
     else:
-        print('tipo n„o definido')
+        print('tipo n√£o definido')
         return
     
     sqlseq = f'''CREATE INDEX idx_{tabela}_{coluna} ON {tabela} (
@@ -580,7 +580,7 @@ def removeTabelasTemporarias():
     insp = sqlalchemy.inspect(con)
     nomes = insp.get_table_names()
     tabelasAApagar = [n for n in nomes if n!='link_ete']
-    print(f'removeTabelasTemporarias. O script vai fazer alteraÁıes no banco de dados, APAGANDO as tabelas {tabelasAApagar}. Prossegue?(y,n)')
+    print(f'removeTabelasTemporarias. O script vai fazer altera√ß√µes no banco de dados, APAGANDO as tabelas {tabelasAApagar}. Prossegue?(y,n)')
     if input()!='y':
         exit()
     for t in tabelasAApagar:
@@ -612,9 +612,9 @@ def leArquivoEnderecos():
     
 if __name__ == "__main__":
     if not os.path.exists(camDbSqliteBaseCompleta):
-        print(f'O arquivo {camDbSqliteBaseCompleta} com a base de cnpj n„o foi localizado. Corrija a vari·vel camDbSqliteBaseCompleta')
+        print(f'O arquivo {camDbSqliteBaseCompleta} com a base de cnpj n√£o foi localizado. Corrija a vari√°vel camDbSqliteBaseCompleta')
         sys.exit(0)
-    print('O script vai fazer alteraÁıes no banco de dados. Prossegue?(y,n)')
+    print('O script vai fazer altera√ß√µes no banco de dados. Prossegue?(y,n)')
     if input()!='y':
         exit()
     #baixa_enderecos_cnpj_Dask(False)
