@@ -140,7 +140,7 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 
 ## Histórico de versões
 versão 0.7.4 (dezembro/2021)
-- O projeto online pode ser acessado em redecnpj.com.br
+- O projeto online pode ser acessado em http://redecnpj.com.br
 
 versão 0.7.3 (setembro/2021)
 - correção de erro em ligação em banco de dados local.
