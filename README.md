@@ -32,9 +32,9 @@ A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão e 
 Esta versão antiga executável só irá funcionar com a base de testes que está no arquivo compactado.<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
-A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido no Google Drive https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing (base da SRF de 9/10/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite (base da SRF de 13/11/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
 <b>base_receita = cnpj.db</b><br>
-O projeto https://github.com/rictom/cnpj-sqlite faz a conversão dos arquivos zipados do site da Receita para sqlite e gera o arquivo <b>cnpj.db</b> que está no Google Drive.<br>
+O projeto https://github.com/rictom/cnpj-sqlite faz a conversão dos arquivos zipados do site da Receita para sqlite e gera o arquivo <b>cnpj.db</b>.<br>
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
 Até 2020 este script utilizava o arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full), mas não funciona mais porque o layout das tabelas mudou.<br>
