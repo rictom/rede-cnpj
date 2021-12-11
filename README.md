@@ -122,8 +122,8 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 
 Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
 https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv<br>
-Arquivo CNPJ.db completo, referência 13/11/2021, já no formato sqlite, dividido em blocos, foi copiado no Google Drive:<br>
-https://drive.google.com/drive/folders/1Gkeq27aHv6UgT8m30fc4hZWMPqdhEHWr?usp=sharing <br>
+Arquivo CNPJ.db completo, referência 13/11/2021, já no formato sqlite, dividido em blocos, está disponível em:<br>
+https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite <br>
 Para juntar os blocos, abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem cerca de 25GB.<br>
 
 ## Outras referências:
