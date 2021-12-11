@@ -1,4 +1,4 @@
-# REDE-DADOS-CNPJ - Visualização de dados públicos de CNPJ
+# REDE-CNPJ - Visualização de dados públicos de CNPJ
 
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
