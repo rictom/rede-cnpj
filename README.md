@@ -14,7 +14,7 @@ Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Ex
 A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, este repositório tem o arquivo com cerca de mil registros com dados fictícios de empresas e de sócios. <br>
 
 ## Versão online com base completa de dados públicos de CNPJ:
-http://redecnpj.com.br ou http://168.138.150.250/rede/ <br>
+http://www.redecnpj.com.br ou http://168.138.150.250/rede/ <br>
 Leia as informações iniciais. Para fazer uma consulta, digite um CNPJ, a Razão Social Completa, o Nome Completo de Sócio ou Radical do CNPJ. Para exibir um CNPJ aleatório, digite "TESTE". Pode-se inserir vários CNPJs de uma só vez, separando-os por (;). Para fazer busca por parte da Razão Social ou parte do nome de Sócio, utilize o asterisco (*) na parte que faltar do nome.
 Funciona parcialmente em celular, com menu errático.
 
