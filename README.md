@@ -27,7 +27,7 @@ Se der algum erro como “module <nome do módulo> not found”, instale o módu
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
-A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite (base da SRF de 13/11/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite (base da SRF de 11/12/2021), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
 <b>base_receita = cnpj.db</b><br>
 O projeto https://github.com/rictom/cnpj-sqlite faz a conversão dos arquivos zipados do site da Receita para sqlite e gera o arquivo <b>cnpj.db</b>.<br>
 
@@ -122,9 +122,9 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 
 Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
 https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv<br>
-Arquivo CNPJ.db completo, referência 13/11/2021, já no formato sqlite, dividido em blocos, está disponível em:<br>
+Arquivo CNPJ.db sqlite completo está disponível em:<br>
 https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite <br>
-Para juntar os blocos, abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem cerca de 25GB.<br>
+Baixe todos os blocos e abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem cerca de 25GB.<br>
 
 ## Outras referências:
 Biblioteca em javascript para visualização:<br>
