@@ -124,7 +124,7 @@ Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informaç
 https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv<br>
 Arquivo CNPJ.db sqlite completo está disponível em:<br>
 https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite <br>
-Baixe todos os blocos e abra o primeiro (CNPJ.7z.001) no 7zip. Os arquivos compactados têm o tamanho de 5GB. O arquivo descompactado tem cerca de 25GB.<br>
+Baixe o arquivo CNPJ.7z e descompacte usando o 7zip (https://www.7-zip.org/download.html). O arquivo descompactado tem cerca de 25GB.<br>
 
 ## Outras referências:
 Biblioteca em javascript para visualização:<br>
