@@ -76,12 +76,12 @@
 .alertify-notifier .ajs-message.ajs-success {
   color: #fff;
   background: rgba(91, 189, 114, 0.95);
-  text-shadow: 1px -1px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.5);
 }
 .alertify-notifier .ajs-message.ajs-error {
   color: #fff;
   background: rgba(217, 92, 92, 0.95);
-  text-shadow: 1px -1px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.5);
 }
 .alertify-notifier .ajs-message.ajs-warning {
   background: rgba(252, 248, 215, 0.95);
