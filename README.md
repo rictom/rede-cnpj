@@ -138,11 +138,11 @@ versão 0.8.1 (janeiro/2022)
 - flask-limiter para diminuir excesso de consultas;
 - usando somente POST em algumas consultas;
 - alerta de que consulta por CPF pode apresentar erros;
-- usando certificado digital na versão online;
 - opção no menu Salvar/Abrir>Baixar base CNPJ para abrir a página com o arquivo em SQLITE.
 
 versão 0.7.4 (dezembro/2021)
-- O projeto online pode ser acessado em https://www.redecnpj.com.br
+- O projeto online pode ser acessado em https://www.redecnpj.com.br;
+- usando certificado digital na versão online;
 
 versão 0.7.3 (setembro/2021)
 - correção de erro em ligação em banco de dados local.
