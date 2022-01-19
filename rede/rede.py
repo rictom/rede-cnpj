@@ -2,9 +2,10 @@
 """
 Created on set/2020
 @author: github rictom/rede-cnpj
+https://github.com/rictom/rede-cnpj
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
+from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response, redirect
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #import Limiter
 
@@ -14,6 +15,7 @@ import rede_config as config, rede_relacionamentos
 import pandas as pd
 
 from requests.utils import unquote
+import rede_config as config
 
 try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
     import rede_acao
@@ -22,11 +24,13 @@ except:
 
 app = Flask("rede")
 limiter = flask_limiter.Limiter(app, key_func=flask_limiter.util.get_remote_address) #, default_limits=["200 per day", "50 per hour"])
-limiter_param = '20 per minute'
+limiter_padrao = config.config['ETC'].get('limiter_padrao', '20/minute').strip() 
+limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip() 
+
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['numeroDeEmpresasNaBase'] = rede_relacionamentos.numeroDeEmpresasNaBase()
-gp['camadaMaxima'] = 15
+gp['camadaMaxima'] = 10
 
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
@@ -50,9 +54,14 @@ if False:
     gLock = contextlib.nullcontext()
     gUwsgiLock = False
 
+# @app.route("/")
+# def raiz():
+#     return redirect("/rede/", code = 302)
+
 @app.route("/rede/")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
+@limiter.limit(limiter_padrao)
 def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     mensagemInicial = ''
     inserirDefault = ''
@@ -136,10 +145,10 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     return render_template('rede_template.html', parametros=paramsInicial)
 #.def serve_html_pagina
 
-@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET','POST'])
-@limiter.limit(limiter_param)
+@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['POST'])
+@limiter.limit(limiter_padrao)
 def serve_rede_json_cnpj(cpfcnpj, camada=1):
-    # if request.remote_addr in ('189.6.12.35', '187.113.35.170','200.233.12.9'):
+    # if request.remote_addr in ('xxx'):
     #     return jsonify({'acesso':'problema no acesso. favor não utilizar como api de forma intensiva, pois isso pode causar bloqueio para outros ips.'})        
     camada = min(gp['camadaMaxima'], int(camada))
     #cpfcnpj = cpfcnpj.upper().strip() #upper dá inconsistência com email, que está minusculo na base
@@ -170,7 +179,7 @@ def serve_rede_json_cnpj(cpfcnpj, camada=1):
 #.def serve_rede_json_cnpj
 
 @app.route('/rede/grafojson/links/<int:camada>/<int:numeroItens>/<int:valorMinimo>/<int:valorMaximo>/<cpfcnpj>',  methods=['GET','POST'])
-@limiter.limit(limiter_param)
+@limiter.limit(limiter_padrao)
 def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, valorMaximo=0):
     r = None
     if gUwsgiLock:
@@ -188,8 +197,8 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
     return r
 #.def serve_rede_json_links
 
-@app.route('/rede/dadosjson/<cpfcnpj>')
-@limiter.limit("5 per minute")
+@app.route('/rede/dadosjson/<cpfcnpj>', methods=['POST'])
+@limiter.limit(limiter_dados)
 def serve_dados_detalhes(cpfcnpj):
     if gUwsgiLock:
         uwsgi.lock()
@@ -212,7 +221,8 @@ def serve_dir_directory_index(arquivopath):
 local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos)
 
 
-@app.route('/rede/arquivos_json/<arquivopath>') #, methods=['GET'])
+@app.route('/rede/arquivos_json/<arquivopath>', methods=['POST'])
+@limiter.limit(limiter_padrao)
 def serve_arquivos_json(arquivopath):
     filename = secure_filename(arquivopath)
     extensao = os.path.splitext(filename)[1]
@@ -236,6 +246,7 @@ def serve_arquivos_json(arquivopath):
         return Response("Solicitação não autorizada", status=400)
 
 @app.route('/rede/arquivos_json_upload/<nomeArquivo>', methods=['POST'])
+@limiter.limit(limiter_padrao)
 def serve_arquivos_json_upload(nomeArquivo):
     nomeArquivo = unquote(nomeArquivo)
     filename = secure_filename(nomeArquivo)
@@ -253,6 +264,7 @@ def serve_arquivos_json_upload(nomeArquivo):
     return jsonify({'nomeArquivoServidor':filename})
 
 @app.route('/rede/json_para_base/<comentario>', methods=['POST'])
+@limiter.limit(limiter_padrao)
 def serve_arquivos_json_upload_para_base(comentario=''):
     comentario = unquote(comentario)
     if not usuarioLocal():
@@ -265,6 +277,7 @@ def serve_arquivos_json_upload_para_base(comentario=''):
     return jsonify({'retorno':'ok'})
 
 @app.route('/rede/envia_json/<acao>', methods=['POST'])
+@limiter.limit(limiter_padrao)
 def serve_envia_json_acao(acao=''):
     if not usuarioLocal():
         return jsonify({'mensagem':{'lateral':'', 'popup':'Opção apenas disponível para usuário local', 'confirmar':''}})
@@ -275,6 +288,7 @@ def serve_envia_json_acao(acao=''):
         return jsonify({'retorno':'ok', 'mensagem':{'popup':r}})
     except:
         return jsonify({'mensagem':{'lateral':'', 'popup':'Servidor não foi configurada para esta ação', 'confirmar':''}})
+
 # @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
 # def serve_arquivos_download(arquivopath):
 #     if not config.par.bArquivosDownload:
@@ -291,11 +305,13 @@ def serve_envia_json_acao(acao=''):
 
       
 @app.route('/rede/dadosemarquivo/<formato>', methods = ['GET', 'POST'])
+@limiter.limit(limiter_padrao)
 def serve_dadosEmArquivo(formato='xlsx'):
     dados = json.loads(request.form['dadosJSON'])
     return send_file(rede_relacionamentos.dadosParaExportar(dados), attachment_filename="rede_dados_cnpj.xlsx", as_attachment=True)
 
 @app.route('/rede/formdownload.html', methods = ['GET','POST'])
+@limiter.limit(limiter_padrao)
 def serve_form_download(): #formato='pdf'):
     return '''
         <html>
@@ -309,6 +325,7 @@ def serve_form_download(): #formato='pdf'):
     '''
     
 @app.route('/rede/abrir_arquivo/', methods = ['POST'])
+@limiter.limit(limiter_padrao)
 #def serve_abrirArquivoLocal(nomeArquivo=''):
 def serve_abrirArquivoLocal():
     if not config.par.bArquivosDownload:
@@ -341,6 +358,7 @@ def serve_abrirArquivoLocal():
         return jsonify({'retorno':True, 'mensagem':'Arquivo aberto,'})
     else:
         return jsonify({'retorno':False, 'mensagem':'Extensão de arquivo não autorizada,'})
+#.def serve_abrirArquivoLocal
 
 def usuarioLocal():
     return request.remote_addr ==  '127.0.0.1'
@@ -358,6 +376,7 @@ def nomeArquivoNovo(nome):
             print('algo errado em nomeArquivoNovo')
             break
     return nome
+#.def nomeArquivoNovo
 
 def removeAcentos(data):
   import unicodedata, string
@@ -369,3 +388,4 @@ if __name__ == '__main__':
     import webbrowser
     webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 
     app.run(host='0.0.0.0',debug=True, use_reloader=False, port=config.par.porta_flask)
+            #ssl_context=('certificado/rede_selfsigned.crf', 'certificado/rede_selfsigned.key'))

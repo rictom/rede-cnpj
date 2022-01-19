@@ -1,31 +1,41 @@
 <!DOCTYPE html>
+<html>
+<head>
+<title>Rede</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="description" content="Visualização Gráfica de Empresas e de Sócios com dados abertos da Receita Federal do Brasil. Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."/>
+<meta name="keywords" content="CNPJ, Dados Abertos, Receita Federal"/>
+<meta name="author" content="https://github.com/rictom/rede-cnpj"/>
+<!--meta name="viewport" content="width=device-width, initial-scale=1" -->
+
 <!-- 
 projeto disponível em https://github.com/rictom/rede-cnpj
-
-utilizando os seguintes códigos e recursos:
+Utilizando os seguintes códigos e recursos:
 https://github.com/anvaka/VivaGraphJS
+// adaptado de http://jsfiddle.net/ibigd/z7ymfpmm/
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 https://fabien-d.github.io/alertify.js/
 https://fontawesome.com/v4.7.0/
 https://github.com/encharm/Font-Awesome-SVG-PNG
 https://www.freepik.com/
 -->
-<html>
-<head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta charset="utf-8">
-<title>Rede</title>
-<link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
-<link rel="icon" href="/static/imagem/favicon.ico" type="imagem/x-icon">
+
+<meta property="og:title" content="Rede CNPJ" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.redecnpj.com.br" />
+<meta property="og:image" content="https://www.redecnpj.com.br/rede/static/imagem/favicon.jpg" />
+<!--
+<link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon"> colocando /rede/ abaixo, para evitar erro quando rodando no nginx. -->
+<link rel="icon" href="/rede/static/imagem/favicon.ico" type="imagem/x-icon"/>
 <script type="text/javascript" src="/static/vivagraph/vivagraph.js"></script>
 <script type="text/javascript" src="/static/alertify/alertify.min.js"></script>
 <link  rel="stylesheet" href="/static/alertify/css/alertify.css" /><link  rel="stylesheet" href="/static/alertify/css/themes/default.css" />
-<link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css">
-<link rel="stylesheet" href="/static/menu/menu.css">
+<link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css"/>
+<link rel="stylesheet" href="/static/menu/menu.css"/>
 
 <script type="text/javascript">
-
-// adaptado de http://jsfiddle.net/ibigd/z7ymfpmm/
+//Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."
 var graph = Viva.Graph.graph();
 var graphics = Viva.Graph.View.svgGraphics();
 
@@ -37,7 +47,7 @@ var gparam = {};
 	
 	gparam.nodeSize = 20; //24
 	gparam.tamanhoFonte = 10;
-	gparam.corLigacaoLink = 'seagreen';
+	gparam.corLigacaoLink = 'gray'; //'seagreen';
 	gparam.bMostraLigacao = true;
 	gparam.kligacoes = 0;
 	gparam.btextoEmbaixoIcone = gparam.inicio.btextoEmbaixoIcone; 
@@ -1191,7 +1201,7 @@ function menu_dados(bNovaJanela, idNo) {
 	}
 
 	var url = base + 'dadosjson/' + idin ;
-	fetch(url, {method: 'get', cache: "no-store"}) //, mode: 'cors',})
+	fetch(url, {method: 'post', cache: "no-store"}) //, mode: 'cors',})
 	  .then(
 		function(response) {
 		  if (response.status !== 200) {
@@ -1451,7 +1461,7 @@ function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
 		//fetch(url, {method: 'get'}) // mode: 'cors',
-		fetch(url, {method: 'get', headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+		fetch(url, {method: 'post', headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
@@ -1642,6 +1652,10 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	if (tipo=='links') {
 		dialogoParametrosLink();
 	} else {
+			if (camada>10) {
+				alertify.error('O número de camadas é limitado em 10.');
+			}
+			camada = Math.min(camada, 10);
 		url = base + 'grafojson/cnpj/' + camada + '/';
 		fazFetch(url, idin);
 	}
@@ -1724,6 +1738,10 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 			valorMaximo = (valorMaximo!='NaN')?valorMaximo:'0';
 			numeroItens = (numeroItens!='NaN')?numeroItens:'0';
 			camada = (camada!='NaN')?camada:'0';
+			if (camada>10) {
+				alertify.error('O número de camadas é limitado em 10.');
+			}
+			camada = Math.min(camada, 10);
 			//alert('valores: ' + valorMinimo + ' '+ valorMaximo + ' ' + numeroItens + ' '+camadas);
 			//console.log(valorMinimo, valorMaximo, numeroItens, camada);
 			ativaAtalhos(true);
@@ -1761,12 +1779,14 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 		itensDefault = textoDefault;
 	}
 	var textoPrompt = 'Digite CNPJ, radical do CNPJ, Razão Social Completa, Nome Completo do Sócio ou vários CNPJs separados por ponto e virgula (;). ';
-	if (gparam.inicio.bBaseFullTextSearch) {
-		textoPrompt += ' Para realizar busca por parte do nome, utilize * (curinga de palavra), ? ( 1 caractere) ou aspas (mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, F?LANO DE TAL , "FULANO DE"*, EMPRESA* BRASILEIRA.';
-	} else {
-		textoPrompt += ' Não foi implementada busca parcial.';
+	if (!gparam.mobile) {
+		if (gparam.inicio.bBaseFullTextSearch) {
+			textoPrompt += ' Para realizar busca por parte do nome, utilize * (curinga de palavra), ? ( 1 caractere) ou aspas (mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, F?LANO DE TAL , "FULANO DE"*, EMPRESA* BRASILEIRA.';
+		} else {
+			textoPrompt += ' Não foi implementada busca parcial.';
+		}
+		textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @ e número, por exemplo, FULANO@20 para 20 registros. Para exibir Matriz e 10 filiais, digite apenas o Radical do CNPJ seguido de @10. Digite TESTE para visualizar um CNPJ aleatório.';
 	}
-	textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @ e número, por exemplo, FULANO@20 para 20 registros. Para exibir Matriz e 10 filiais, digite apenas o Radical do CNPJ seguido de @10. Digite TESTE para visualizar um CNPJ aleatório.';
 	alertify.prompt( 'Inserir item no gráfico', textoPrompt , itensDefault
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;
@@ -1779,6 +1799,9 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 							if (gparam.numeroInsercoes==0) { //se for primeira insercao de teste, já coloca camada 2 
 								camada = 1;
 							}
+						}
+						if (isNumeric(cn) && (cn.length==11)) { 
+							alertify.warning('A busca por CPF pode apresentar resultados incorretos, pois a tabela de sócios não tem todos os dígitos do identificador.');
 						}
 						if (camada==0) {
 							camada = prompt('Quantidade de Camadas (ou Níveis da consulta)', 1);
@@ -3856,6 +3879,10 @@ alertifyfake = {
 		menuOnClick();
 		setTimeout(function(){ alert(texto);}, 500);
 	},
+	'warning':function(texto) {
+		menuOnClick();
+		setTimeout(function(){ alert('ATENÇÃO!!! ' + texto); }, 500);
+	},
 	'error':function(texto) {
 		menuOnClick();
 		setTimeout(function(){ alert('ERRO!!! ' + texto); }, 500);
@@ -3903,6 +3930,7 @@ function ajustaAmbiente() {
 			alertify.prompt = alertifyfake.prompt;
 			alertify.confirm = alertifyfake.confirm;
 			alertify.alert = alertifyfake.alert; 
+			alertify.warning = alertifyfake.warning;
 			//alertify.success = alertifyfake.success;
 			//alertify.error = alertifyfake.error;	
 			//safari, trocar onclick por ontouchend nos botoes
@@ -3919,13 +3947,17 @@ function ajustaAmbiente() {
 			document.querySelector('.menu').style.width='300px';
 			//document.getElementById('botaoDadosBasicos').ontouchend = "";
 		} 
-		alert('Isto não funciona corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
 		document.getElementById("drop_area").style.display = "none"; //esconde área de drop em mobile
-		document.getElementById('div_referencia').textContent=""; //apaga referencia
+		document.getElementById("btn_srf").style.display = "none"; //esconde botão receita em mobile
+		document.getElementById("div_referencia").style.display = "none"; //esconde referência
+		//document.getElementById('div_referencia').textContent=""; //apaga referencia
+		alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
 	} else { //desktop
 		try {
 			document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
 			document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";
+			document.getElementById('div_referencia').textContent="\xa0" +  gparam.inicio.referenciaBDCurto + "\xa0";
+			document.getElementById('drop_area').textContent="\xa0DROP (json ou lista de identificadores)";
 		} catch (e) {;}
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
@@ -4022,27 +4054,26 @@ function main() {
 </head>
 <body id='corpo' onload='main()' style='overflow:hidden;'>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
-<div id="block_container">
+<!--div id="block_container"-->
 	<div id='div_botoes'>
-		<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>&nbsp;&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i> </button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'>&nbsp;+&nbsp;</button>&nbsp;
-		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'>&nbsp;-&nbsp;</button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>
 		{% if parametros.bBaseReceita %}
-		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>&nbsp;&nbsp;
-		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Página de dados públicos da SRF'>Dados</button>&nbsp;&nbsp;
+		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>
+		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Página de dados públicos da SRF'>Dados</button>
 		{% endif %}
+		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'><i class="fa fa-search-plus"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
+		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i></button>
+	
+	<button id='div_referencia' title="{{ parametros.referenciaBD }}" disabled></button>
+	<button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções." disabled><!--i class="fa fa-hand-holding-water"></i--></button>
 	</div>
-	<div id='div_referencia' title="{{ parametros.referenciaBD }}">&nbsp;{{ parametros.referenciaBDCurto }}&nbsp;</div>
-	<div id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções.">
-		<i class="fa fa-hand-holding-water"></i>&nbsp;DROP (json ou lista de identificadores)
-	</div>
-</div>
+<!--/div-->
  <!-- 
 <div id="principal" style="width: 100%; height: 100%; position: absolute;  left: 0; top: 30;" charset="utf-8">
 -->
@@ -4395,7 +4426,7 @@ function main() {
 		</menu>
 		{% if parametros.bBaseLocal %}
 		<li class="menu-item submenu">
-		<button type="button" class="menu-btn" title="Opções para exportar para Banco de Dados"> <i class="fa fa-file-export"></i> <span class="menu-text">Banco de Dados</span> </button>
+		<button type="button" class="menu-btn" title="Opções para exportar para Banco de Dados"> <i class="fa fa-file-export"></i> <span class="menu-text">Base Local</span> </button>
 		<menu class="menu">
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidorParaBaseLocal(false)" title="Salva as informações da visualização no Banco de Dados Local SQLITE no Servidor">
@@ -4409,9 +4440,13 @@ function main() {
 			</li>  	
 		</menu>		
 		{% endif %}
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://app.mediafire.com/1vdqoa2mk0fu9');" title="Página para baixar a base de dados de cnpj em SQLITE.">
+		<i class="fa fa-download"></i> <span class="menu-text">Baixar base CNPJ</span>
+		</button>
+		</li>  
 	</menu>
 	</li>
-
 	<li class="menu-separator"></li>
 	<li class="menu-item submenu">
 	<button type="button" class="menu-btn"> <i class="fa fa-trash"></i> <span class="menu-text">Excluir</span> </button>

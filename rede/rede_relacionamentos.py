@@ -119,6 +119,8 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
     #se limite==-1, não havia @N no nome
     tmp='tmp'
     nomeIn = nomeIn.strip().upper()
+    caracteres_pontuacao = set('''!#$%&\'()+,-./:;<=>@[\\]^_`{|}~''') #sem * ? "
+    nomeIn = ''.join(ch for ch in nomeIn if ch not in caracteres_pontuacao)
     nomeMatch = ''
     try:
         limite = int(limite)
@@ -767,6 +769,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
     #print('INICIANDO-------------------------')
     #print(f'camadasLink ({camada})-{cpfcnpjIn}-inicio: ' + time.ctime() + ' ', end='')
     mensagem = {'lateral':'', 'popup':'', 'confirmar':''}
+    #camada = min(camada, 10) #camada alta causa erro no limite da sql, que fica muito grande. A camada de link
     if tipoLink=='endereco':
         if not caminhoDBEnderecoNormalizado:
             #mensagem['popup'] = 'Não há tabela de enderecos configurada.'
@@ -972,22 +975,32 @@ def jsonDados(cpfcnpjIn, listaIds=False):
     cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn)    
     # if outrosIdentificadores: #pegar o jsonDadosBaseLocal sempre
     #     return jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn, listaIds=listaIds)
-    dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
-    dftmptable['grupo']=''
-    dftmptable['camada']=0
-    tmp = tabelaTemp()
+    # dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
+    # dftmptable['grupo']=''
+    # dftmptable['camada']=0
+    # tmp = tabelaTemp()
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}",execution_options=gEngineExecutionOptions)
-    dftmptable.to_sql(f'{tmp}_cnpjs1', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+    # dftmptable.to_sql(f'{tmp}_cnpjs1', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
 
+    # query = f'''
+    #     select t.*, te.*, ifnull(tm.descricao,t.nome_cidade_exterior) as municipio_texto, tpais.descricao as pais_, tsimples.opcao_mei
+    #     from estabelecimento t
+    #     inner join {tmp}_cnpjs1 tp on tp.cnpj=t.cnpj
+    #     left join empresas te on te.cnpj_basico=t.cnpj_basico
+    #     left join municipio tm on tm.codigo=t.municipio
+    #     left join simples tsimples on tsimples.cnpj_basico=t.cnpj_basico
+    #     left join pais tpais on tpais.codigo=t.pais
+        
+    #         '''
     query = f'''
         select t.*, te.*, ifnull(tm.descricao,t.nome_cidade_exterior) as municipio_texto, tpais.descricao as pais_, tsimples.opcao_mei
         from estabelecimento t
-        inner join {tmp}_cnpjs1 tp on tp.cnpj=t.cnpj
+        
         left join empresas te on te.cnpj_basico=t.cnpj_basico
         left join municipio tm on tm.codigo=t.municipio
         left join simples tsimples on tsimples.cnpj_basico=t.cnpj_basico
         left join pais tpais on tpais.codigo=t.pais
-        
+        where t.cnpj=:cnpjin
             '''
     camposPJ = ['cnpj', 'matriz_filial', 'razao_social', 'nome_fantasia', 'data_inicio_atividades', 'situacao_cadastral', 
 				'data_situacao_cadastral', 'motivo_situacao_cadastral', 'natureza_juridica', 'cnae_fiscal', 'porte_empresa', 'opcao_mei',
@@ -995,40 +1008,43 @@ def jsonDados(cpfcnpjIn, listaIds=False):
 				'ddd1', 'telefone1', 'ddd2', 'telefone2', 'ddd_fax', 'fax', 'correio_eletronico', 'capital_social'
 				]
     dlista = []
-    for k in con.execute(query):
-        d = dict(k)  
-        
-        capital = d['capital_social'] #capital social vem multiplicado por 100
-        capital = f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.')
-        listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
-        logradouro = ', '.join(listalogradouro)
-        #d['cnpj'] = f"{d['cnpj']} - {'Matriz' if d['matriz_filial']=='1' else 'Filial'}"       
-        d['matriz_filial'] = 'Matriz' if d['matriz_filial']=='1' else 'Filial'
-        d['data_inicio_atividades'] = ajustaData(d['data_inicio_atividades'])
-        d['situacao_cadastral'] = f"{d['situacao_cadastral']} - {gdic.dicSituacaoCadastral.get(d['situacao_cadastral'],'')}"
-        d['data_situacao_cadastral'] = ajustaData(d['data_situacao_cadastral']) 
-        if d['motivo_situacao_cadastral']=='0':
-            d['motivo_situacao_cadastral'] = ''
-        else:
-            d['motivo_situacao_cadastral'] = f"{d['motivo_situacao_cadastral']}-{gdic.dicMotivoSituacao.get(d['motivo_situacao_cadastral'],'')}"
-        d['natureza_juridica'] = f"{d['natureza_juridica']}-{gdic.dicNaturezaJuridica.get(d['natureza_juridica'],'')}"
-        #d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(int(d['cnae_fiscal']),'')}"
-        d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(d['cnae_fiscal'],'')}"
-        d['porte_empresa'] = f"{d['porte_empresa']}-{gdic.dicPorteEmpresa.get(d['porte_empresa'],'')}"
-        d['endereco'] = f"{d['tipo_logradouro']} {logradouro}"
-        d['capital_social'] = capital 
-        d['municipio'] = d['municipio_texto']
-        d['opcao_mei'] = d['opcao_mei'] if  d['opcao_mei']  else ''
-        d['uf'] = d['pais_'] if d['uf']=='EX' else d['uf']
-
-        d = {k:v for k,v in d.items() if k in camposPJ}
-        d['id'] = 'PJ_'+ d['cnpj']
-        dlista.append(copy.deepcopy(d))
-        if not listaIds:
-            break #só pega primeiro
-    else:
+    if not cnpjs:
         d = None
-    con.execute(f'Drop table if exists {tmp}_cnpjs1')
+    else:
+        for k in con.execute(query, {'cnpjin':list(cnpjs)[0]}):
+            d = dict(k)  
+            
+            capital = d['capital_social'] #capital social vem multiplicado por 100
+            capital = f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.')
+            listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
+            logradouro = ', '.join(listalogradouro)
+            #d['cnpj'] = f"{d['cnpj']} - {'Matriz' if d['matriz_filial']=='1' else 'Filial'}"       
+            d['matriz_filial'] = 'Matriz' if d['matriz_filial']=='1' else 'Filial'
+            d['data_inicio_atividades'] = ajustaData(d['data_inicio_atividades'])
+            d['situacao_cadastral'] = f"{d['situacao_cadastral']} - {gdic.dicSituacaoCadastral.get(d['situacao_cadastral'],'')}"
+            d['data_situacao_cadastral'] = ajustaData(d['data_situacao_cadastral']) 
+            if d['motivo_situacao_cadastral']=='0':
+                d['motivo_situacao_cadastral'] = ''
+            else:
+                d['motivo_situacao_cadastral'] = f"{d['motivo_situacao_cadastral']}-{gdic.dicMotivoSituacao.get(d['motivo_situacao_cadastral'],'')}"
+            d['natureza_juridica'] = f"{d['natureza_juridica']}-{gdic.dicNaturezaJuridica.get(d['natureza_juridica'],'')}"
+            #d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(int(d['cnae_fiscal']),'')}"
+            d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(d['cnae_fiscal'],'')}"
+            d['porte_empresa'] = f"{d['porte_empresa']}-{gdic.dicPorteEmpresa.get(d['porte_empresa'],'')}"
+            d['endereco'] = f"{d['tipo_logradouro']} {logradouro}"
+            d['capital_social'] = capital 
+            d['municipio'] = d['municipio_texto']
+            d['opcao_mei'] = d['opcao_mei'] if  d['opcao_mei']  else ''
+            d['uf'] = d['pais_'] if d['uf']=='EX' else d['uf']
+    
+            d = {k:v for k,v in d.items() if k in camposPJ}
+            d['id'] = 'PJ_'+ d['cnpj']
+            dlista.append(copy.deepcopy(d))
+            if not listaIds:
+                break #só pega primeiro
+        else:
+            d = None
+    #con.execute(f'Drop table if exists {tmp}_cnpjs1')
     if caminhoDBBaseLocal:
         dicDados = jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn) 
         if dicDados:
@@ -1212,7 +1228,7 @@ def dadosParaExportar(dados):
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     #workbook = writer.book
     dfe=pd.read_sql_query(queryempresas, con)
-    dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.'))
+    dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.') if capital else '')
     
     dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
     dfe['data_inicio_atividades'] = dfe['data_inicio_atividades'].apply(ajustaData)
@@ -1323,7 +1339,8 @@ def numeroDeEmpresasNaBase():
     except:
         r = 0
     if not r:
-        r = con.execute('select count(*) as contagem from estabelecimento;').fetchone()[0]
+        print('select count(*) as contagem from estabelecimento')
+        r = con.execute('select count(*) as contagem from estabelecimento').fetchone()[0]
     return r
 
 def imagensNaPastaF(bRetornaLista=False):
