@@ -1839,12 +1839,22 @@ function menu_GoogleMaps() {
 function menu_abrirNovaAba(idno, bNosSelecionados) {
 	var novaJanela=null;
 	if ((!idno)&&(!bNosSelecionados)) {
-		novaJanela=window.open(base + '?pula_mensagem=sim');
+		novaJanela = window.open(base + '?pula_mensagem=sim');
 		novaJanela.focus(); 
 		return;
 	}
 	if ((!idno)&&bNosSelecionados) { //abre numa nova aba os nós selecionados
-		menu_exportaJSONServidor(true, false, 'temporario', null, document.title + '-parcial')	
+		//se tiver só um nó selecionado, pergunta quantas camadas
+		if (gparam.idNosSelecionados.size==1){ 
+			var camada = prompt('Quantidade de camadas para abrir ' + gparam.idnoSelecionado + ' em uma nova aba:','1');
+			if (!camada) return;
+			novaJanela = window.open(base + 'grafico/' + String(camada) + '/' + gparam.idnoSelecionado) ;
+			if (novaJanela) {
+				novaJanela.focus();
+			}
+		} else {
+			menu_exportaJSONServidor(true, false, 'temporario', null, document.title + '-parcial')	
+		}
 		return;
 	}
 	if (idno.startsWith('LI_')) {
