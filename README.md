@@ -139,7 +139,7 @@ versão 0.8.2 (janeiro/2022)
 - usando somente POST em algumas consultas;
 - alerta de que consulta por CPF pode apresentar erros;
 - opção no menu Salvar/Abrir>Baixar base CNPJ para abrir a página com o arquivo em SQLITE;
-- tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/<camada>/PJ_X, que poderá ser compartilhado.
+- tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/NUMERO_CAMADA/PJ_X, que poderá ser compartilhado.
 
 versão 0.7.4 (dezembro/2021)
 - O projeto online pode ser acessado em https://www.redecnpj.com.br;
