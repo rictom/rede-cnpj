@@ -27,9 +27,9 @@ Se der algum erro como “module <nome do módulo> not found”, instale o módu
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
-A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite (base da SRF de 12/2/2022), alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite, alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
 <b>base_receita = cnpj.db</b><br>
-O projeto https://github.com/rictom/cnpj-sqlite faz a conversão dos arquivos zipados do site da Receita para sqlite e gera o arquivo <b>cnpj.db</b>.<br>
+O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b>. O código foi ajustado para o formato disponibilizado a partir de 2021.<br> 
 
 ## OBSERVAÇÃO IMPORTANTE em março de 2021:
 Até 2020 este script utilizava o arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full), mas não funciona mais porque o layout das tabelas mudou.<br>
