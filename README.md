@@ -1,5 +1,7 @@
 # REDE-CNPJ - Visualização de dados públicos de CNPJ
 
+Ferramenta para observar o relacionamento entre empresas e sócios, a partir dos dados públicos disponibilizados pela Receita Federal.<br>
+
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
 
@@ -29,15 +31,12 @@ As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
 A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite, alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
 <b>base_receita = cnpj.db</b><br>
-O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b>. O código foi ajustado para o formato disponibilizado a partir de 2021.<br> 
-
-## OBSERVAÇÃO IMPORTANTE em março de 2021:
-Até 2020 este script utilizava o arquivo sqlite gerado a partir do script do Fabio Serpa (https://github.com/fabioserpa/CNPJ-full), mas não funciona mais porque o layout das tabelas mudou.<br>
+O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b>. O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
 
 ## Opções:
 
 A roda do mouse expande ou diminui o tamanho da exibição.<br>
-Fazendo click duplo em um ícone, a rotina expande as ligações.<br>
+Fazendo click duplo em um ícone, a rotina expande as ligações. Por exemplo, clique duplo no ícone de uma pessoa, exibirá todas as empresas que esta é sócia. Clique duplo em um ícone de CNPJ, exibirá todos os sócios da empresa.<br>
 Apertando SHIFT, é possível selecionar mais de um ícone. <br>
 Pressionando CTRL e arrastando na tela, adiciona a seleção os itens da área.
 Clicar no botão do meio do mouse (roda) faz aparecer janela para editar uma Nota, que aparece numa terceira linha abaixo do ícone.
@@ -120,10 +119,9 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 
 ## Fonte dos dados:
 
-Base de CNPJ. A base de dados públicos de CNPJ da Receita Federal tem informação de Capital Social de empresas. A tabela de sócios contém apenas os sócios ativos de empresas, com CPF descaracterizado e nome completo do sócio.<br>
-https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv<br>
-Arquivo CNPJ.db sqlite completo está disponível em:<br>
-https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite <br>
+Base de CNPJ está disponível em https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv.<br>
+Arquivo CNPJ.db sqlite já tratado pelo projeto https://github.com/rictom/cnpj-sqlite está disponível em 
+https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite. Eu tento atualizar esse arquivo mensalmente.<br>
 Baixe o arquivo CNPJ.7z e descompacte usando o 7zip (https://www.7-zip.org/download.html). O arquivo descompactado tem cerca de 25GB.<br>
 
 ## Outras referências:
@@ -135,11 +133,12 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 
 ## Histórico de versões
 versão 0.8.2 (janeiro/2022)
-- flask-limiter para diminuir excesso de consultas;
-- usando somente POST em algumas consultas;
-- alerta de que consulta por CPF pode apresentar erros;
 - opção no menu Salvar/Abrir>Baixar base CNPJ para abrir a página com o arquivo em SQLITE;
-- tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/NUMERO_CAMADA/PJ_X, que poderá ser compartilhado.
+- tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/NUMERO_CAMADA/PJ_X, cujo link poderá ser compartilhado;
+- usando somente POST em algumas consultas;
+- alerta de que consulta por CPF pode apresentar erros. A base da Receita só contem seis dígitos do CPF de sócios, por isso a busca exibe todos os CPFs que tem os mesmo dígitos;
+- flask-limiter para diminuir excesso de consultas. Se precisar dos dados por api, rode o projeto localmente e altere os parâmetros limiter_padrao e limiter_dados do arquivo de configuração rede.ini.
+
 
 versão 0.7.4 (dezembro/2021)
 - O projeto online pode ser acessado em https://www.redecnpj.com.br;
