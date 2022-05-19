@@ -3,11 +3,13 @@
 Created on set/2020
 @author: github rictom/rede-cnpj
 https://github.com/rictom/rede-cnpj
+pip install Flask-Limiter
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
 from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response, redirect
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #import Limiter
+from flask_limiter.util import get_remote_address
 
 from werkzeug.utils import secure_filename
 import os, sys, json, secrets, copy, io
@@ -23,7 +25,8 @@ except:
     pass
 
 app = Flask("rede")
-limiter = flask_limiter.Limiter(app, key_func=flask_limiter.util.get_remote_address) #, default_limits=["200 per day", "50 per hour"])
+#limiter = flask_limiter.Limiter(app, key_func=flask_limiter.util.get_remote_address) #, default_limits=["200 per day", "50 per hour"])
+limiter = flask_limiter.Limiter(app, key_func=get_remote_address) #, default_limits=["200 per day", "50 per hour"])
 limiter_padrao = config.config['ETC'].get('limiter_padrao', '20/minute').strip() 
 limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip() 
 
@@ -114,7 +117,7 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                 if numeroEmpresas>40000000: #no código do template, dois pontos será substituida por .\n
                     mensagemInicial += f'''\nA base tem {tnumeroEmpresas} empresas.\n''' + config.referenciaBD
                 else:
-                    inserirDefault =' TESTE'     
+                    inserirDefault = 'TESTE'     
         else:
             config.par.bMenuInserirInicial = False
     
@@ -212,14 +215,17 @@ def serve_dados_detalhes(cpfcnpj):
 
 #https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 
-static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'static')
-@app.route('/rede/static/<path:arquivopath>') #, methods=['GET'])
-def serve_dir_directory_index(arquivopath):
-    return send_from_directory(static_file_dir, arquivopath)
+# rotina antiga, para servir imagens - nginx não estava servindo imagens por erro de permissão na pasta
+# em windows, o flask (por padrão) já serve esses arquivos em static e as imagens. 
+# no linux, configurar o nginx para servir imagens. Configurar a pasta imagem com a permissão chmod 755 
+# static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'static')
+# @app.route('/rede/static/<path:arquivopath>') #, methods=['GET'])
+# def serve_dir_directory_index(arquivopath):
+#     print('servindo static: ' + arquivopath)
+#     return send_from_directory(static_file_dir, arquivopath)
 
 #local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'arquivos')
 local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos)
-
 
 @app.route('/rede/arquivos_json/<arquivopath>', methods=['POST'])
 @limiter.limit(limiter_padrao)

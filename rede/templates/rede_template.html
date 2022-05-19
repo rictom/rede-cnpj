@@ -24,10 +24,10 @@ https://www.freepik.com/
 <meta property="og:title" content="Rede CNPJ" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://www.redecnpj.com.br" />
-<meta property="og:image" content="https://www.redecnpj.com.br/rede/static/imagem/favicon.jpg" />
+<meta property="og:image" content="https://www.redecnpj.com.br/static/imagem/favicon.jpg"/>
 <!--
 <link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon"> colocando /rede/ abaixo, para evitar erro quando rodando no nginx. -->
-<link rel="icon" href="/rede/static/imagem/favicon.ico" type="imagem/x-icon"/>
+<link rel="icon" href="/static/imagem/favicon.ico" type="imagem/x-icon"/>
 <script type="text/javascript" src="/static/vivagraph/vivagraph.js"></script>
 <script type="text/javascript" src="/static/alertify/alertify.min.js"></script>
 <link  rel="stylesheet" href="/static/alertify/css/alertify.css" /><link  rel="stylesheet" href="/static/alertify/css/themes/default.css" />
@@ -74,11 +74,13 @@ var gparam = {};
 
 // variáveis globais
 var base = '/rede/',
+	baseImagem = '/static/imagem/',
 	gdebug = null,
 	markerSeta = null,
 	defs = null,
 	menu = null;
-	
+
+
 /*
 createMarker = function(id) {
 	return Viva.Graph.svg('marker')
@@ -248,8 +250,9 @@ graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	let ui = Viva.Graph.svg('g');
 	let urlImagem = node.data.imagem ? node.data.imagem: 'icone-grafo-id.png';
-	if (!urlImagem.includes(base)) {
-		urlImagem = base + 'static/imagem/' + urlImagem;
+	//if (!urlImagem.includes(base)) {
+	if (!urlImagem.includes(baseImagem)) {
+		urlImagem = baseImagem + urlImagem;
 	}
 	let img = Viva.Graph.svg('image');
 	//ui.posXRel = - gparam.nodeSize/2;
@@ -1555,14 +1558,28 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			continue;
 		}
 		var ligExistente = graph.hasLink(ligaux.origem, ligaux.destino);
+		var direcao = '';
 		if (!ligExistente) {
 			ligExistente = graph.hasLink(ligaux.destino, ligaux.origem);
+			direcao = '-'; //item novo está na direção contrária da seta XXX, adiciona menos antes do tipo de ligação
 		}
 		if (ligExistente) { 
 			labelLigacao = ligExistente.data.label ? ligExistente.data.label : '';
 			var conjLabel = new Set(labelLigacao.split(';')); //; é separador dos tipos de ligação
 			//var conjNovo = new Set(ligaux.label.split(';')); //bug, quando a ligacao.label é null
-			var conjNovo = new Set(ligaux.label ?  ligaux.label.split(';') : ''.split(';'));
+			//var conjNovo = new Set(ligaux.label ?  ligaux.label.split(';') : ''.split(';'));
+			if (direcao) { //se o tipo de ligação novo está em direção contrária da seta existente, adiciona menos
+							//seria necessário tratar as situações em ligações que não há direção (não seria preciso por sinal)
+				var laux = ligaux.label ?  ligaux.label.split(';') : ''.split(';');
+				if (ligaux.label) {
+					laux.forEach((element, index) => {
+					  laux[index] = '-' + element;
+					});
+				}
+				var conjNovo = new Set(laux);
+			} else {
+				var conjNovo = new Set(ligaux.label ?  ligaux.label.split(';') : ''.split(';'));
+			}
 			let uniao = new Set([...conjLabel, ...conjNovo]);
 			uniao.delete('');
 			ligExistente.data.label = [...uniao].join(';')
@@ -1777,6 +1794,8 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	var itensDefault = gparam.inserirDefault;
 	if (textoDefault) {
 		itensDefault = textoDefault;
+	} else {
+		itensDefault = document.getElementById('input_cnpj').value;
 	}
 	var textoPrompt = 'Digite CNPJ, radical do CNPJ, Razão Social Completa, Nome Completo do Sócio ou vários CNPJs separados por ponto e virgula (;). ';
 	if (!gparam.mobile) {
@@ -1791,6 +1810,8 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;
 					var cn = cnpjs.trim().toUpperCase();
+					var cnaux = cn.replaceAll('.', '').replace('-', ''); //cn.replace(/\./g, '').replace(/\-/g, '');
+					console.log(cnaux);
 					if (cn) { 
 						if (cn=='T') {
 							cn='TESTE';
@@ -1800,7 +1821,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 								camada = 1;
 							}
 						}
-						if (isNumeric(cn) && (cn.length==11)) { 
+						if (isNumeric(cnaux) && (cnaux.length==11)) { 
 							alertify.warning('A busca por CPF pode apresentar resultados incorretos, pois a tabela de sócios não tem todos os dígitos do identificador.');
 						}
 						if (camada==0) {
@@ -2646,7 +2667,7 @@ function alterarItens(dadosNos) {//altera dados do item a partir de lista de dad
 				} catch (e){console.log(e); };		
 			} else if (chave=='imagem') {
 				try {
-					ui.getElementsByTagName('image')[0].setAttribute('xlink:href', base + 'static/imagem/' + valor);
+					ui.getElementsByTagName('image')[0].setAttribute('xlink:href', baseImagem + valor);
 				} catch (e){console.log(e); };			
 			}
 		}		
@@ -3177,7 +3198,7 @@ function menu_alterarIcone(bparam) {
 			no.data.imagem = nomeIcone;
 			var node = graphics.getNodeUI(noid);
 			try {
-				node.getElementsByTagName('image')[0].setAttribute('xlink:href', base + 'static/imagem/' + nomeIcone);
+				node.getElementsByTagName('image')[0].setAttribute('xlink:href', baseImagem + nomeIcone);
 			} catch (e){; };
 		}		
 	} 
@@ -3303,7 +3324,7 @@ function menu_exportaJsonArquivo(bSoSelecionados) {
 	saveTextAsFile(JSON.stringify(rede), 'rede.json', {type:"application/json"});
 }//.function menu_exportaJsonArquivo
 
-function replaceAll(texto, textoAProcurar, textoASubstituir) {
+function replaceAll(texto, textoAProcurar, textoASubstituir) { // pode ser substituido por string.replaceAll, que já existe no javascript
 	//return texto.split(textoAProcurar).join(textoASubstituir);
 	if (texto) {
 		return texto.replace(new RegExp(textoAProcurar,'g'), textoASubstituir); 
@@ -3332,7 +3353,7 @@ function getXMLdeSVG() {
 			'icone-grafo-id.png' ]; */
 	var sImagens = new Set(); //gparam.listaImagens;
 	//verifica quais imagens estão sendo usadas.
-	var pedacos = svg_xml.split('xlink:href="' + base + 'static/imagem/');
+	var pedacos = svg_xml.split('xlink:href="' + baseImagem);
 	for (let p of pedacos) {
 		if (p.indexOf('.png') != -1) {
 			var nome = p.split('.png')[0];
@@ -3347,7 +3368,7 @@ function getXMLdeSVG() {
 		var c = document.createElement('canvas');
 		for (let nomeImagem of listaImagens) {
 			var img = new Image();
-			img.src = base + 'static/imagem/' + nomeImagem;
+			img.src = baseImagem + nomeImagem;
 			img_home.appendChild(img);
 			if (1) {
 				c.height = img.naturalHeight;
@@ -3364,7 +3385,7 @@ function getXMLdeSVG() {
 	var dicionario = converteImagens2Base64();
 	for (let key of listaImagens) {
 		var baseStr=dicionario[key];
-		var strProcurar = 'xlink:href="' + base + 'static/imagem/' + key + '"';
+		var strProcurar = 'xlink:href="' + baseImagem + key + '"';
 		var strSubstituicao = 'xlink:href="'+baseStr + '"';
 		svg_xml = replaceAll(svg_xml, strProcurar, strSubstituicao);
 	}
@@ -3411,6 +3432,17 @@ function menu_zoomout(teclaShift, teclaCtrl) {
 		var escala = gparam.renderer.zoomOut();
 	}
 }//.function menu_zoomout
+
+function menu_input_cnpj(elemento) {
+    if(event.key === 'Enter') {
+		gparam.inserirDefault = elemento.value;
+		var cn = elemento.value.trim().toUpperCase();
+		if (isNumeric(cn) && (cn.length==11)) { 
+			alertify.warning('A busca por CPF pode apresentar resultados incorretos, pois a tabela de sócios não tem todos os dígitos do identificador.');
+		}
+		menu_incluirCamada(elemento.value, 1);
+	}
+}//.function menu_input_cnpj
 
 //teclas Up, down, left e right servem somente para navegar árvore hierárquica
 function menu_teclaUp(bSemMensagem) { //segue direção da seta
@@ -3935,6 +3967,10 @@ function ajustaAmbiente() {
 			for (let botao of document.getElementsByClassName('botaosuperior')) { 
 				botao.style.fontSize = '60px'; //="font-size:60px;";
 			}	
+			alertify.prompt = alertifyfake.prompt;
+			alertify.confirm = alertifyfake.confirm;
+			alertify.alert = alertifyfake.alert; 
+			alertify.warning = alertifyfake.warning;
 		} else 	{ //safari
 			gparam.safari = true;
 			alertify.prompt = alertifyfake.prompt;
@@ -3965,7 +4001,7 @@ function ajustaAmbiente() {
 	} else { //desktop
 		try {
 			document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
-			document.getElementById('btn_srf').textContent="Dados Públicos da Receita Federal";
+			document.getElementById('btn_srf').textContent="Dados Públicos RFB";
 			document.getElementById('div_referencia').textContent="\xa0" +  gparam.inicio.referenciaBDCurto + "\xa0";
 			document.getElementById('drop_area').textContent="\xa0DROP (json ou lista de identificadores)";
 		} catch (e) {;}
@@ -4069,8 +4105,12 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>
 		{% if parametros.bBaseReceita %}
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>
-		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Página de dados públicos da SRF'>Dados</button>
+		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Clique para abrir a página de dados públicos de CNPJ da Receita Federal do Brasil'>Dados</button>
 		{% endif %}
+		<input type="text" id="input_cnpj" name="input_cnpj" size="18" value='TESTE' onkeydown='menu_input_cnpj(this)' 
+			onfocusin="ativaAtalhos(false)" onfocusout="ativaAtalhos(true);" onClick="this.select();"
+			title='Digite {% if parametros.bBaseReceita %} CNPJ, Razão Social ou CPF  {% endif %}e pressiona Enter, ou clique no Botão ao lado para adicionar mais Camadas'
+		>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>
@@ -4097,7 +4137,7 @@ function main() {
 		<button type="button" class="menu-btn" title="Expande vinculos de sócios. Aperte a tecla 1-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir Camadas</span> </button>
 		<menu class="menu">
 			<li class="menu-item">
-				<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção">
+				<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção, ou faça clique duplo no ícone.">
 				<i class="fa fa-layer-group"></i><span class="menu-text">1 (Tecla 1)</span> </button>
 			</li>
 			<li class="menu-item">
@@ -4451,8 +4491,8 @@ function main() {
 		</menu>		
 		{% endif %}
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://app.mediafire.com/1vdqoa2mk0fu9');" title="Página para baixar a base de dados de cnpj em SQLITE.">
-		<i class="fa fa-download"></i> <span class="menu-text">Baixar base CNPJ</span>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/cnpj-sqlite#arquivo_sqlite');" title="Página para baixar a base de dados de cnpj em SQLITE.">
+		<i class="fa fa-download"></i> <span class="menu-text">Baixar Base CNPJ</span>
 		</button>
 		</li>  
 	</menu>

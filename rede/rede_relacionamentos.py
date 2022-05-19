@@ -94,7 +94,7 @@ def timeit(method):
 #     tmp = prefixo_tabela_temporaria
 #     con.execute(f'DROP TABLE if exists {tmp}_cpfpjnomes')
 #     con.execute(f'DROP TABLE if exists {tmp}_ids')
-#     con.execute(f'DROP TABLE if exists {tmp}_socios')
+#     con.execute(f'DROP TABLE if exists {tmp}_ligacao')
 #     con.execute(f'DROP TABLE if exists {tmp}_busca_nome')
 #     con = None
 
@@ -484,55 +484,77 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
                 #AND (length(cnpj_cpf_socio)<>14 OR substr(cnpj_cpf_socio, 9, 4)="0001")
 
         query = f''' 
-        DROP TABLE if exists {tmp}_socios;
+        DROP TABLE if exists {tmp}_ligacao;
         
-        CREATE TABLE {tmp}_socios AS
-        SELECT DISTINCT 
-        * From (
-        SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
-        FROM socios t
-        INNER JOIN {tmp}_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
-        left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
-        where tl.nome=''
-        UNION
-        SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
-        FROM socios t
-        INNER JOIN {tmp}_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
-        left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio 
-        where tl.nome=''
-        {whereMatriz}
-        UNION
-        SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
-        FROM socios t
-        INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
-        left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
-        where tn.nome<>''
-         {whereMatriz}
+        CREATE TABLE {tmp}_ligacao AS
+        SELECT DISTINCT * From 
+        (
+            SELECT t.cnpj as origem, '' as nome_origem, t.cnpj_cpf_socio , t.nome_socio, sq.descricao as cod_qualificacao
+            FROM socios t
+            INNER JOIN {tmp}_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
+            left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+            where tl.nome=''
+            UNION
+            SELECT t.cnpj as origem, '' as nome_origem, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
+            FROM socios t
+            INNER JOIN {tmp}_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
+            left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio 
+            where tl.nome=''
+            {whereMatriz}
+            UNION
+            SELECT t.cnpj as origem, '' as nome_origem, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
+            FROM socios t
+            INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
+            left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+            where tn.nome<>''
+            
+            UNION --xxx inclui responsavel por socio
+            SELECT t.representante_legal as origem, t.nome_representante as nome_origem, t.cnpj_cpf_socio, t.nome_socio, 'rep-sócio-' || sq.descricao as cod_qualificacao
+            FROM socios t
+            INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
+            left join qualificacao_socio sq ON sq.codigo=t.qualificacao_representante_legal --sera que é a mesma tabela?
+            where t.nome_representante<>''
+            UNION --responsavel socio que é cnpj
+            SELECT t.representante_legal as origem, t.nome_representante as nome_origem, t.cnpj_cpf_socio, t.nome_socio, 'rep-sócio-' || sq.descricao as cod_qualificacao
+            FROM socios t
+            INNER JOIN {tmp}_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
+            left join qualificacao_socio sq ON sq.codigo=t.qualificacao_representante_legal
+            where tl.nome='' and t.nome_representante<>''
+            
         ) as taux 
         ; 
         
-        
-        Insert INTO {tmp}_socios (cnpj, cnpj_cpf_socio, nome_socio, cod_qualificacao) 
-        select  tm.cnpj, tp.cpfpj as cnpj_cpf_socio, "" as nome_socio, "filial" as cod_qualificacao
+        --inclui filiais
+        Insert INTO {tmp}_ligacao (origem, nome_origem, cnpj_cpf_socio, nome_socio, cod_qualificacao) 
+        select  tm.cnpj as origem,'' as nome_origem, tp.cpfpj as cnpj_cpf_socio, "" as nome_socio, "filial" as cod_qualificacao
         from estabelecimento t
         inner join {tmp}_cpfpjnomes tp on tp.cpfpj=t.cnpj
         left join estabelecimento tm on tm.cnpj_basico=t.cnpj_basico and tm.cnpj<>tp.cpfpj
         where tm.matriz_filial is "1" --is é mais rapido que igual (igual é muito lento)
         and tp.nome='';
         
-        
+        /*
         Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada) 
-        select distinct ts.cnpj as cpfpj, "" as nome, "{grupo}" as grupo, {cam+1} as camada
-        From {tmp}_socios ts;                  
+        select distinct ts.origem as cpfpj, "" as nome, "{grupo}" as grupo, {cam+1} as camada
+        From {tmp}_ligacao ts
+        where length(cnpj_cpf_socio)=14
+        */
+        
+        --acrescentado
+        Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada)
+        select distinct ts.origem as cpfpj, nome_origem as nome, "{grupo}" as grupo, {cam+1} as camada
+        From {tmp}_ligacao ts
+        --where length(cnpj_cpf_socio)<>14
+        ;        
         
         Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada)
         select distinct cnpj_cpf_socio as cpfpj,"" as nome, "{grupo}" as grupo, {cam+1} as camada
-        From {tmp}_socios ts
+        From {tmp}_ligacao ts
         where length(cnpj_cpf_socio)=14;
         
         Insert INTO {tmp}_cpfpjnomes (cpfpj, nome, grupo, camada)
         select distinct cnpj_cpf_socio as cpfpj, nome_socio as nome, "{grupo}" as grupo, {cam+1} as camada
-        From {tmp}_socios ts
+        From {tmp}_ligacao ts
         where  length(cnpj_cpf_socio)<>14;
 
         drop table if exists {tmp}_cpfpjnomes_aux;
@@ -590,10 +612,10 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
             break
     #.for cam in range(camada): 
     if camada==0:
-        #gambiarra, em camada 0, não apaga a tabela tmp_socios, por isso pega dados de consulta anterior.
+        #gambiarra, em camada 0, não apaga a tabela tmp_ligacao, por isso pega dados de consulta anterior.
         query0 = f''' 
-        CREATE TABLE {tmp}_socios AS
-        SELECT t.cnpj, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
+        CREATE TABLE {tmp}_ligacao AS
+        SELECT t.cnpj as origem, '' as nome_origem, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
         FROM socios t
         left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
         limit 0
@@ -622,15 +644,20 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         nosaux.append(copy.deepcopy(no))         
     querySocios = f'''
         select *
-        from {tmp}_socios
+        from {tmp}_ligacao
     '''
     for k in con.execute(querySocios):
-        ksocio = k['cnpj_cpf_socio']
-        if len(ksocio)==14:
-            destino = cnpj2id(ksocio) #'PJ_'+ ksocio
+        korigem = k['origem'] #e
+        if len(korigem)==14:
+            origem = cnpj2id(korigem) #'PJ_'+ ksocio
         else:
-            destino = cpfnome2id(ksocio,k['nome_socio']) # 'PF_'+ksocio+'-'+k['nome_socio']
-        ligacao = {"origem":cnpj2id(k['cnpj']), #'PJ_'+k['cnpj'], 
+            origem = cpfnome2id(korigem, k['nome_origem']) # 'PF_'+ksocio+'-'+k['nome_socio']       
+        kdestino = k['cnpj_cpf_socio']
+        if len(kdestino)==14:
+            destino = cnpj2id(kdestino) #'PJ_'+ ksocio
+        else:
+            destino = cpfnome2id(kdestino, k['nome_socio']) # 'PF_'+ksocio+'-'+k['nome_socio']
+        ligacao = {"origem":origem, #cnpj2id(k['cnpj']), #'PJ_'+k['cnpj'], 
                    "destino":destino, 
                    "cor": "silver", #"cor":"gray", 
                    "camada":0,
@@ -1185,31 +1212,53 @@ def dadosParaExportar(dados):
     listaCpfCnpjs = list(sids)
     camadasIds_, cnpjs_, cpfnomes_, tmp = criaTabelasTmpParaCamadas(con, listaIds=listaCpfCnpjs, grupo='')
     querysocios = f'''
-                SELECT * from
-				(SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
+                SELECT distinct * from
+    				(SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao, 
+                     t.data_entrada_sociedade, t.pais, tpais.descricao as pais_, t.representante_legal, t.nome_representante, t.qualificacao_representante_legal, sq2.descricao as qualificacao_representante_legal_, t.faixa_etaria
                 FROM socios t
                 --INNER JOIN tmp_cnpjs tl ON  tl.cnpj = t.cnpj
                 INNER JOIN {tmp}_cpfpjnomes tl ON  tl.cpfpj = t.cnpj
                 left join estabelecimento tt on tt.cnpj=t.cnpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
-                left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq2 ON sq2.codigo=t.qualificacao_representante_legal
+                left join pais tpais on tpais.codigo=t.pais
                 where tl.nome=''
                 UNION
-                SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
+                SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao,
+                    t.data_entrada_sociedade, t.pais, tpais.descricao as pais_, t.representante_legal, t.nome_representante, t.qualificacao_representante_legal, sq2.descricao as qualificacao_representante_legal_, t.faixa_etaria
                 FROM socios t
                 INNER JOIN {tmp}_cpfpjnomes tl ON tl.cpfpj = t.cnpj_cpf_socio
                 left join estabelecimento tt on tt.cnpj=t.cnpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
-                left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq2 ON sq2.codigo=t.qualificacao_representante_legal
+                left join pais tpais on tpais.codigo=t.pais
                 where tl.nome=''
                 UNION
-                SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao
+                SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao, 
+                    t.data_entrada_sociedade, t.pais, tpais.descricao as pais_, t.representante_legal, t.nome_representante, t.qualificacao_representante_legal, sq2.descricao as qualificacao_representante_legal_, t.faixa_etaria
                 FROM socios t
                 INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
                 left join estabelecimento tt on tt.cnpj=t.cnpj
                 LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
-                left join qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq2 ON sq2.codigo=t.qualificacao_representante_legal
+                left join pais tpais on tpais.codigo=t.pais
                 where tn.nome<>''
+                /* XXX
+                UNION --xxx inclui responsavel por socio
+                SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao, 
+                    t.data_entrada_sociedade, t.pais, tpais.descricao as pais_, t.representante_legal, t.nome_representante, t.qualificacao_representante_legal, sq2.descricao as qualificacao_representante_legal_,  t.faixa_etaria
+                --SELECT t.representante_legal as origem, t.nome_representante as nome_origem, t.cnpj_cpf_socio, t.nome_socio, 'rep-sócio-' || sq.descricao as cod_qualificacao
+                FROM socios t
+                INNER JOIN {tmp}_cpfpjnomes tn ON tn.nome= t.nome_socio AND tn.cpfpj=t.cnpj_cpf_socio
+                left join estabelecimento tt on tt.cnpj=t.cnpj
+                LEFT JOIN empresas te on te.cnpj_basico=tt.cnpj_basico
+                LEFT JOIN qualificacao_socio sq ON sq.codigo=t.qualificacao_socio
+                LEFT JOIN qualificacao_socio sq2 ON sq2.codigo=t.qualificacao_representante_legal
+                left join pais tpais on tpais.codigo=t.pais
+                where t.nome_representante<>'' */
             )
                 ORDER BY nome_socio
             '''
