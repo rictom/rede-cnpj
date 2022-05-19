@@ -132,6 +132,11 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+versão 0.8.3 (maio/2022)
+- relacionamento de representante de sócio. Para funcionar, necessita atualizar base com índice na coluna representante legal;
+- campo de busca de cpf/cnpj na linha do menu;
+- rotina cnpj_search.py para indexar coluna de razão social ou nome de sócio para busca por parte do nome.
+
 versão 0.8.2 (janeiro/2022)
 - opção no menu Salvar/Abrir>Baixar base CNPJ para abrir a página com o arquivo em SQLITE;
 - tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/NUMERO_CAMADA/PJ_X, cujo link poderá ser compartilhado;
