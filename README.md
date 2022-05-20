@@ -133,7 +133,7 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 
 ## Histórico de versões
 versão 0.8.3 (maio/2022)
-- relacionamento de representante de sócio. Para funcionar, necessita atualizar base com índice na coluna representante legal;
+- inclusão de relacionamento de representante de sócio;
 - campo de busca de cpf/cnpj na linha do menu;
 - rotina cnpj_search.py para indexar coluna de razão social ou nome de sócio para busca por parte do nome.
 
