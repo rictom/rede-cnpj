@@ -27,11 +27,14 @@ python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
+A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos itens para testar o funcionamento da rotina.<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
-A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite, alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b>. 
+O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
+O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
+Para utilizar a base completa <b>cnpj.db</b> na <b>REDE-CNPJ</b>, altere o arquivo de configuração rede.ini, mudando a linha de configuração para<br>
 <b>base_receita = cnpj.db</b><br>
-O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b>. O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
 
 ## Opções:
 
