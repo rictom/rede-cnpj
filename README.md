@@ -134,6 +134,10 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+
+versão 0.8.4 (junho/2022)
+- aceita CNPJs ou CPFs com zeros à esquerda faltando.
+
 versão 0.8.3 (maio/2022)
 - inclusão de relacionamento de representante de sócio;
 - campo de busca de cpf/cnpj na linha do menu;
