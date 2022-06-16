@@ -13,7 +13,6 @@ Exportar dados como json: https://youtu.be/WKn02G9yHbQ <br>
 Arrastar células do Excel: https://youtu.be/Oxze-d4V7kE <br>
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
-A base de dados é o arquivo CNPJ_full.db, banco de dados no formato sqlite. Para exemplificar o funcionamento da rotina, este repositório tem o arquivo com cerca de mil registros com dados fictícios de empresas e de sócios. <br>
 
 ## Versão online com base completa de dados públicos de CNPJ:
 https://www.redecnpj.com.br<br>
@@ -27,11 +26,14 @@ python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
+A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos itens para testar o funcionamento da rotina.<br> 
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
-A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos dados apenas para testar o funcionamento da rotina. Substitua esse arquivo pela base <b>cnpj.db</b> em sqlite que pode ser obtido em https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite, alterando o arquivo de configuração rede.ini, mudando o nome do banco na linha para<br>
+O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
+O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
+O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
+Para utilizar a base completa <b>cnpj.db</b> na <b>REDE-CNPJ</b>, altere o arquivo de configuração rede.ini, mudando a linha de configuração para<br>
 <b>base_receita = cnpj.db</b><br>
-O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b>. O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
 
 ## Opções:
 
@@ -121,7 +123,7 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 
 Base de CNPJ está disponível em https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv.<br>
 Arquivo CNPJ.db sqlite já tratado pelo projeto https://github.com/rictom/cnpj-sqlite está disponível em 
-https://www.mediafire.com/folder/1vdqoa2mk0fu9/cnpj-sqlite. Eu tento atualizar esse arquivo mensalmente.<br>
+https://github.com/rictom/cnpj-sqlite#arquivo_sqlite. Eu tento atualizar esse arquivo mensalmente.<br>
 Baixe o arquivo CNPJ.7z e descompacte usando o 7zip (https://www.7-zip.org/download.html). O arquivo descompactado tem cerca de 25GB.<br>
 
 ## Outras referências:
@@ -132,6 +134,15 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+
+versão 0.8.4 (junho/2022)
+- aceita CNPJs ou CPFs com zeros à esquerda faltando.
+
+versão 0.8.3 (maio/2022)
+- inclusão de relacionamento de representante de sócio;
+- campo de busca de cpf/cnpj na linha do menu;
+- rotina cnpj_search.py para indexar coluna de razão social ou nome de sócio para busca por parte do nome.
+
 versão 0.8.2 (janeiro/2022)
 - opção no menu Salvar/Abrir>Baixar base CNPJ para abrir a página com o arquivo em SQLITE;
 - tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/NUMERO_CAMADA/PJ_X, cujo link poderá ser compartilhado;
