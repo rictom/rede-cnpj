@@ -11,6 +11,7 @@ import os, sys, glob
 import time, copy, re, string, unicodedata, collections, json, secrets
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
+import cpf_cnpj
 '''
 from sqlalchemy.pool import StaticPool
 engine = create_engine('sqlite://',
@@ -121,6 +122,8 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
     nomeIn = nomeIn.strip().upper()
     caracteres_pontuacao = set('''!#$%&\'()+,-./:;<=>@[\\]^_`{|}~''') #sem * ? "
     nomeIn = ''.join(ch for ch in nomeIn if ch not in caracteres_pontuacao)
+    if not nomeIn:
+        return set(), set()
     nomeMatch = ''
     try:
         limite = int(limite)
@@ -352,6 +355,13 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
                     cnpjs.update(cnpjsaux)
                 if cpfnomesaux:
                     cpfnomes.update(cpfnomesaux)  
+            elif not re.findall('\D',str(i)): #só tem digitos, tenta acrescentar zeros à esquerda
+                if cpf_cnpj.validar_cpf(i):
+                    lcpfs = busca_cpf(cpf_cnpj.validar_cpf(i))
+                    if lcpfs:
+                        cpfnomes.update(set(lcpfs))                    
+                if cpf_cnpj.validar_cnpj(i):
+                    cnpjs.add(cpf_cnpj.validar_cnpj(i))
     cpfpjnomes = copy.deepcopy(cpfnomes)
     for c in cnpjs:
         cpfpjnomes.add((c,''))

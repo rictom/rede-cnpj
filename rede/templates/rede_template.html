@@ -781,10 +781,17 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 	var textoU = texto.toUpperCase(); 
 	var idNosLocalizados= new Set(); 
 	var primeiroNoid = null;
-	texto = texto.replace(/\n/g,';').replace(/\t/g,';');
+	texto = texto.trim().replace(/\n/g,';').replace(/\t/g,';');
+	if (texto.search(' ')>=0) {
+		let bEspaco = confirm('O texto a procurar tem espaço(s). Utiliza espaço como separador?');
+		if (bEspaco) {
+			texto = texto.replace(/\s/g,';')
+		}
+	}
 	graph.forEachNode(function(node){
 		for (let taux of texto.toUpperCase().split(';')) { //usa ; como separador para busca de mais de um termo
 			let t = taux.trim();
+			if (!t) continue;
 			if ((node.id.toUpperCase().search(t)!= -1) || (node.data.descricao.toUpperCase().search(t)!=-1)
 				|| (node.data.nota.toUpperCase().search(t)!= -1)) {
 				if ((!bFiltroNosSelecionados) || ((bFiltroNosSelecionados) && (gparam.idNosSelecionados.has(node.id)))) {
@@ -3784,7 +3791,7 @@ function evento_teclasDown(e) {
 		return true;
 	}
 	
-	if (e.code.startsWith('Digit') && (e.code.length==6)) {
+	if ((e.code.startsWith('Digit') && (e.code.length==6)) || (e.code.startsWith('Numpad') && (e.code.length==7) && (e.getModifierState('NumLock')))){
 		if (gparam.idnoSelecionado) {
 			if (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) || ((gparam.idnoSelecionado.substr(0,3)=='ID_') && !gparam.inicio.bBaseLocal))  {
 				menu_abrirNovaAba(gparam.idnoSelecionado);
