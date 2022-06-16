@@ -308,8 +308,7 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
     cpfnomes = set()
     outrosIdentificadores = set() #outros identificadores, com EN_ (supondo dois caracteres mais underscore) 
     if cpfcnpjIn:
-        lista = cpfcnpjIn.split(';')
-        lista = [i.strip() for i in lista if i.strip()]
+        lista = [i.strip() for i in cpfcnpjIn.split(';') if i.strip()]
     else:
         lista = listaIds
     for i in lista:
@@ -355,7 +354,7 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
                     cnpjs.update(cnpjsaux)
                 if cpfnomesaux:
                     cpfnomes.update(cpfnomesaux)  
-            elif not re.findall('\D',str(i)): #só tem digitos, tenta acrescentar zeros à esquerda
+            elif not re.findall('\D',str(i).replace('.','').replace('-','')): #só tem digitos, tenta acrescentar zeros à esquerda
                 if cpf_cnpj.validar_cpf(i):
                     lcpfs = busca_cpf(cpf_cnpj.validar_cpf(i))
                     if lcpfs:
