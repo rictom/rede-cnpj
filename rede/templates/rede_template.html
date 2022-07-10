@@ -80,7 +80,6 @@ var base = '/rede/',
 	defs = null,
 	menu = null;
 
-
 /*
 createMarker = function(id) {
 	return Viva.Graph.svg('marker')
@@ -205,7 +204,6 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	if (node.data.nota) {
 		texto += '\r' + node.data.nota;
 	}
-
 	return texto;
 }//.function textoTooltip
 
@@ -1223,7 +1221,8 @@ function menu_dados(bNovaJanela, idNo) {
 			var texto = "";
 			gparam.json = data;
 
-			if (data) {
+			// if (data) { // se data for {}. é não nulo no javascript
+			if (Object.keys(data).length) {
 				if (idin.startsWith('PJ_')) {
 					ht = dadosEmHtmlPJ(data, noData) 
 				} // else {
@@ -1396,11 +1395,33 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 	}
 }//.function menu_exportaJSONServidorParaBaseLocal
 
+
+function menu_novaAbaComDados(bSoSelecionados, setNos) {
+	//abre nova aba exportando dados para o servidor
+	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
+	//se setNos especificado, usa esses itens para exportar
+	//se setNos = null, usa todos os itens do gráfico se bSoSelecionados=false ou só selecionados se bSoSelecionados=true
+	var jsonDados;
+	if (setNos) {
+		jsonDados = getRedeNosLigacoes(null, setNos);
+	} else {
+		jsonDados = getRedeNosLigacoes(bSoSelecionados);
+	}
+	openWindowWithPost(jsonDados); 
+}//.function menu_novaAbaComDados
+
 function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServidor, setNos, nomeNovaAba) {
 	//abre nova aba exportando dados para o servidor
 	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
 	//se setNos especificado, usa esses itens para exportar
 	//se setNos = null, usa todos os itens do gráfico se bSoSelecionados=false ou só selecionados se bSoSelecionados=true
+	
+	//nos casos de idArquivoServidor = 'temporario', utilizar
+	//menu_novaAbaComDados(bSoSelecionados, setNos) , que evita criar um arquivo no servidor.
+	if (idArquivoServidor=='temporario') {
+		menu_novaAbaComDados(bSoSelecionados, setNos);
+		return;
+	}
 	var jsonDados;
 	var novaJanela;
 	if (setNos) {
@@ -1457,6 +1478,23 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 	}
 	//return novaJanela; novaJanela só retorna null
 }//.function menu_exportaJSONServidor
+
+function openWindowWithPost(data) {
+	//https://stackoverflow.com/questions/5684303/javascript-window-open-pass-values-using-post
+    var form = document.createElement("form");
+    form.target = "_blank";
+    form.method = "POST";
+    form.action = base + 'abre_json/' ; 
+    form.style.display = "none";
+	var input = document.createElement("input");
+	input.type = "hidden";
+	input.name = "data";
+	input.value = JSON.stringify(data);
+	form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+} //openWindowWithPost
 
 function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 	if (!idArquivoServidor) {
@@ -1559,7 +1597,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	for (let ligaux of Object.values(ligacao)) {
 		var nosExistem = ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino)));
 		if (!nosExistem) {
-			console.log('erro. Um dados de um dos nós da ligação não foi definido');
+			console.log('erro. Dados de um dos nós da ligação não foi definido');
 			console.log('ligacao '+ ligaux.origem + ' para ' + ligaux.destino);
 			alertify.error('Erro na ligacao '+ ligaux.origem + ' para ' + ligaux.destino);
 			continue;
@@ -1568,7 +1606,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		var direcao = '';
 		if (!ligExistente) {
 			ligExistente = graph.hasLink(ligaux.destino, ligaux.origem);
-			direcao = '-'; //item novo está na direção contrária da seta XXX, adiciona menos antes do tipo de ligação
+			direcao = '-'; //item novo está na direção contrária da seta, adiciona menos antes do tipo de ligação
 		}
 		if (ligExistente) { 
 			labelLigacao = ligExistente.data.label ? ligExistente.data.label : '';
@@ -1687,7 +1725,7 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	function fazFetch(url, idin) {
 		document.body.style.cursor = 'wait';
 		//fetch(url, {method: 'get'}) // mode: 'cors',
-		let bodyjson = idin ?  JSON.stringify([]) :  JSON.stringify([...gparam.idNosSelecionados]);
+		let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]);
 		url += idin ? idin : gparam.idnoSelecionado;
 		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
@@ -1798,10 +1836,11 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	}
 	var camada = 0;
 	ativaAtalhos(false);
-	var itensDefault = gparam.inserirDefault;
+	//var itensDefault = gparam.inserirDefault;
 	if (textoDefault) {
 		itensDefault = textoDefault;
-	} else {
+	} 
+	else {
 		itensDefault = document.getElementById('input_cnpj').value;
 	}
 	var textoPrompt = 'Digite CNPJ, radical do CNPJ, Razão Social Completa, Nome Completo do Sócio ou vários CNPJs separados por ponto e virgula (;). ';
@@ -1816,6 +1855,9 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	alertify.prompt( 'Inserir item no gráfico', textoPrompt , itensDefault
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;
+					try {
+						document.getElementById('input_cnpj').value = gparam.inserirDefault;
+					} catch (e) {;};
 					var cn = cnpjs.trim().toUpperCase();
 					var cnaux = cn.replaceAll('.', '').replace('-', ''); //cn.replace(/\./g, '').replace(/\-/g, '');
 					console.log(cnaux);
@@ -1881,7 +1923,8 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 				novaJanela.focus();
 			}
 		} else {
-			menu_exportaJSONServidor(true, false, 'temporario', null, document.title + '-parcial')	
+			//menu_exportaJSONServidor(true, false, 'temporario', null, document.title + '-parcial')	
+			menu_novaAbaComDados(true, null);
 		}
 		return;
 	}
@@ -2303,7 +2346,8 @@ function menu_quebraGraficoEmPartes(){
 		resp = confirm('Deseja criar uma nova aba com ' + sconj.size + ' elementos?'); 
 		if (resp) {
 			k += 1;
-			menu_exportaJSONServidor(null, null, 'temporario', sconj, document.title + '-' + k);
+			//menu_exportaJSONServidor(null, null, 'temporario', sconj, document.title + '-' + k);
+			menu_novaAbaComDados(false, sconj);
 		} else {
 			resp = confirm('Deseja abrir outras abas?');
 			if (!resp) {
@@ -3921,7 +3965,7 @@ alertifyfake = {
 	},
 	'alert':function(titulo, texto, func) {
 		menuOnClick();
-		texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '')
+		texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '; ')
 		setTimeout(function(){ alert(titulo + '\n\n' + texto);}, 500);	
 	},
 	'success':function(texto) {
@@ -4003,19 +4047,27 @@ function ajustaAmbiente() {
 		document.getElementById("drop_area").style.display = "none"; //esconde área de drop em mobile
 		document.getElementById("btn_srf").style.display = "none"; //esconde botão receita em mobile
 		document.getElementById("div_referencia").style.display = "none"; //esconde referência
+		document.getElementById("input_cnpj").style.display = "none"; //esconde referência
 		//document.getElementById('div_referencia').textContent=""; //apaga referencia
 		alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
 	} else { //desktop
 		try {
 			document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
 			document.getElementById('btn_srf').textContent="Dados Públicos RFB";
-			document.getElementById('div_referencia').textContent="\xa0" +  gparam.inicio.referenciaBDCurto + "\xa0";
-			document.getElementById('drop_area').textContent="\xa0DROP (json ou lista de identificadores)";
+			document.getElementById('div_referencia').textContent="\xa0" +  gparam.inicio.referenciaBDCurto + "\xa0"; //\xa0 espaço não separável
+			document.getElementById('drop_area').textContent="\xa0DROP "; //"\xa0DROP (json ou lista de identificadores)";
+			document.getElementById("drop_area").style.display = "inline"; //esconde área de drop em mobile
+			document.getElementById("btn_srf").style.display = "inline"; //esconde botão receita em mobile
+			document.getElementById("div_referencia").style.display = "inline"; //esconde referência
+			document.getElementById("input_cnpj").style.display = "inline"; //esconde referência
 		} catch (e) {;}
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
 		ajustaAmbiente_adicionarListaIconesAoMenu();
 	}
+	try {
+		document.getElementById('input_cnpj').value = gparam.inserirDefault;
+	} catch (e) {;};
 }//.function ajustaAmbiente
 
 function main() {
@@ -4024,7 +4076,7 @@ function main() {
 		   springLength : gparam.springLength, //170, //140, //80,
 		   springCoeff : 0.0002, //0.0002,
 		   dragCoeff : 0.02, 
-		   gravity : -1.2, 
+		   gravity : -1.0, //-1.2, 
 		   theta : 0.8
 	});
 	gparam.renderer = Viva.Graph.View.renderer(graph, {
@@ -4112,11 +4164,12 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>
 		{% if parametros.bBaseReceita %}
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>
-		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Clique para abrir a página de dados públicos de CNPJ da Receita Federal do Brasil'>Dados</button>
+		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Clique para abrir a página de dados públicos de CNPJ da Receita Federal do Brasil' hidden>Dados</button>
 		{% endif %}
 		<input type="text" id="input_cnpj" name="input_cnpj" size="18" value='TESTE' onkeydown='menu_input_cnpj(this)' 
 			onfocusin="ativaAtalhos(false)" onfocusout="ativaAtalhos(true);" onClick="this.select();"
 			title='Digite {% if parametros.bBaseReceita %} CNPJ, Razão Social ou CPF  {% endif %}e pressiona Enter, ou clique no Botão ao lado para adicionar mais Camadas'
+			hidden
 		>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
@@ -4127,8 +4180,8 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i></button>
 	
-	<button id='div_referencia' title="{{ parametros.referenciaBD }}" disabled></button>
-	<button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções." disabled><!--i class="fa fa-hand-holding-water"></i--></button>
+	<button id='div_referencia' title="{{ parametros.referenciaBD }}" hidden disabled></button>
+	<button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções." hidden disabled><!--i class="fa fa-hand-holding-water"></i--></button>
 	</div>
 <!--/div-->
  <!-- 
@@ -4139,7 +4192,7 @@ function main() {
 	<div id="principal_overlay" class="graph-overlay" style="cursor:crosshair;" ></div>
 </div>
 
-<menu id='menu_contexto' class="menu">
+<menu id='menu_contexto' class="menu" style="overflow: hidden;">  <!-- overflow: hidden parece resolver quebra da linha de menu no android -->
 	<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Expande vinculos de sócios. Aperte a tecla 1-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir Camadas</span> </button>
 		<menu class="menu">
@@ -4426,12 +4479,6 @@ function main() {
 	<li class="menu-item submenu">
 	<button type="button" class="menu-btn"> <i class="fa fa-file-export"></i> <span class="menu-text">Salvar/Abrir</span> </button>
 	<menu class="menu">
-		<!--
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(true)"> 
-		<i class="fa fa-file-excel"></i><span class="menu-text">Exportar p/ Excel-Selecão</span> 
-		</button>
-		</li> -->
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
 		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel...</span> 
@@ -4443,7 +4490,7 @@ function main() {
 		</button>
 		</li>
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(false)" title="Salva arquivo JSON com os itens e ligações de todo o gráfico, que pode ser aberto pela opção Importar JSON">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(false)" title="Salva arquivo JSON com os itens e ligações de todo o gráfico, que pode ser aberto pela opção ABRIR ARQUIVO JSON">
 		<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json...</span>
 		</button>
 		</li>

@@ -9,6 +9,7 @@ Não fazer Create table ou criar índice para uma tabela a ser criada ou modific
 """
 import os, sys, glob
 import time, copy, re, string, unicodedata, collections, json, secrets
+from functools import lru_cache
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
 import cpf_cnpj
@@ -32,9 +33,7 @@ caminhoDBLinks = config.config['BASE'].get('base_links', '').strip()
 
 caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '').strip()
 
-#logAtivo = True if config['rede']['logAtivo']=='1' else False #registra cnpjs consultados
 logAtivo = config.config['ETC'].getboolean('logativo',False) #registra cnpjs consultados
-#    ligacaoSocioFilial = True if config['rede']['ligacaoSocioFilial']=='1' else False #registra cnpjs consultados
 ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
 kLimiteCamada = config.config['ETC'].getboolean('limite_registros_camada', 10000)
 
@@ -88,16 +87,6 @@ def timeit(method):
                   (method.__name__, (te - ts) * 1000))
         return result    
     return timed
-
-# def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp'):
-#     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
-#     #con.execute('DROP TABLE if exists tmp_cnpjs')
-#     tmp = prefixo_tabela_temporaria
-#     con.execute(f'DROP TABLE if exists {tmp}_cpfpjnomes')
-#     con.execute(f'DROP TABLE if exists {tmp}_ids')
-#     con.execute(f'DROP TABLE if exists {tmp}_ligacao')
-#     con.execute(f'DROP TABLE if exists {tmp}_busca_nome')
-#     con = None
 
 def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp', caminhoDB=caminhoDBReceita):
     '''apaga tabelas temporárias. Isto pode dar erro em ambiente com threads??
@@ -303,14 +292,19 @@ def busca_cpf(cpfin):
     con = None
     return lista
             
-def separaEntrada(cpfcnpjIn='', listaIds=None):
+#def separaEntrada(cpfcnpjIn='', listaIds=None):
+def separaEntrada(listaIds=None):
     cnpjs = set()
     cpfnomes = set()
     outrosIdentificadores = set() #outros identificadores, com EN_ (supondo dois caracteres mais underscore) 
-    if cpfcnpjIn:
-        lista = [i.strip() for i in cpfcnpjIn.split(';') if i.strip()]
-    else:
-        lista = listaIds
+    # if cpfcnpjIn:
+    #     lista = [i.strip() for i in cpfcnpjIn.split(';') if i.strip()]
+    # else:
+    #     lista = listaIds
+    lista = []
+
+    for cpfcnpjIn in listaIds:
+        lista.extend([i.strip() for i in cpfcnpjIn.split(';') if i.strip()])
     for i in lista:
         if i.startswith('PJ_'):
             cnpjs.add(i[3:])
@@ -367,14 +361,6 @@ def separaEntrada(cpfcnpjIn='', listaIds=None):
     return cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes
 #.def separaEntrada
 
-
-def jsonRede(cpfcnpjIn, camada=1 ):    
-    if cpfcnpjIn:
-        return camadasRede(cpfcnpjIn = cpfcnpjIn, camada=camada, bjson=True)
-    else:
-        return {'no': [], 'ligacao':[]} 
-#.def jsonRede
-
 dtype_tmp_ids={'identificador':sqlalchemy.types.VARCHAR,
                        'grupo':sqlalchemy.types.VARCHAR,
                        'camada':sqlalchemy.types.INTEGER }
@@ -391,7 +377,8 @@ dtype_tmp_cpfpjnomes={'cpfpj':sqlalchemy.types.VARCHAR,
                        'grupo':sqlalchemy.types.VARCHAR,
                        'camada':sqlalchemy.types.INTEGER }
 
-def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefixo_tabela_temporaria=''):
+#def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefixo_tabela_temporaria=''):
+def criaTabelasTmpParaCamadas(con, listaIds=None, grupo='', prefixo_tabela_temporaria=''):
     global gTable
     if prefixo_tabela_temporaria:
         tmp = prefixo_tabela_temporaria
@@ -399,10 +386,8 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefix
         tmp = tabelaTemp()
         
     apagaTabelasTemporarias(tmp)
-    if cpfcnpjIn:
-        cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn=cpfcnpjIn)
-    else:
-        cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(listaIds=listaIds)
+
+    cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(listaIds=listaIds)
     camadasIds = {}
     
     ids = set(['PJ_'+c for c in cnpjs])
@@ -427,7 +412,6 @@ def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefix
     dftmptable['camada'] = 0
     #con.execute('DELETE FROM tmp_cpfnomes')
     dftmptable.to_sql(f'{tmp}_cpfpjnomes', con=con, if_exists='replace', index=False, dtype=dtype_tmp_cpfpjnomes)       
-    
     return camadasIds, cnpjs, cpfnomes, tmp #, ids
 #.def criaTabelasTmpParaCamadas
 
@@ -450,15 +434,8 @@ def id2cnpj(id):
     return id[3:]
 
 @timeit
-def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):    
-    # usando SQL
-    #se cpfcnpjIn=='', usa dados das tabelas tmp_cnpjs e tmp_cpfnomes, não haverá camada=0
-    #se fromTmpTable=False, espera que cpfcnpjIn='cpf-nome;cnpj;nome...'
-    #se fromTmpTable=True, ignora cpfcnpjIn e pega dados a partir de tmp_cnpjs e tmp_cpfnomes
-    #print('INICIANDO-------------------------')
-    #print(f'camadasRede ({camada})-{cpfcnpjIn}-inicio: ' + time.ctime() + ' ', end='')
+def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):    
     mensagem = {'lateral':'', 'popup':'', 'confirmar':''}
-    #con=sqlite3.connect(caminhoDBReceita)
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     '''
     https://stackoverflow.com/questions/17497614/sqlalchemy-core-connection-context-manager
@@ -469,12 +446,8 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     print(conn.closed)'''
     grupo = str(grupo)
     nosaux = []
-    #nosids = set()
     ligacoes = []
-    #setOrigDest = set()
-    camadasIds, cnpjs, cpfnomes, tmp  = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo)
-
-
+    camadasIds, cnpjs, cpfnomes, tmp  = criaTabelasTmpParaCamadas(con, listaIds=listaIds, grupo=grupo)
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
                 
     for cam in range(camada):  
@@ -631,7 +604,6 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
         '''
         con.execute(query0)
  
-    
     queryLertmp = f'''
         Select *
         from {tmp}_ids
@@ -714,8 +686,8 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
             elif tipo=='base_local':
                  if not caminhoDBBaseLocal:
                     continue               
-            #jsonEnderecosBanco = camadaLink(cpfcnpjIn='', listaIds=ids, conCNPJ=con, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
-            jsonEnderecosBanco = camadaLink(cpfcnpjIn='', listaIds=ids, conCNPJ=None, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
+            #jsonEnderecosBanco = camadaLink(cpfcnpjIn='', listaIds=ids, conCNPJ=None, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
+            jsonEnderecosBanco = camadaLink(listaIds=ids, conCNPJ=None, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
             for item in jsonEnderecosBanco['no']:
                 if item['id'] not in camadasIds:
                     nosaux.append(item)
@@ -725,10 +697,6 @@ def camadasRede(cpfcnpjIn='', listaIds=None, camada=1, grupo='', bjson=True):
     nosaux=ajustaLabelIcone(nosaux)
     textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem} 
     con = None
-    #print(listaIds)
-    #print(textoJson)
-    #print(' fim: ' + time.ctime())
-    #print(' fim: ' + ' '.join(str(time.ctime()).split()[3:]))
     apagaTabelasTemporarias(tmp)
     return textoJson
 #.def camadasRede
@@ -795,9 +763,10 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
 #.def dadosDosNosCNPJs
 
 @timeit
-def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, 
+#def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, 
+def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15, 
                valorMinimo=0, valorMaximo=0, grupo='', bjson=True, 
-               listaIds=None, tipoLink='link'):    
+               tipoLink='link'):    
     #se cpfcnpjIn=='', usa dados das tabelas tmp_cnpjs e tmp_cpfnomes, não haverá camada=0
     #se fromTmpTable=False, espera que cpfcnpjIn='cpf-nome;cnpj;nome...'
     #se fromTmpTable=True, ignora cpfcnpjIn e pega dados a partir de tmp_cnpjs e tmp_cpfnomes
@@ -866,7 +835,7 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
     #nosids = set()
     ligacoes = []
     setLigacoes = set()
-    camadasIds, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(con, cpfcnpjIn=cpfcnpjIn, listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp)
+    camadasIds, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(con, listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp)
 
     cnpjsInicial = copy.copy(cnpjs)
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
@@ -899,8 +868,6 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
             cntlink[k['id1']] += 1
             cntlink[k['id2']] += 1
             
-            #nosids.add(k['id1'])
-            #nosids.add(k['id2'])
             if k['id1'] not in camadasIds:
                 camadasIds[k['id1']] = cam+1            
             if k['id2'] not in camadasIds:
@@ -931,9 +898,6 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
         dftmptable = pd.DataFrame({'identificador' : listaProximaCamada})
         dftmptable['grupo'] = grupo
         dftmptable['camada'] = dftmptable['identificador'].apply(lambda x: camadasIds[x])
-        #dftmptable['camada'] = dftmptable['cnpj'].map(camadasIds)
-        #con.execute('DELETE from tmp_ids;')
-        #dftmptable.set_index('identificador', inplace=True)
         dftmptable.to_sql(f'{tmp}_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
         #curioso, esse índice deixa a busca lenta!!!!
         #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
@@ -942,24 +906,6 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
     for c in camadasIds:
         if c.startswith('PJ_'):
             cnpjs.add(c[3:])
-        # else:
-        #     if c.startswith('PF_'):
-        #         nome = c[15:] #supõe 'PF_12345678901-nome'
-        #         no = {'id': c, 'descricao':nome, 
-        #                 'camada': camadasIds[c], 
-        #                 'situacao_ativa': True, 
-        #                 'logradouro':'',
-        #                 'municipio': '', 'uf': ''} 
-        #     # elif c.startswith('ID_'):
-        #     #     
-        #     else: #elif c.startswith('EN_'):
-        #         no = {'id': c, 'descricao':'', 
-        #                 'camada': camadasIds[c], 
-        #                 'situacao_ativa': True, 
-        #                 'logradouro':'',
-        #                 'municipio': '', 'uf': ''} 
-        #     nosaux.append(copy.deepcopy(no))
-
     if conCNPJ:
         conCNPJaux =conCNPJ
     else:
@@ -992,8 +938,6 @@ def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15,
     con = None
     if conCNPJ:
         conCNPJaux = None
-    #print(' fim: ' + time.ctime())
-    #print('camadaLink fim: ' + ' '.join(str(time.ctime()).split()[3:]))
     apagaTabelasTemporarias(tmp)
     return textoJson
 #.def camadaLink
@@ -1004,31 +948,12 @@ def apagaLog():
     con.execute('DROP TABLE IF EXISTS log_cpfnomes;')
     con = None
                 
-def jsonDados(cpfcnpjIn, listaIds=False):
-    #print('INICIANDO-------------------------')
-    #dados de cnpj para popup de Dados
-    #print('jsonDados-inicio: ' + time.ctime())
-    cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjIn)    
-    # if outrosIdentificadores: #pegar o jsonDadosBaseLocal sempre
-    #     return jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn, listaIds=listaIds)
-    # dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
-    # dftmptable['grupo']=''
-    # dftmptable['camada']=0
-    # tmp = tabelaTemp()
+def jsonDados(listaIds):
+#def jsonDados(cpfcnpjIn, listaIds=False):
+    '''pegando apenas dados do primeiro item da lista'''
+    cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(listaIds)    
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}",execution_options=gEngineExecutionOptions)
-    # dftmptable.to_sql(f'{tmp}_cnpjs1', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
-
-    # query = f'''
-    #     select t.*, te.*, ifnull(tm.descricao,t.nome_cidade_exterior) as municipio_texto, tpais.descricao as pais_, tsimples.opcao_mei
-    #     from estabelecimento t
-    #     inner join {tmp}_cnpjs1 tp on tp.cnpj=t.cnpj
-    #     left join empresas te on te.cnpj_basico=t.cnpj_basico
-    #     left join municipio tm on tm.codigo=t.municipio
-    #     left join simples tsimples on tsimples.cnpj_basico=t.cnpj_basico
-    #     left join pais tpais on tpais.codigo=t.pais
-        
-    #         '''
-    query = f'''
+    query = '''
         select t.*, te.*, ifnull(tm.descricao,t.nome_cidade_exterior) as municipio_texto, tpais.descricao as pais_, tsimples.opcao_mei
         from estabelecimento t
         
@@ -1049,7 +974,6 @@ def jsonDados(cpfcnpjIn, listaIds=False):
     else:
         for k in con.execute(query, {'cnpjin':list(cnpjs)[0]}):
             d = dict(k)  
-            
             capital = d['capital_social'] #capital social vem multiplicado por 100
             capital = f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.')
             listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
@@ -1076,13 +1000,11 @@ def jsonDados(cpfcnpjIn, listaIds=False):
             d = {k:v for k,v in d.items() if k in camposPJ}
             d['id'] = 'PJ_'+ d['cnpj']
             dlista.append(copy.deepcopy(d))
-            if not listaIds:
-                break #só pega primeiro
+            break #só pega primeiro
         else:
             d = None
-    #con.execute(f'Drop table if exists {tmp}_cnpjs1')
     if caminhoDBBaseLocal:
-        dicDados = jsonDadosBaseLocal(cpfcnpjIn=cpfcnpjIn) 
+        dicDados = jsonDadosBaseLocal(listaIds) #cpfcnpjIn=cpfcnpjIn) 
         if dicDados:
             nosaux = []
             for n in dlista: 
@@ -1093,29 +1015,20 @@ def jsonDados(cpfcnpjIn, listaIds=False):
                 nosaux.append(copy.deepcopy(n))
             dlista = nosaux
     #print('jsonDados-fim: ' + time.ctime())   
-
     con = None
-    if not listaIds:
-        return dlista[0] if dlista else {}
-    else:
-        return dlista
+    return dlista[0] if dlista else {} #retornando só primeiro
 #.def jsonDados
 
-def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):    
+def jsonDadosBaseLocal(listaIds=None):  
+#def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):    
     if not caminhoDBBaseLocal:
         return {}
-    if not listaIds and not cpfcnpjIn:
+    if not listaIds: #and not cpfcnpjIn:
         return {}
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}",execution_options=gEngineExecutionOptions)
-    if not listaIds:
-        #dftmptable = pd.DataFrame({'id' : list(cpfcnpjIn.upper().split(';'))})
-        dftmptable = pd.DataFrame({'id' : list(cpfcnpjIn.split(';'))})
-    else:
-        dftmptable = pd.DataFrame({'id' : list(listaIds)})
-    
+    dftmptable = pd.DataFrame({'id' : list(listaIds)})
     tmp = tabelaTemp()
     dftmptable.to_sql(f'{tmp}_idsj', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
-
     query = f'''
         select tj.id, tj.json
         from {tmp}_idsj t
@@ -1125,13 +1038,9 @@ def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):
     dicLista = {}
     for k in con.execute(query):
         try:
-            #d = {k['id']:json.loads(k['json'])} #dict(k)  
             d = json.loads(k['json']) #dict(k)  
         except:
             d = {k['id']:'erro na base'}
-        # if not listaIds:
-        #     break #só pega primeiro
-        #dlista.append(copy.deepcopy(d))
         if k['id'] not in dicLista:
             dicLista[k['id']]=copy.deepcopy(d)
         else: #já havia registro de dados com id, sobrepoe os campos novos
@@ -1139,16 +1048,9 @@ def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):
             for q,v in d.items():
                 daux[q] = v
             dicLista[k['id']]=copy.deepcopy(daux)
-    # else:
-    #     d = None
     con.execute(f'Drop table if exists {tmp}_idsj')
     con = None
-    #print('jsonDados-fim: ' + time.ctime())   
     return dicLista
-    # if not listaIds:
-    #     return d
-    # else:
-    #     return dicLista #dlista
 #.def jsonDadosBaseLocal
 
 def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
@@ -1283,40 +1185,30 @@ def dadosParaExportar(dados):
             '''
     from io import BytesIO
     output = BytesIO()
-    writer = pd.ExcelWriter(output, engine='xlsxwriter')
-    #workbook = writer.book
-    dfe=pd.read_sql_query(queryempresas, con)
-    dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.') if capital else '')
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        dfe=pd.read_sql_query(queryempresas, con)
+        dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.') if capital else '')  
+        dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
+        dfe['data_inicio_atividades'] = dfe['data_inicio_atividades'].apply(ajustaData)
+        dfe['situacao_cadastral'] = dfe['situacao_cadastral'].apply(lambda x: gdic.dicSituacaoCadastral.get(x,'') if x else '')
+        dfe['data_situacao_cadastral'] =  dfe['data_situacao_cadastral'].apply(ajustaData)
+        dfe['motivo_situacao_cadastral'] = dfe['motivo_situacao_cadastral'].apply(lambda x: x + '-' + gdic.dicMotivoSituacao.get(x,'') if x else '')
+        dfe['natureza_juridica'] = dfe['natureza_juridica'].apply(lambda x: x + '-' + gdic.dicNaturezaJuridica.get(x,'') if x else 11)
+        dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x +'-'+ gdic.dicCnae.get(x,'') if x else '')
+        dfe['porte_empresa'] = dfe['porte_empresa'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,'') if x else '')
+        dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False)
+        dfs=pd.read_sql_query(querysocios, con)
+        dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False)
+        dfin = pd.DataFrame.from_dict(dados['no']) #,orient='index',  columns=['id', 'descricao', 'nota', 'camada', 'cor', 'posicao', 'pinado', 'imagem', 'logradouro', 'municipio', 'uf', 'cod_nat_juridica', 'situacao_ativa', 'tipo', 'sexo'])
+        dfin.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "identificadores", index=False)
     
-    dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
-    dfe['data_inicio_atividades'] = dfe['data_inicio_atividades'].apply(ajustaData)
-    dfe['situacao_cadastral'] = dfe['situacao_cadastral'].apply(lambda x: gdic.dicSituacaoCadastral.get(x,'') if x else '')
-                                            
-    dfe['data_situacao_cadastral'] =  dfe['data_situacao_cadastral'].apply(ajustaData)
-    dfe['motivo_situacao_cadastral'] = dfe['motivo_situacao_cadastral'].apply(lambda x: x + '-' + gdic.dicMotivoSituacao.get(x,'') if x else '')
-    dfe['natureza_juridica'] = dfe['natureza_juridica'].apply(lambda x: x + '-' + gdic.dicNaturezaJuridica.get(x,'') if x else 11)
-    #dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x +'-'+ gdic.dicCnae.get(int(x),'') if x else '')
-    dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x +'-'+ gdic.dicCnae.get(x,'') if x else '')
-    
-    dfe['porte_empresa'] = dfe['porte_empresa'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,'') if x else '')
-    
-    dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False)
-
-    dfs=pd.read_sql_query(querysocios, con)
-    #dfs['cod_qualificacao'] =  dfs['cod_qualificacao'].apply(lambda x:x + '-' + gdic.dicQualificacao_socio.get(int(x),''))
-    dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False)
-
-    #dfin = pd.DataFrame(listaCpfCnpjs, columns=['cpfcnpj'])    
-    dfin = pd.DataFrame.from_dict(dados['no']) #,orient='index',  columns=['id', 'descricao', 'nota', 'camada', 'cor', 'posicao', 'pinado', 'imagem', 'logradouro', 'municipio', 'uf', 'cod_nat_juridica', 'situacao_ativa', 'tipo', 'sexo'])
-    dfin.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "identificadores", index=False)
-
-    ligacoes = []
-    for lig in dados['ligacao']:
-        ligacoes.append([lig['origem'], lig['destino'], lig['label'], lig['tipoDescricao']])
-    dflig = pd.DataFrame(ligacoes, columns=['origem','destino','ligacao','tipo_ligacao'])
-    dflig.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "ligacoes", index=False)
+        ligacoes = []
+        for lig in dados['ligacao']:
+            ligacoes.append([lig['origem'], lig['destino'], lig['label'], lig['tipoDescricao']])
+        dflig = pd.DataFrame(ligacoes, columns=['origem','destino','ligacao','tipo_ligacao'])
+        dflig.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "ligacoes", index=False)
      
-    writer.close()
+    #writer.close()
     output.seek(0)
     apagaTabelasTemporarias(tmp)
     con = None
@@ -1386,6 +1278,16 @@ def provavelSexo(nome):
         sexo = 0
     return sexo
 
+def mensagemInicial():
+    mensagemInicial = '' 
+    numeroEmpresas = numeroDeEmpresasNaBase()
+    if numeroEmpresas:
+        tnumeroEmpresas = format(numeroEmpresas,',').replace(',','.')
+        if numeroEmpresas>40000000: #no código do template, dois pontos será substituida por .\n
+            mensagemInicial += f'''\nA base tem {tnumeroEmpresas} empresas.\n''' + config.referenciaBD
+    return mensagemInicial
+
+@lru_cache(8)
 def numeroDeEmpresasNaBase(): 
     #pega qtde de registros na tabela _referencia para acelerar o início da rotina
     if not caminhoDBReceita:
@@ -1401,18 +1303,6 @@ def numeroDeEmpresasNaBase():
         r = con.execute('select count(*) as contagem from estabelecimento').fetchone()[0]
     return r
 
-def imagensNaPastaF(bRetornaLista=False):
-    dic = {}
-    for item in glob.glob('static/imagem/**/*.png', recursive=True):
-        if '/nao_usado/' not in item.replace("\\","/"):
-            dic[os.path.split(item)[1]] = item.replace("\\","/")
-    if bRetornaLista:
-        return sorted(list(dic.keys()))
-    else:
-        return dic
-        
-gdicImagens = imagensNaPastaF()
-
 if __name__ == '__main__':
-    apagaTabelasTemporarias('tmp_') #apaga todas as tabelas tmp_
+    apagaTabelasTemporarias('tmp_') #apaga todas as tabelas tmp_ 
     
