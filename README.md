@@ -137,7 +137,8 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 
 versão 0.8.5 (julho/2022)
 - visualização melhorada em celular Android;
-- alteração do script rede_relacionamentos.py para rede_sqlite_cnpj.py.
+- alteração do script rede_relacionamentos.py para rede_sqlite_cnpj.py;
+- alteração do parâmetro gravidade, para diminuir a dispersão de grupos não conexos.
 
 versão 0.8.4 (junho/2022)
 - aceita CNPJs ou CPFs com zeros à esquerda faltando.
