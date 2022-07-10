@@ -3738,7 +3738,7 @@ function menuOnClick(e){
 function menu_botao(event) {
 	event.preventDefault();
 	// menu funciona no chrome do android mas não no firefox (não fecha o menu)
-	showMenu(10,25);
+	showMenu(7,30);
 	setTimeout(function(){
         document.addEventListener(gparam.eventclick, menuOnClick, false);
 	},1000);
@@ -4052,6 +4052,7 @@ function ajustaAmbiente() {
 		alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
 	} else { //desktop
 		try {
+			//document.getElementById('btn_menu').textContent="Menu";
 			document.getElementById('btn_github').textContent="Rede-CNPJ no Github";
 			document.getElementById('btn_srf').textContent="Dados Públicos RFB";
 			document.getElementById('div_referencia').textContent="\xa0" +  gparam.inicio.referenciaBDCurto + "\xa0"; //\xa0 espaço não separável
@@ -4060,6 +4061,8 @@ function ajustaAmbiente() {
 			document.getElementById("btn_srf").style.display = "inline"; //esconde botão receita em mobile
 			document.getElementById("div_referencia").style.display = "inline"; //esconde referência
 			document.getElementById("input_cnpj").style.display = "inline"; //esconde referência
+			
+			
 		} catch (e) {;}
 		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
@@ -4160,8 +4163,8 @@ function main() {
 <body id='corpo' onload='main()' style='overflow:hidden;'>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
 <!--div id="block_container"-->
-	<div id='div_botoes'>
-		<button class='botaosuperior' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'>Menu</button>
+	<div id='div_botoes' >
+		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
 		{% if parametros.bBaseReceita %}
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>
 		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Clique para abrir a página de dados públicos de CNPJ da Receita Federal do Brasil' hidden>Dados</button>
