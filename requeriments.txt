@@ -4,5 +4,5 @@ sqlalchemy
 xlrd
 xlsxwriter
 requests
-uwsgi
+#uwsgi
 flask_limiter
