@@ -21,10 +21,12 @@ Funciona parcialmente em celular, com menu errático.
 
 ## Versão em python:
 É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython.<br> 
-Para iniciar esse script, em um console DOS digite<br>
+Use o comando<br>
+pip install -r requirements.txt<br>
+para instalar as bibliotecas utilizadas no projeto.<br><br>
+Para iniciar o script, em um console digite<br>
 python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
-Se der algum erro como “module <nome do módulo> not found”, instale o módulo pelo comando pip install <nome do módulo>.<br>
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos itens para testar o funcionamento da rotina.<br> 
 
