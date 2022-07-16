@@ -29,6 +29,7 @@ python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos itens para testar o funcionamento da rotina.<br> 
+Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
 O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
