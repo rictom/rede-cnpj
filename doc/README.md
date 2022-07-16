@@ -1,7 +1,7 @@
 # REDE-CNPJ - Visualização de dados públicos de CNPJ
 
 ## TUTORIAL:
-Instalação passo-a-passo no Windows: https://github.com/rictom/rede-cnpj/doc/instalacao_windows.md<br>
+Instalação passo-a-passo no Windows: https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
