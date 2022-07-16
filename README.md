@@ -6,7 +6,7 @@ Ferramenta para observar o relacionamento entre empresas e sócios, a partir dos
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
 
 <br>Outros vídeos de utilização:<br>
-Opção básicas dos botões: https://youtu.be/-Ug6ToTRnE4 <br>
+Opções básicas dos botões: https://youtu.be/-Ug6ToTRnE4 <br>
 Criar uma ligação no gráfico: https://youtu.be/8I0oNb4U9Rw <br>
 Aumentar tamanho da ligação: https://youtu.be/7hy74LE8e7A <br>
 Exportar dados como json: https://youtu.be/WKn02G9yHbQ <br>
@@ -141,7 +141,8 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 versão 0.8.5 (julho/2022)
 - visualização melhorada em celular Android;
 - alteração do script rede_relacionamentos.py para rede_sqlite_cnpj.py;
-- alteração do parâmetro gravidade, para diminuir a dispersão de grupos não conexos.
+- alteração do parâmetro gravidade, para diminuir a dispersão de grupos não conexos;
+- tutorial de instalação passo a passo.
 
 versão 0.8.4 (junho/2022)
 - aceita CNPJs ou CPFs com zeros à esquerda faltando.
