@@ -98,6 +98,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - SubMenu - Busca em sites:
 - G – Abre o nó numa aba do site Google;
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
+- H ou CTRL+G - Raspa a página do Google e coloca links;
 - Jusbrasil - Busca no site Jusbrasil
 - Portal da Transparência - Busca no Portal da Transparência;
 
