@@ -20,7 +20,10 @@ Leia as informações iniciais. Para fazer uma consulta, digite um CNPJ, o radic
 Funciona parcialmente em celular, com menu errático.
 
 ## Versão em python:
-É preciso ter instalado no computador, um interpretador de linguagem python (versão 3.7 ou posterior) como a distribuída pelo Anaconda ou WinPython.<br> 
+É preciso ter instalado no computador:
+- python <b>versão 3.9</b> ou posterior.<br> 
+- 40GB de espaço livre, para utilizar a base de CNPJs em sqlite.
+
 Use o comando<br>
 pip install -r requirements.txt<br>
 para instalar as bibliotecas utilizadas no projeto.<br><br>
