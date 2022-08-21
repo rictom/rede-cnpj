@@ -16,6 +16,8 @@
 # Current working directory (os.getcwd()):
 #   generateDS-2.12d
 #
+#original source code:
+#https://github.com/pcbje/pyanx
 
 import sys
 import getopt
