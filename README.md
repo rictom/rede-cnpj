@@ -141,6 +141,15 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
+versão 0.8.6 (agost/2022)
+- exportação para gráfico (ex-IBM) i2 Chart Reader ou Analyst's Notebook, pela opção no menu Salvar/Abrir>Salvar i2...:![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)
+
+- opção H para abrir árvore com links de busca na página do Google:![image](https://user-images.githubusercontent.com/71139693/185807100-2627141d-d67b-4325-92fa-0014cedaac7c.png)
+
+- opção SHIFT+H para abrir árvore com palavras chaves dos links da página do Google. Exemplo: 
+![image](https://user-images.githubusercontent.com/71139693/185806901-9151f0f7-4a98-408c-80ba-0050f61a0b9d.png)
+- para usar a opção SHIFT+H, deve-se instalar as bibliotecas pelo comando pip install -r requirements_chaves.txt<br> e depois instalar os módulos do spacy pelos comandos python -m spacy download en_core_web_sm e python -m spacy download pt_core_news_lg. No arquivo rede.ini, modifique o parâmetro para busca_chaves = 1
+- Como a opção de chaves é lenta, não foi habilitado para rodar no servidor. Utilize com a versão local do projeto.
 
 versão 0.8.5 (julho/2022)
 - visualização melhorada em celular Android;
