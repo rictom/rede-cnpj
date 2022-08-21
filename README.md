@@ -141,7 +141,7 @@ Menu Contextual:<br>
 https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascript-and-css3/
 
 ## Histórico de versões
-versão 0.8.6 (agost/2022)
+versão 0.8.6 (agosto/2022)
 - exportação para gráfico (ex-IBM) i2 Chart Reader ou Analyst's Notebook, pela opção no menu Salvar/Abrir>Salvar i2...:![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)
 
 - opção H para abrir árvore com links de busca na página do Google:![image](https://user-images.githubusercontent.com/71139693/185807100-2627141d-d67b-4325-92fa-0014cedaac7c.png)
