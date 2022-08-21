@@ -36,7 +36,7 @@ para executar a rede-cnpj<br>
 ![image](https://user-images.githubusercontent.com/71139693/179335510-4f092b99-c988-4c02-a22d-200f500d8d42.png)
 
  - O console vai ficar desta forma, com uma linha "Running on http:...":<br>
- ![image](https://user-images.githubusercontent.com/71139693/179335537-02810afb-01e4-4852-989d-12946f709790.png)
+ ![image](https://user-images.githubusercontent.com/71139693/179633950-4f5e28c8-fafb-4b63-8ff5-8e3696da36e9.png)
 
  - O script vai tentar abrir uma janela no navegador padrão:<br>
   ![image](https://user-images.githubusercontent.com/71139693/179335572-768b1699-a92d-4ddc-92af-538b8a07f145.png)
