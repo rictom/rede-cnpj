@@ -6,6 +6,7 @@ json a partir da tabela sqlite
 @author: github rictom/rede-cnpj
 2020-11-25 - Se uma tabela já existir, parece causar lentidão para o pandas pd.to_sql. 
 Não fazer Create table ou criar índice para uma tabela a ser criada ou modificada pelo pandas 
+2022-07-20 - Parâmetro WAL no sqlite para consultas concorrentes.
 """
 import os, sys, glob
 import time, copy, re, string, unicodedata, collections, json, secrets
@@ -13,12 +14,25 @@ from functools import lru_cache
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
 import cpf_cnpj
+
 '''
 from sqlalchemy.pool import StaticPool
-engine = create_engine('sqlite://',
-                    connect_args={'check_same_thread':False},
-                    poolclass=StaticPool)
+engine = create_engine('sqlite://', connect_args={'check_same_thread':False}, poolclass=StaticPool)
 '''
+
+'''
+#https://sqlite.org/wal.html #para permitir consultas concorrentes, mas ainda dá erro quando se cria tabela. 
+#deu comportamento estranho, bloqueou a base... Parece que se usa o pragma WAL, a base fica usando isso depois, mesmo não chamando o pragma de novo. Precisa de muito mais testes
+#https://stackoverflow.com/questions/9671490/how-to-set-sqlite-pragma-statements-with-sqlalchemy
+from sqlalchemy.engine import Engine
+from sqlalchemy import event
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.close()
+   ''' 
 import rede_config as config
 
 try:
@@ -35,9 +49,12 @@ caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '').strip()
 
 logAtivo = config.config['ETC'].getboolean('logativo',False) #registra cnpjs consultados
 ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
-kLimiteCamada = config.config['ETC'].getboolean('limite_registros_camada', 10000)
+kLimiteCamada = config.config['ETC'].getint('limite_registros_camada', 1000)
 
 gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'pool_size':1} #poll_size=1 força usar só uma conexão??
+#ttt gEngineExecutionOptions = {"sqlite_raw_colnames": True} #poll_size=1 força usar só uma conexão??
+#eee gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'pool_size':3} #poll_size=1 força usar só uma conexão??
+#gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'Pooling':True} #poll_size=1 força usar só uma conexão??
 #'isolation_level':'AUTOCOMMIT'
 
 class DicionariosCodigosCNPJ():
@@ -62,10 +79,14 @@ class DicionariosCodigosCNPJ():
         #self.dicSituacaoCadastral = {'1':'Nula', '2':'Ativa', '3':'Suspensa', '4':'Inapta', '8':'Baixada'}
         self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
 
+gtabelaTempComPrefixo = False
 def tabelaTemp():
     ''' tabela temporaria com numero aleatorio para evitar colisão '''
-    return 'tmp' #'tmp_' + secrets.token_hex(4)
-
+    if gtabelaTempComPrefixo:      
+        return 'tmp_' + secrets.token_hex(4)
+    else:
+        return 'tmp_'
+    
 gdic = DicionariosCodigosCNPJ()
 
 dfaux=None
@@ -398,7 +419,6 @@ def criaTabelasTmpParaCamadas(con, listaIds=None, grupo='', prefixo_tabela_tempo
     dftmptable = pd.DataFrame({'identificador' : list(ids)})
     dftmptable['camada'] = 0
     dftmptable['grupo'] = grupo
-
     dftmptable.to_sql(f'{tmp}_ids', con=con, if_exists='replace', index=False, dtype=dtype_tmp_ids)
     #indice deixa a busca lenta!
     #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
@@ -435,7 +455,7 @@ def id2cnpj(id):
 
 @timeit
 def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):    
-    mensagem = {'lateral':'', 'popup':'', 'confirmar':''}
+    mensagem = '' #{'lateral':'', 'popup':'', 'confirmar':''}
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     '''
     https://stackoverflow.com/questions/17497614/sqlalchemy-core-connection-context-manager
@@ -449,7 +469,7 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
     ligacoes = []
     camadasIds, cnpjs, cpfnomes, tmp  = criaTabelasTmpParaCamadas(con, listaIds=listaIds, grupo=grupo)
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
-                
+    registrosAnterior = 0
     for cam in range(camada):  
         whereMatriz = ''
         if bjson and not ligacaoSocioFilial:
@@ -590,8 +610,12 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
             con.execute(sql)
         registros = con.execute(f'select count(*) from {tmp}_ids').fetchone()[0]
         if registros>kLimiteCamada:
-            mensagem['popup'] = f'Alcançou apenas a camada {cam}, a camada {camada} não foi alcançada, por excesso de itens.'
+            mensagem='Alcançou apenas a camada {cam}, a camada {camada} não foi alcançada, pois se excedeu o limite de itens.'
             break
+        if registros==registrosAnterior:
+            mensagem = f'Alcançou a camada {cam}, não havia mais itens até a camada {camada}.'
+            break
+        registrosAnterior = registros
     #.for cam in range(camada): 
     if camada==0:
         #gambiarra, em camada 0, não apaga a tabela tmp_ligacao, por isso pega dados de consulta anterior.
@@ -762,7 +786,7 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
     #return nos
 #.def dadosDosNosCNPJs
 
-@timeit
+#@timeit
 #def camadaLink(cpfcnpjIn='', conCNPJ=None, camada=1, numeroItens=15, 
 def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15, 
                valorMinimo=0, valorMaximo=0, grupo='', bjson=True, 
@@ -773,7 +797,7 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     #se numeroItens=0 ou <0, fica sem limite
     #print('INICIANDO-------------------------')
     #print(f'camadasLink ({camada})-{cpfcnpjIn}-inicio: ' + time.ctime() + ' ', end='')
-    mensagem = {'lateral':'', 'popup':'', 'confirmar':''}
+    mensagem = '' #{'lateral':'', 'popup':'', 'confirmar':''}
     #camada = min(camada, 10) #camada alta causa erro no limite da sql, que fica muito grande. A camada de link
     if tipoLink=='endereco':
         if not caminhoDBEnderecoNormalizado:
@@ -782,10 +806,12 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     con = None
     tabela = ''
     tmp = tabelaTemp()
+    camDB = ''
     if tipoLink=='link':
         if not caminhoDBLinks:
-            mensagem['popup'] = 'Não há tabela de links configurada.'
+            mensagem = 'Não há tabela de links configurada.'
             return {'no': [], 'ligacao':[], 'mensagem': mensagem} 
+        camDB = caminhoDBLinks
         con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBLinks}",execution_options=gEngineExecutionOptions)
         tabela = 'links'
         bValorInteiro = False
@@ -804,10 +830,12 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     elif tipoLink=='endereco' or tipoLink=='base_local':
         if tipoLink=='endereco':
             if caminhoDBEnderecoNormalizado:
+                camDB = caminhoDBEnderecoNormalizado
                 con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBEnderecoNormalizado}", execution_options=gEngineExecutionOptions)        
                 tabela = 'link_ete'
         else:
             if caminhoDBBaseLocal:
+                camDB = caminhoDBBaseLocal
                 con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}", execution_options=gEngineExecutionOptions)
                 tabela = 'links'       
 
@@ -938,7 +966,8 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     con = None
     if conCNPJ:
         conCNPJaux = None
-    apagaTabelasTemporarias(tmp)
+        apagaTabelasTemporarias(tmp, caminhoDBReceita)
+    apagaTabelasTemporarias(tmp, camDB)
     return textoJson
 #.def camadaLink
 
@@ -1196,7 +1225,7 @@ def dadosParaExportar(dados):
         dfe['natureza_juridica'] = dfe['natureza_juridica'].apply(lambda x: x + '-' + gdic.dicNaturezaJuridica.get(x,'') if x else 11)
         dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x +'-'+ gdic.dicCnae.get(x,'') if x else '')
         dfe['porte_empresa'] = dfe['porte_empresa'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,'') if x else '')
-        dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False)
+        dfe.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Empresas", index=False, freeze_panes=(1,0))
         dfs=pd.read_sql_query(querysocios, con)
         dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False)
         dfin = pd.DataFrame.from_dict(dados['no']) #,orient='index',  columns=['id', 'descricao', 'nota', 'camada', 'cor', 'posicao', 'pinado', 'imagem', 'logradouro', 'municipio', 'uf', 'cod_nat_juridica', 'situacao_ativa', 'tipo', 'sexo'])

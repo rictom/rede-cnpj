@@ -1,8 +1,15 @@
 flask
+flask-limiter
 pandas
 sqlalchemy
 xlrd
 xlsxwriter
 requests
+bs4
+#se for rodar em linux com nginx/uwsgi
 #uwsgi
-flask_limiter
+#se for usar com busca de chaves google
+async
+aioflask
+aiohttp
+asgiref

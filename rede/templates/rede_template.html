@@ -7,6 +7,7 @@
 <meta name="description" content="Visualização Gráfica de Empresas e de Sócios com dados abertos da Receita Federal do Brasil. Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."/>
 <meta name="keywords" content="CNPJ, Dados Abertos, Receita Federal"/>
 <meta name="author" content="https://github.com/rictom/rede-cnpj"/>
+
 <!--meta name="viewport" content="width=device-width, initial-scale=1" -->
 
 <!-- 
@@ -71,6 +72,8 @@ var gparam = {};
 	gparam.springLength=150;
 	gparam.bRenderAtivado = true;
 	gparam.fScale = graphics.scale;
+	gparam.paginaBuscaGoogle = {};
+	gparam.idExpandido = {}; //id -> última camada por duplo clique
 
 // variáveis globais
 var base = '/rede/',
@@ -146,6 +149,9 @@ function labelsNo(node, tipoResumido) {
 			idno = idno.substr(0,29) + '...';
 			//descricao = idno.substr(-29);
 		}
+		if (nota.length>30) {
+			nota = '...';
+		}
 	} else if (idno.startsWith('ID_')) {
 		idno = idno.substr(3);
 		if (idno.includes('__')) {
@@ -173,8 +179,7 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	} else if (node.id.startsWith('PF_')) {	
 	
 	} else if (node.id.startsWith('LI_')) {
-		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao :  '')
-		texto += LF + LF + 'Clique duplo para abrir o link';
+		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao :  '') + LF;
 	} else if (node.id.startsWith('AR_')) {
 		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao: '')
 		if (window.location.href.startsWith('http://127.0.0.1')) {
@@ -202,7 +207,10 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 		}	
 	}
 	if (node.data.nota) {
-		texto += '\r' + node.data.nota;
+		texto += LF + node.data.nota;
+	}
+	if (node.id.startsWith('LI_')) {
+		texto += LF + LF + 'Clique duplo para abrir o link';
 	}
 	return texto;
 }//.function textoTooltip
@@ -248,16 +256,19 @@ graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	let ui = Viva.Graph.svg('g');
 	let urlImagem = node.data.imagem ? node.data.imagem: 'icone-grafo-id.png';
-	//if (!urlImagem.includes(base)) {
-	if (!urlImagem.includes(baseImagem)) {
+
+	if (!urlImagem.includes(baseImagem) && !urlImagem.startsWith('data:') && !urlImagem.startsWith('http')) {
+	//if (!urlImagem.includes(baseImagem) ) {
 		urlImagem = baseImagem + urlImagem;
 	}
 	let img = Viva.Graph.svg('image');
 	//ui.posXRel = - gparam.nodeSize/2;
 	//ui.posYRel = - gparam.nodeSize/2;
+
 	img.attr('width', gparam.nodeSize)
 		.attr('height', gparam.nodeSize)
 		.link(urlImagem); 
+
 	//if (!node.data.situacao_ativa) {
 	if (node.data.situacao_ativa==false) {
 		img.attr('filter','url(#filtroPB)');
@@ -294,13 +305,13 @@ graphics.node(function(node) {
 	*/
 	var [identificador, nome, nota] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
 	//var nota = node.data.nota? node.data.nota: '';
-	node.data.nota = nota;
+	//node.data.nota = nota;
 	
 	if (gparam.btextoEmbaixoIcone) { //textp embaixo do ícone
 		var svgText = Viva.Graph.svg('text')
 			.attr('pointer-events', 'none') //o texto não é mais clicável
 			.attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
-			.attr('x', gparam.nodeSize/2).attr('text-anchor','middle')  
+			.attr('x', gparam.nodeSize/2).attr('text-anchor','middle')
 			.attr('font-size',gparam.tamanhoFonte+'px'); 
 		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
 		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);		
@@ -338,10 +349,12 @@ graphics.node(function(node) {
 	ui.onmousedown = function(event) {  //estava onmouseup, assim dá pra congelar após click
 		if (event.which == 1) {
 			if (event.altKey) {
+				//console.log('x1'); //ttt não funciona, apesar de chegar aqui, não está abrindo... Talvez alguma coisa a ver com o altKey??
 				event.preventDefault();		
 				menu_abrirNovaAba(node.id);			
 				return;
 			}
+
 			if (!event.ctrlKey) {
 				event.preventDefault();				
 				selecionaNoid(node.id, event.shiftKey);
@@ -481,7 +494,7 @@ function filtraTextoLigacao(texto) {
 	for (let k of texto.split(';')){
 		var pedaco = (k.search(':')!=-1) ? k.split(':')[0] : k
 		//if (['endereço','telefone','end','tel','email','link'].includes(pedaco.trim())) {
-		if (['endereço','telefone','end','tel','email'].includes(pedaco.trim())) {
+		if (['endereço','telefone','end','tel','email','google','chave'].includes(pedaco.trim())) {
 			continue;
 		}
 		if (pedaco=='link') {
@@ -974,14 +987,6 @@ function menu_localiza_itensComMaisLigacoes() {
 }//.function menu_localiza_itensComMaisLigacoes
 
 function listaESeleciona(dcontagem, texto) {
-	/*
-	var listaIdContagem = [];
-	for (const [k,v] of Object.entries(dcontagem)) {
-		listaIdContagem.push([k, v]);
-	}
-	listaIdContagem.sort(function(a, b) {
-		return b[1] - a[1];
-	}); */
 	const listaIdContagem = Object.entries(dcontagem).sort(([,a],[,b]) => b-a);
 	var tmaiores = texto + '\n\nN - ID: CONTAGEM\n\n';
 	var k=0;
@@ -1060,7 +1065,9 @@ function removeIdNo(noId) {
 	if (gparam.idnoSelecionado==noId) {
 		gparam.idnoSelecionado=null;
 	}
+	gparam.idExpandido = {};
 }//.function removeIdNo
+
 
 function menu_excluirNosSelecionados(bSemConfirmar) {
 	if (!gparam.idNosSelecionados.size) {
@@ -1128,6 +1135,7 @@ function menu_inserirDesfazer() {
 	}
 	var tmensagem = (tam==1 ? 'Foi removido um nó.' : ('Foram removidos ' + tam + ' nós.'))
 	alertify.success(tmensagem);
+	gparam.idExpandido = {}; //reseta idExpandidos
 }//.menu_inserirDesfazer
 
 function dadosEmHtmlPJ(d, noData) {
@@ -1299,7 +1307,7 @@ function menu_importarJsonArquivo(evt, tipo) {
 				//alert( "Got the file.n"  +"name: " + f.name + "n"  +"type: " + f.type + "n"  +"size: " + f.size + " bytesn"  + "starts with: " + contents.substr(1, contents.indexOf("n"))); 
 				if (f.name.endsWith('.csv')) {
 					inserir_lista(contents);
-					console.log(contents);
+					//console.log(contents);
 				} else if (f.name.endsWith('.json')){
 					//importaJSON(contents);
 					try {
@@ -1317,7 +1325,13 @@ function menu_importarJsonArquivo(evt, tipo) {
 					inserir_lista('_>j\n' + contents);
 				} else {
 					var idNovo = 'AR_' + f.name;
-					menu_ligar_novo(idNovo,'');
+					resp = confirm('Exporta arquivo para o servidor?')
+					if (resp) {
+						exportaArquivoServidor(f);
+						//console.log(idNovo); 
+					} else {
+						menu_ligar_novo(idNovo,'');
+					}
 					/*
 					var descricao = prompt('Digite uma descrição para o arquivo ' + f.name, '');
 					if (graph.hasNode(idNovo)) {
@@ -1382,7 +1396,7 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 						}	
 						exibe_mensagem(textoMensagem, data.mensagem);
 					} else {
-						alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
+						alertify.error('Aconteceu um erro. ' + data.mensagem);
 					}					
 			    });
 			}
@@ -1396,7 +1410,7 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 }//.function menu_exportaJSONServidorParaBaseLocal
 
 
-function menu_novaAbaComDados(bSoSelecionados, setNos) {
+function menu_novaAbaComDadosJson(bSoSelecionados, setNos) {
 	//abre nova aba exportando dados para o servidor
 	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
 	//se setNos especificado, usa esses itens para exportar
@@ -1408,7 +1422,42 @@ function menu_novaAbaComDados(bSoSelecionados, setNos) {
 		jsonDados = getRedeNosLigacoes(bSoSelecionados);
 	}
 	openWindowWithPost(jsonDados); 
-}//.function menu_novaAbaComDados
+}//.function menu_novaAbaComDadosJson
+
+function exportaArquivoServidor(arquivo) { //ttt
+	//https://stackoverflow.com/questions/5587973/javascript-upload-file
+	let formData = new FormData();
+	formData.append("arquivo", arquivo);
+	fetch(base + 'arquivo_upload/', {method: "POST", body: formData})
+		.then(
+			function(response) {
+			  if (response.status !== 200) {
+				document.body.style.cursor = 'default';
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+			  }
+			  // Examine the text in the response
+			  response.json().then(function(data) {
+				//console.log(data);
+				document.body.style.cursor = 'default';
+				if (data.nomeArquivoServidor) {
+					console.log('nome '+ data.nomeArquivoServidor); 
+					let idNovo = 'AR_' + data.nomeArquivoServidor;
+					menu_ligar_novo(idNovo,'');
+					//return data.nomeArquivoServidor;
+				} else {
+					alertify.error('Aconteceu um erro. ' + data.mensagem);
+				}
+			  });
+			}
+		  )
+		  .catch(function(err) {
+			document.body.style.cursor = 'default';
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		  });
+}//.function exportaArquivoServidor
 
 function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServidor, setNos, nomeNovaAba) {
 	//abre nova aba exportando dados para o servidor
@@ -1417,9 +1466,9 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 	//se setNos = null, usa todos os itens do gráfico se bSoSelecionados=false ou só selecionados se bSoSelecionados=true
 	
 	//nos casos de idArquivoServidor = 'temporario', utilizar
-	//menu_novaAbaComDados(bSoSelecionados, setNos) , que evita criar um arquivo no servidor.
+	//menu_novaAbaComDadosJson(bSoSelecionados, setNos) , que evita criar um arquivo no servidor.
 	if (idArquivoServidor=='temporario') {
-		menu_novaAbaComDados(bSoSelecionados, setNos);
+		menu_novaAbaComDadosJson(bSoSelecionados, setNos);
 		return;
 	}
 	var jsonDados;
@@ -1465,7 +1514,7 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 						setTimeout(function(){ novaJanela.document.title = nomeNovaAba; }, 3000); //se o gráfico for muito grande, o tempo pode não ser suficiente
 					}
 				} else {
-					alertify.error('Aconteceu um erro. ' + data.mensagem.popup);
+					alertify.error('Aconteceu um erro. ' + data.mensagem);
 				}
 			  });
 			}
@@ -1484,7 +1533,7 @@ function openWindowWithPost(data) {
     var form = document.createElement("form");
     form.target = "_blank";
     form.method = "POST";
-    form.action = base + 'abre_json/' ; 
+    form.action = base + 'selecao_de_itens/' ; 
     form.style.display = "none";
 	var input = document.createElement("input");
 	input.type = "hidden";
@@ -1571,6 +1620,9 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	}
 	for (let noaux of Object.values(no)) {
 		if (!graph.hasNode(noaux.id)) { 
+			if (!noaux.nota) {
+				noaux.nota = ''; //em algumas funções supõe que nota é string
+			}
 			graph.addNode(noaux.id, JSON.parse(JSON.stringify(noaux)));
 			if (noaux.posicao) { 
 				if ((noaux.posicao.x) && (noaux.posicao.y)) {
@@ -1618,7 +1670,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 				var laux = ligaux.label ?  ligaux.label.split(';') : ''.split(';');
 				if (ligaux.label) {
 					laux.forEach((element, index) => {
-					  laux[index] = '-' + element;
+					  laux[index] = '( - )' + element;
 					});
 				}
 				var conjNovo = new Set(laux);
@@ -1664,21 +1716,8 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			textoMensagem += ' Foram inseridos ' + kl + ' ligações.'
 		}
 	}
-	if ((!kn) && (!kl)) textoMensagem += 'Não encontrou novos itens';
+	if ((!kn) && (!kl)) textoMensagem += ' Não encontrou novos itens';
 	exibe_mensagem(textoMensagem, jsonIn.mensagem); 
-	/*
-	if (!jsonIn.mensagem) {
-		jsonIn.mensagem = {'lateral': '', 'popup': '', 'confirmar': ''};
-	}
-	if (jsonIn.mensagem.popup) {
-		alertify.alert('Alerta!', jsonIn.mensagem.popup, function(){ alertify.success(textoMensagem); });
-	} else {
-		alertify.success(textoMensagem);
-	}
-	if (jsonIn.mensagem.lateral) {
-		alertify.success(jsonIn.mensagem.lateral);
-	}
-	*/
 	if (kn  && !gparam.bRenderAtivado) { //ativa leiaute por 1 segundo para exibir novos itens
 		gparam.renderer.resume();
 		setTimeout(
@@ -1692,25 +1731,41 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 }//.function inserirJson
 
 function exibe_mensagem(textoMensagem, mensagem) {
-	if (!mensagem) {
-		mensagem = {'lateral': '', 'popup': '', 'confirmar': ''};
+	if (textoMensagem) {
+		alertify.success(textoMensagem)
 	}
-	if (mensagem.popup) {
-		alertify.alert('Alerta!', mensagem.popup, function(){ alertify.success(textoMensagem); });
-	} else {
-		alertify.success(textoMensagem);
+	if (mensagem) {
+		alertify.error(mensagem);
 	}
-	if (mensagem.lateral) {
-		alertify.success(mensagem.lateral);
-	}
+
 }//.exibe_mensagem
 
 function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	//if idin='', manda dados dos nós selecionados
 	var url = "";
+	var bAbriuAbaLink = false;
 	idin = idin.replace(/\//g, '');
-	if ((!idin) && (!gparam.idnoSelecionado)) return; //se idin vazio, manda lista de ids selecionados
-
+	if ((!idin) && (!gparam.idnoSelecionado)) return; 
+	
+	if (idin) {
+		if (idin.substr(0,3)=='CH_') {
+			menu_links_google(true);
+			return;
+		}
+		if (gparam.idExpandido[idin] && (camada==1)){ //se ícone já foi clicado, abre camada seguinte.
+			gparam.idExpandido[idin]++;
+			camada = gparam.idExpandido[idin];
+		} else {
+			gparam.idExpandido[idin] = 1;
+		}
+	} else {
+		for (const idaux of gparam.idNosSelecionados) { 
+			if (([ 'LI_', 'AR_'].includes(idaux.substr(0,3))) || ((idaux.substr(0,3)=='ID_') && !gparam.inicio.bBaseLocal))  {
+				menu_abrirNovaAba(idaux);
+				bAbriuAbaLink = true;
+			}	
+		}
+	}
 	if (tipo=='links') {
 		dialogoParametrosLink();
 	} else {
@@ -1725,8 +1780,10 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	function fazFetch(url, idin) {
 		document.body.style.cursor = 'wait';
 		//fetch(url, {method: 'get'}) // mode: 'cors',
-		let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]);
-		url += idin ? idin : gparam.idnoSelecionado;
+		idin = ([ 'LI_', 'AR_'].includes(idin.substr(0,3)))? 'LI' : idin;
+		let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]); //TODO: remover os LI_ da requisição para o servidor
+		//url += idin ? idin : gparam.idnoSelecionado;
+		url += idin ? idin : (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) ? 'LI' : gparam.idnoSelecionado); //aqui colocando LI porque o flask exige um identificador
 		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
@@ -1742,6 +1799,8 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 				document.body.style.cursor = 'default';
 				if (data.no.length) {
 					inserirJson(data, idin + ' em camada ' + camada +'. ', bNaoConfirma);
+				} else if (bAbriuAbaLink) {
+					;
 				} else {
 					if (isNumeric(idin.replace(/[\.\-\//]/g, '').trim()) || idin.includes('*')) { 
 						alertify.error('Não encontrou ' + idin + ' na base.');
@@ -1860,7 +1919,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 					} catch (e) {;};
 					var cn = cnpjs.trim().toUpperCase();
 					var cnaux = cn.replaceAll('.', '').replace('-', ''); //cn.replace(/\./g, '').replace(/\-/g, '');
-					console.log(cnaux);
+					//console.log(cnaux);
 					if (cn) { 
 						if (cn=='T') {
 							cn='TESTE';
@@ -1885,6 +1944,118 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 				}, function() { ativaAtalhos(true);}
 	);
 }//.function menu_inserir
+
+function menu_links_google(bAbrePalavrasChaves) {
+	//manda termos de busca para o servidor, que fará uma chamada ao google e retornará uma lista de nós e de ligações.
+	var termosId = gparam.idnoSelecionado? replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ') : '';
+	var url='';
+	var termos = '';
+	var kpalavras = 0;
+	var pagina = 1;
+	if (!termosId && gparam.idnoSelecionado) {
+		termosId = graph.getNode(gparam.idnoSelecionado).data.id.substr(3);
+	}
+	if (gparam.idnoSelecionado && [ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3)) && bAbrePalavrasChaves 
+			&& !gparam.idnoSelecionado.startsWith('LI_https://www.google.com')) {
+		termosId = gparam.idnoSelecionado;
+	}
+	var termos = prompt('Digite termos para buscar no Google. Será criado um gráfico com o resultado da busca:', termosId);
+	if (!termos) {
+		return;
+	} 
+	if (![ 'LI_', 'AR_'].includes(termos.substr(0,3)) ) {
+		if (gparam.paginaBuscaGoogle[termos]) {
+			gparam.paginaBuscaGoogle[termos]++;
+			//pagina = gparam.paginaBuscaGoogle[termos];
+			pagina = prompt('Digite um número inteiro com a Página do Google para baixar:', gparam.paginaBuscaGoogle[termos]);
+			if (pagina) {
+				gparam.paginaBuscaGoogle[termos] = pagina;
+			}
+		} else {
+			gparam.paginaBuscaGoogle[termos] = 1;
+		}
+	}
+	//var url = base + 'busca_google/' + gparam.paginaBuscaGoogle[termos]  + '/' + encodeURIComponent(termos) ; 
+	if (termos.search('@')!=-1) {
+		kpalavras = parseInt(termos.split('@')[1]);
+		if (kpalavras) {
+			termos = termos.split('@')[0];
+		}
+	} else {
+		kpalavras = 20;
+	}
+	if  ([ 'LI_', 'AR_'].includes(termos.substr(0,3))) {
+		url = base + 'busca_google?link=' + encodeURIComponent(termos); 
+	} else {
+		url = base + 'busca_google?pag=' + gparam.paginaBuscaGoogle[termos]  + '&q=' + encodeURIComponent(termos); 
+	}
+	
+	url += '&palavras_chave=' + (bAbrePalavrasChaves? kpalavras : '0');
+	
+	if (bAbrePalavrasChaves) {
+		alertify.warning('O servidor irá baixar os arquivos e selecionar palavras chaves relacionadas à busca. Isto pode demorar...');
+	}
+	fazFetch(url, termosId);
+
+	return;
+	function fazFetch(url, idin) {
+		document.body.style.cursor = 'wait';
+		let idSelecionadoAnterior = gparam.idnoSelecionado;
+		//fetch(url, {method: 'get'}) // mode: 'cors',
+		idin = ([ 'LI_', 'AR_'].includes(idin.substr(0,3)))? 'LI' : idin;
+		let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]);
+		//url += idin ? idin : gparam.idnoSelecionado;
+		//url += idin ? idin : (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) ? 'LI' : gparam.idnoSelecionado); //aqui colocando LI porque o flask exige um identificador
+		//fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+		fetch(url, {method: 'get',  cache: "no-store"}) // mode: 'cors',
+		.then(
+			function(response) {
+				if (response.status !== 200) {
+				document.body.style.cursor = 'default';
+				console.log('Looks like there was a problem. Status Code: ' +  response.status);
+				alertify.error('Aconteceu um erro (' +  response.status + ')');
+				return;
+				}
+				// Examine the text in the response
+				response.json().then(function(data) {
+				//console.log(data);
+				document.body.style.cursor = 'default';
+				if (data.no.length) {
+					inserirJson(data, 'busca no google por '+termos, true);
+					if (idSelecionadoAnterior && (pagina.toString()=='1')) {
+						setTimeout(function() {
+							var resp = true;
+							if (termos!=termosId)  { //se os termos forem diferentes da descrição do cpf/cnpj, pergunta se quer ligar
+								var resp = confirm('Liga ao item que estava selecionado?');
+							}
+							if (resp) {
+								gparam.idNosSelecionados.add(idSelecionadoAnterior);
+								menu_ligar_selecionados(true,'',true); 
+							}					 
+							if (data.mensagem) {
+								alertify.success(data.mensagem);
+							}
+						 }, 1000);
+					}
+				} else {
+					if (data.mensagem) {
+						alertify.error(data.mensagem);
+					}
+					else {
+						alertify.warning('Não encontrou informações'); 
+					}
+				}
+				});
+			}
+		    )
+		.catch(function(err) {
+			document.body.style.cursor = 'default';
+			console.log('Fetch Error :-S', err);
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		});
+	}
+}//.function menu_links_google
+
 
 function menu_buscaEmSite(siteUrl){
 	var parametro = replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ');
@@ -1913,9 +2084,10 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 		novaJanela.focus(); 
 		return;
 	}
+
 	if ((!idno)&&bNosSelecionados) { //abre numa nova aba os nós selecionados
 		//se tiver só um nó selecionado, pergunta quantas camadas
-		if (gparam.idNosSelecionados.size==1){ 
+		if ((gparam.idNosSelecionados.size==1) && ([ 'PF_', 'PJ_'].includes(gparam.idnoSelecionado.substr(0,3)))){ 
 			var camada = prompt('Quantidade de camadas para abrir ' + gparam.idnoSelecionado + ' em uma nova aba:','1');
 			if (!camada) return;
 			novaJanela = window.open(base + 'grafico/' + String(camada) + '/' + gparam.idnoSelecionado) ;
@@ -1924,10 +2096,10 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 			}
 		} else {
 			//menu_exportaJSONServidor(true, false, 'temporario', null, document.title + '-parcial')	
-			menu_novaAbaComDados(true, null);
+			menu_novaAbaComDadosJson(true, null);
 		}
 		return;
-	}
+	} 
 	if (idno.startsWith('LI_')) {
 		novaJanela=window.open(idno.substr(3));
 		novaJanela.focus();
@@ -1943,29 +2115,30 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 		}
 		let bodyjson = JSON.stringify([idno.substr(3)]); //JSON.stringify([...gparam.idNosSelecionados]);
 		fetch(url, {method: 'post', body: bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
-			.then( 
+		.then( 
 			function(response) {
-			  if (response.status !== 200) {
-				console.log('Looks like there was a problem. Status Code: ' +  response.status);
-				alertify.error('Aconteceu um erro (' +  response.status + ')');
-				return;
-			  }
-			  // Examine the text in the response
-			  response.json().then(function(data) {
+				if (response.status !== 200) {
+					console.log('Looks like there was a problem. Status Code: ' +  response.status);
+					alertify.error('Aconteceu um erro (' +  response.status + ')');
+					return;
+				}
+				// Examine the text in the response
+				response.json().then(function(data) {
 				if (data['retorno']) {
 					alertify.success('O arquivo ' + idno.substr(3) + ' foi aberto.');
 				} else {
 					alertify.error('O arquivo ' + idno.substr(3) + ' não foi aberto. ' + data['mensagem']);
 				}
-			  });
+				});
 			}
-			)
-			.catch(function(err) {
-				alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
-			});
+		)
+		.catch(function(err) {
+			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+		});
 
 		return;
-	}
+	};
+	
 	/*
 	ativaAtalhos(false);
 	alertify.prompt( 'Abrir ' + idno+  ' em nova aba', 'Selecione camadas', '1', 
@@ -2204,7 +2377,7 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 								   'tipoDescricao': '', //'link',
 								   'label': label});
 	} */ 
-	var noLigacoes = {'no':[], 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+	var noLigacoes = {'no':[], 'ligacao':ligacoes, 'mensagem':''};
 	inserirJson(noLigacoes,' Ligações. ');
 	return true;
 }//.function menu_ligar_selecionados
@@ -2301,7 +2474,7 @@ function removeGalhos(bExibeMensagem) {
 		sNosRemover = new Set();	
 		graph.forEachNode(function(node) {
 			if (node) {
-				quantidadeLigacoes = 0 + graph.getLinks(node.id).length;
+				quantidadeLigacoes = graph.getLinks(node.id)? graph.getLinks(node.id).length: 0;
 				if ((quantidadeLigacoes <= 1) && (node.data.camada != 0) && (!node.data.cor) && (!node.data.nota)) {
 					sNosRemover.add(node.id);
 				}
@@ -2347,7 +2520,7 @@ function menu_quebraGraficoEmPartes(){
 		if (resp) {
 			k += 1;
 			//menu_exportaJSONServidor(null, null, 'temporario', sconj, document.title + '-' + k);
-			menu_novaAbaComDados(false, sconj);
+			menu_novaAbaComDadosJson(false, sconj);
 		} else {
 			resp = confirm('Deseja abrir outras abas?');
 			if (!resp) {
@@ -3118,7 +3291,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 	if (cnpjsids.size) {
 		fazFetchCnpjs(cnpjsids, nos, ligacoes);
 	} else {
-		var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+		var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':''};
 		inserirJson(noLigacoes,' drop lista ', bNaoConfirma);
 		alterarItens(dadosExtras);
 	}
@@ -3203,7 +3376,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 				for (let li of data['ligacao']) {
 					ligacoes.push(JSON.parse(JSON.stringify(li)));
 				}
-				var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':{'lateral': '', 'popup': '', 'confirmar': ''}};
+				var noLigacoes = {'no':nos, 'ligacao':ligacoes, 'mensagem':''};
 				inserirJson(noLigacoes,' drop lista ', bNaoConfirma);
 				alterarItens(dadosExtras);
 			  });
@@ -3277,18 +3450,7 @@ function destroyClickedElement(event){
 */
 
 function exportaIdsParaDownloadExcel() {
-	//var dadosJSON = JSON.stringify({'no':['1','2'], 'ligacao':[]});;
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
-	/*
-	var idArray = [];
-	if (iframeAuxiliar.exportaSoSelecionados) {
-		idArray = [...gparam.idNosSelecionados];
-	} else {
-		graph.forEachNode( function(node) {
-				idArray.push(node.id);
-			}
-		);
-	} */
 	var idArray = getRedeNosLigacoes();
 	var dadosJSON = JSON.stringify(idArray); //não aceita stringify de set
 	var mime={type:"application/json"};
@@ -3306,6 +3468,27 @@ function menu_exportaExcel(bSoSelecionados) {
 	var formato='xlsx';
 	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
 	iframeAuxiliar.onload = exportaIdsParaDownloadExcel;
+	iframeAuxiliar.src = base + 'formdownload.html';
+	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
+}//.function menu_exportaExcel
+
+function exportaIdsParai2() {
+	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
+	var idArray = getRedeNosLigacoes();
+	var dadosJSON = JSON.stringify(idArray); //não aceita stringify de set
+	var mime={type:"application/json"};
+	iframeAuxiliar.onload = null;
+	var iframeDocumento = iframeAuxiliar.contentDocument || iframeAuxiliar.contentWindow.document;
+	var form = iframeDocumento.getElementById('formDownload');
+	form.dadosJSON.value = dadosJSON;
+	form.action = base + 'dadosemarquivo/anx' ;
+	form.submit();
+}//.function exportaIdsParai2
+
+function menu_exportai2(bSoSelecionados) {
+	var formato='xlsx';
+	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
+	iframeAuxiliar.onload = exportaIdsParai2;
 	iframeAuxiliar.src = base + 'formdownload.html';
 	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
 }//.function menu_exportaExcel
@@ -3758,24 +3941,33 @@ function drop_handler(ev) {
 	ev.preventDefault();
 	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
 	var tipos = ev.dataTransfer.types;
+	console.log(tipos);
+	var shiftKey = ev.shiftKey; //ttt
 	//window.focus(); //não funciona, o focus with no aplicativo de origem da dragagem
-	if (tipos.includes("text/x-moz-url")) { //funciona no firefox, mas no chrome não aparece esse flavor
+	if (tipos.includes("rede_json")) { //recebe botão DRAG de outra aba da rede
+		var nosLigacoes = ev.dataTransfer.getData("rede_json"); 
+		inserirJson(JSON.parse(nosLigacoes), 'Drop. ');
+	} else if (tipos.includes("text/x-moz-url")) { //drop link url - funciona no firefox, mas no chrome não aparece esse flavor
 		//var data = ev.dataTransfer.getData("text");
 		var lista = ev.dataTransfer.getData("text/x-moz-url").split('\n'); //url separado do titulo por linha
 		menu_ligar_novo('LI_' + lista[0], lista[1]);
-	} else if (tipos.includes( "text/uri-list")) { //no chrome
+	} else if (tipos.includes( "text/uri-list")) { //drop link url- no chrome
 		var item = ev.dataTransfer.getData("text/uri-list"); //aqui só tem url, não tem título da página como no firefox
 		menu_ligar_novo('LI_' + item, '');
 	} else if (tipos.includes("text/plain")) {
 		var data = ev.dataTransfer.getData("text");
-		inserir_lista(data);
+		if (shiftKey) {
+		   //ttt
+		} else {
+			inserir_lista(data);
+		}
 	} else if (tipos.includes("Files")) {
 		menu_importarJsonArquivo(ev, 'drop');
 	} else {
 		alertify.error('Drop. Tipo não reconhecido');
 		console.log(tipos);
+		return;
 	}
-
 }//.function drop_handler
 
 function ajustaRegiaoDrop() {
@@ -3810,6 +4002,18 @@ function ajustaRegiaoDrop() {
 	});
 }//.function ajustaRegiaoDrop
 
+function drag_handler(ev) {
+	//console.log('drag');
+	ev.dataTransfer.setData("rede_json", JSON.stringify(getRedeNosLigacoes(true))); 
+	var texto = [...gparam.idNosSelecionados].join('\n');
+	ev.dataTransfer.setData("text/plain", texto);
+	if (gparam.idnoSelecionado.startsWith('LI_')) { 
+		texto = gparam.idnoSelecionado.substr(3);
+		ev.dataTransfer.setData("text/x-moz-url", texto);
+		ev.dataTransfer.setData("text/uri-list", texto);
+	}
+}//.function drag_handler
+
 function ativaAtalhos(bcaptura) {
 	// é preciso desativar antes de usar o alertify.prompt
 	if (gparam.mobile) {
@@ -3836,12 +4040,6 @@ function evento_teclasDown(e) {
 	}
 	
 	if ((e.code.startsWith('Digit') && (e.code.length==6)) || (e.code.startsWith('Numpad') && (e.code.length==7) && (e.getModifierState('NumLock')))){
-		if (gparam.idnoSelecionado) {
-			if (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) || ((gparam.idnoSelecionado.substr(0,3)=='ID_') && !gparam.inicio.bBaseLocal))  {
-				menu_abrirNovaAba(gparam.idnoSelecionado);
-				return;
-			}
-		}
 		var ns = e.code.substr(-1);
 		var tipo = 'cnpj';
 		if (e.shiftKey) {
@@ -3892,6 +4090,12 @@ function evento_teclasDown(e) {
 		menu_buscaEmSite('https://www.google.com/search?q=');;
 	} else if (testa('KeyG', true, false)) { 
 		menu_GoogleMaps();;
+	} else if (testa('KeyG', false, true)) { 
+		menu_links_google(false);
+	} else if (testa('KeyH', false, false)) { 
+		menu_links_google(false);
+	} else if (testa('KeyH', true, false)) { 
+		menu_links_google(true);
 	} else if (testa('KeyN', false, false)) { 
 		menu_rotulosCompletos(null);
 	} else if (testa('KeyN', true, false)) { 
@@ -4017,7 +4221,7 @@ function ajustaAmbiente() {
 			document.querySelector('body').style.fontSize='xx-large'; //para alterar tamanho do texto no alertify
 			for (let botao of document.getElementsByClassName('botaosuperior')) { 
 				botao.style.fontSize = '60px'; //="font-size:60px;";
-			}	
+			}
 			alertify.prompt = alertifyfake.prompt;
 			alertify.confirm = alertifyfake.confirm;
 			alertify.alert = alertifyfake.alert; 
@@ -4058,6 +4262,8 @@ function ajustaAmbiente() {
 			document.getElementById('div_referencia').textContent="\xa0" +  gparam.inicio.referenciaBDCurto + "\xa0"; //\xa0 espaço não separável
 			document.getElementById('drop_area').textContent="\xa0DROP "; //"\xa0DROP (json ou lista de identificadores)";
 			document.getElementById("drop_area").style.display = "inline"; //esconde área de drop em mobile
+			document.getElementById('drag_area').textContent="\xa0DRAG "; 
+			document.getElementById("drag_area").style.display = "inline"; 
 			document.getElementById("btn_srf").style.display = "inline"; //esconde botão receita em mobile
 			document.getElementById("div_referencia").style.display = "inline"; //esconde referência
 			document.getElementById("input_cnpj").style.display = "inline"; //esconde referência
@@ -4157,13 +4363,12 @@ function main() {
     display: flex;
     justify-content: left;
 }
-
 </style>
 </head>
 <body id='corpo' onload='main()' style='overflow:hidden;'>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
 <!--div id="block_container"-->
-	<div id='div_botoes' >
+	<div id='div_botoes'>
 		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
 		{% if parametros.bBaseReceita %}
 		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>
@@ -4182,20 +4387,17 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'><i class="fa fa-search-plus"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i></button>
-	
-	<button id='div_referencia' title="{{ parametros.referenciaBD }}" hidden disabled></button>
-	<button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste uma coluna de CNPJs ou um arquivo .json para esta área. Ver documentação para mais opções." hidden disabled><!--i class="fa fa-hand-holding-water"></i--></button>
+		<button id='div_referencia' title="{{ parametros.referenciaBD }}" hidden disabled></button>
+		<button id="drag_area"  ondragstart="drag_handler(event);" draggable="true" title="Arraste este botão para outra Aba de Rede para copiar os itens selecionados" hidden><!-- drag_area--> <!--i class="fa fa-hand-holding-water"></i--></button>
+		<button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste para esta tela uma coluna de CNPJs, um arquivo tipo json ou o botão DRAG de outra aba" hidden disabled><!--i class="fa fa-hand-holding-water"></i--></button>
 	</div>
-<!--/div-->
- <!-- 
-<div id="principal" style="width: 100%; height: 100%; position: absolute;  left: 0; top: 30;" charset="utf-8">
--->
+
 <div id="principal" style="width: 100%; height: 100%; position: absolute;" charset="utf-8" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  > 
 <!-- top=0 desativa botoes-->
 	<div id="principal_overlay" class="graph-overlay" style="cursor:crosshair;" ></div>
 </div>
 
-<menu id='menu_contexto' class="menu">  <!-- style="overflow: hidden;" overflow: hidden parece resolver quebra da linha de menu no android -->
+<menu id='menu_contexto' class="menu">  <!-- style="overflow: hidden;" overflow: hidden parece resolver quebra da linha de menu no android, mas não deixa submenu aparecer-->
 	<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Expande vinculos de sócios. Aperte a tecla 1-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir Camadas</span> </button>
 		<menu class="menu">
@@ -4456,18 +4658,23 @@ function main() {
 		<button type="button" class="menu-btn" title="Abre aba com busca em sites"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
 		<menu class="menu">
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.google.com/search?q=');"> 
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.google.com/search?q=');" title='Abre uma aba do Google com busca pelo item'> 
 			<i class="fab fa-google"></i><span class="menu-text">Google (G)</span> 
 			</button>
 			</li>
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();"> 
-			<i class="fab fa-google"></i><span class="menu-text">Google Maps (Shift+G)</span> 
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();" title='Abre o Google Maps no endereço do CNPJ'> 
+			<i class="fab fa-google"></i><span class="menu-text">Google Maps (SHIFT+G)</span> 
 			</button>
 			</li>
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://www.jusbrasil.com.br/diarios/busca?q=');"> 
-			<i class="fa fa-balance-scale"></i><span class="menu-text">JusBrasil</span> 
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_links_google();" title='Adiciona um ícone com link para página de busca do Google e para os links desta busca'> 
+			<i class="fab fa-google"></i><span class="menu-text">Google Links (CTRL+G)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.escavador.com/busca?q=');"> 
+			<i class="fa fa-balance-scale"></i><span class="menu-text">Escavador</span> 
 			</button>
 			</li>
 			<li class="menu-item">
@@ -4485,6 +4692,11 @@ function main() {
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
 		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel...</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportai2(false)" title="Salva dados dos itens da tela para o IBM i2 Chart Reader(Experimental)" > 
+		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar em Gráfico i2 Chart Reader...</span> 
 		</button>
 		</li>
 		<li class="menu-item">

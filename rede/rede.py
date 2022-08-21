@@ -12,7 +12,7 @@ from requests.utils import unquote
 import flask_limiter #pip install Flask-Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
-import os, sys, json, secrets, io, glob
+import os, sys, json, secrets, io, glob, copy, pathlib
 from functools import lru_cache
 import rede_config as config
 import pandas as pd
@@ -26,17 +26,30 @@ except:
         print('utilizando rede_sql como rede_relacionamentos')
     except:
         raise Exception('não há módulo de relacionamentos!!!')
-    
+
+sys.path.append('busca') #pasta com rotinas de busca
+try:
+    import rede_google
+except:
+    print('não importou módulo rede_google')
+    pass
 try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
     import rede_acao
 except:
     pass
 
+#rede_relacionamentos.gtabelaTempComPrefixo=False
+
 app = Flask("rede")
+app.config['MAX_CONTENT_PATH'] = 100000000
+app.config['UPLOAD_FOLDER'] = 'arquivos'
+kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg']
 limiter = flask_limiter.Limiter(app, key_func=get_remote_address) #, default_limits=["200 per day", "50 per hour"])
 limiter_padrao = config.config['ETC'].get('limiter_padrao', '20/minute').strip() 
 limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip() 
-
+limiter_google = config.config['ETC'].get('limiter_google', '4/minute').strip() 
+bConsultaGoogle = config.config['ETC'].getboolean('busca_google',False)
+bConsultaChaves = config.config['ETC'].getboolean('busca_chaves',False)
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
@@ -50,6 +63,7 @@ try:
     gUwsgiLock=True
     #rlock = contextlib.nullcontext() #funciona no python3.7
     gLock =  contextlib.suppress() #python <3.7 #context manager que não faz nada
+    print('usando gUwsgiLock=True e gLock = contexlib.suppress()')
 except:
     from threading import Lock
     gUwsgiLock=False
@@ -58,9 +72,12 @@ except:
 #sem usar lock, erro sqlite "database schema has changed"
 '''para remover o lock, necessita de um esquema para gerenciar tabelas temporárias.
    foi colocado prefixos aleatórios às tabelas temporárias, mas em ambiente com thread provavelmente vai dar erro'''
-if False:
+if False: #bloqueia em rede_sqlite_cnpj.py
+    #True= não usa bloqueio, rede_relacionamentos.gtabelaTempComPrefixo deve ser =True, para adicionar prefixo nas tabelas temporárias
+    #False= usa bloqueio
     #gLock = contextlib.suppress() 
-    gLock = contextlib.nullcontext()
+    #gLock = contextlib.nullcontext() #somente python>=3.7
+    gLock =  contextlib.suppress()
     gUwsgiLock = False
 
 # @app.route("/")
@@ -153,7 +170,7 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
 
 @app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET', 'POST']) #methods=['POST'])
 @limiter.limit(limiter_padrao)
-def serve_rede_json_cnpj(cpfcnpj, camada=1):
+def serve_rede_json_cnpj(cpfcnpj='', camada=1):
     # if request.remote_addr in ('xxx'):
     #     return jsonify({'acesso':'problema no acesso. favor não utilizar como api de forma intensiva, pois isso pode causar bloqueio para outros ips.'})        
     camada = min(gp['camadaMaxima'], int(camada))
@@ -165,23 +182,11 @@ def serve_rede_json_cnpj(cpfcnpj, camada=1):
     else:
         listaIds = request.get_json()
     r = None
-    if gUwsgiLock:
-        uwsgi.lock()
     try:
+        if gUwsgiLock:
+            uwsgi.lock()
         with gLock:
             noLig = rede_relacionamentos.camadasRede(listaIds=listaIds, camada=camada, grupo='', bjson=True)
-            # if listaIds:
-            #     cpfcnpj=''
-            # if not cpfcnpj:
-            #     noLig = rede_relacionamentos.camadasRede(listaIds=listaIds, camada=camada, grupo='', bjson=True)
-            # elif cpfcnpj.startswith('PJ_') or cpfcnpj.startswith('PF_'):
-            #     noLig = rede_relacionamentos.camadasRede(listaIds=[cpfcnpj,], camada=camada, grupo='', bjson=True )
-            # elif cpfcnpj.startswith('EN_') or cpfcnpj.startswith('EM_') or cpfcnpj.startswith('TE_'):
-            #     noLig = rede_relacionamentos.camadaLink(listaIds=[cpfcnpj,], camada=camada, tipoLink='endereco')
-            # elif cpfcnpj.startswith('ID_'): #ver se o upper é necessário 
-            #     noLig = rede_relacionamentos.camadaLink(listaIds=[cpfcnpj.upper(),], camada=camada, tipoLink='base_local')
-            # else:
-            #     noLig = rede_relacionamentos.camadasRede(listaIds=[cpfcnpj,], camada=camada)
             r = jsonify(noLig)
     finally:
         if gUwsgiLock:
@@ -199,13 +204,11 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
     else:
         listaIds = request.get_json()
     r = None
-    if gUwsgiLock:
-        uwsgi.lock()
+
     try:
+        if gUwsgiLock:
+            uwsgi.lock()
         with gLock:
-            # if listaIds:
-            #     cpfcnpj=''
-            #r = jsonify(rede_relacionamentos.camadaLink(cpfcnpjIn=cpfcnpj, listaIds=listaIds, camada=camada, numeroItens=numeroItens, valorMinimo=valorMinimo, valorMaximo=valorMaximo, tipoLink='link'))
             r = jsonify(rede_relacionamentos.camadaLink(listaIds=listaIds, camada=camada, numeroItens=numeroItens, valorMinimo=valorMinimo, valorMaximo=valorMaximo, tipoLink='link'))
     finally:
         if gUwsgiLock:
@@ -216,15 +219,16 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
 @app.route('/rede/dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST'])
 @limiter.limit(limiter_dados)
 def serve_dados_detalhes(cpfcnpj):
-    if gUwsgiLock:
-        uwsgi.lock()
     try: 
+        if gUwsgiLock:
+            uwsgi.lock()
         with gLock:
             r = rede_relacionamentos.jsonDados([cpfcnpj,])
             return jsonify(r)
     finally:
         if gUwsgiLock:
             uwsgi.unlock()    
+#.def serve_dados_detalhes
 
 #https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 
@@ -258,11 +262,12 @@ def serve_arquivos_json(arquivopath):
                 return_data.write(fo.read())
             return_data.seek(0)
             os.remove(caminho)
-            return send_file(return_data, mimetype='application/json', attachment_filename=arquivopath)            
+            return send_file(return_data, mimetype='application/json', download_name=arquivopath)            
         else:
             return send_from_directory(local_file_dir, filename)
     else:
         return Response("Solicitação não autorizada", status=400)
+#.def serve_arquivos_json
 
 @app.route('/rede/arquivos_json_upload/<nomeArquivo>', methods=['POST'])
 @limiter.limit(limiter_padrao)
@@ -270,7 +275,8 @@ def serve_arquivos_json_upload(nomeArquivo):
     nomeArquivo = unquote(nomeArquivo)
     filename = secure_filename(nomeArquivo)
     if len(request.get_json())>100000:
-        return jsonify({'mensagem':{'lateral':'', 'popup':'O arquivo é muito grande e não foi salvo', 'confirmar':''}})
+        #return jsonify({'mensagem':{'lateral':'', 'popup':'O arquivo é muito grande e não foi salvo', 'confirmar':''}})
+        return jsonify({'mensagem':'O arquivo é muito grande e não foi salvo'})
     nosLigacoes = request.get_json()
     if usuarioLocal():
         cam = nomeArquivoNovo(os.path.join(local_file_dir, filename + '.json'))
@@ -281,10 +287,32 @@ def serve_arquivos_json_upload(nomeArquivo):
     with open(cam, 'w') as outfile:
         json.dump(nosLigacoes, outfile)
     return jsonify({'nomeArquivoServidor':filename})
+#.def serve_arquivos_json_upload
 
-@app.route('/rede/abre_json/', methods=['POST']) #usando post, não precisa criar arquivo temporário para abrir nova aba com itens selecionados
+@app.route('/rede/arquivo_upload/', methods=['POST'])
 @limiter.limit(limiter_padrao)
-def serve_post_json(): #xxx
+def serve_arquivos_upload():
+    if not config.par.bArquivosDownload:
+        return jsonify({'nomeArquivoServidor':'', 'mensagem':'salvamento de arquivo não autorizado'})
+        #return Response("Solicitação não autorizada", status=400)
+    f = request.files['arquivo']
+    if pathlib.Path(f.filename).suffix not in kExtensaoDeArquivosPermitidos:
+        return jsonify({'mensagem':'extensão de arquivo não permitido'})
+    filename = secure_filename(f.filename)
+    if not usuarioLocal():
+        #filename += '.'+secrets.token_hex(10) + '.json'
+        #cam = os.path.join(local_file_dir, filename)           
+        return jsonify({'nomeArquivoServidor':'', 'mensagem':'salvamento de arquivo não autorizado'})
+    else:
+        cam = nomeArquivoNovo(os.path.join(local_file_dir, filename))
+        filename = os.path.split(cam)[1]
+    f.save(cam)
+    return jsonify({'nomeArquivoServidor':filename})
+#.def serve_arquivos_upload
+
+@app.route('/rede/selecao_de_itens/', methods=['POST']) #usando post, não precisa criar arquivo temporário para abrir nova aba com itens selecionados
+@limiter.limit(limiter_padrao)
+def serve_post_json():
     listaJson = request.form.get('data')
     try:
         listaJson = json.loads(listaJson)
@@ -306,32 +334,83 @@ def serve_post_json(): #xxx
                      'referenciaBD':config.referenciaBD,
                      'referenciaBDCurto':config.referenciaBD.split(',')[0]}
     return render_template('rede_template.html', parametros=paramsInicial)
+#.def serve_post_json
 
 @app.route('/rede/json_para_base/<comentario>', methods=['POST'])
 @limiter.limit(limiter_padrao)
 def serve_arquivos_json_upload_para_base(comentario=''):
     comentario = unquote(comentario)
     if not usuarioLocal():
-        return jsonify({'mensagem':{'lateral':'', 'popup':'Opção apenas disponível para usuário local', 'confirmar':''}})
+        return jsonify({'mensagem':'Opção apenas disponível para usuário local'})
     if not config.config['BASE'].get('base_local',''):
-        return jsonify({'mensagem':{'lateral':'', 'popup':'Base sqlite local não foi configurada', 'confirmar':''}})
+        return jsonify({'mensagem':'Base sqlite local não foi configurada'})
         
     nosLigacoes = request.get_json()
     rede_relacionamentos.carregaJSONemBaseLocal(nosLigacoes, comentario)
     return jsonify({'retorno':'ok'})
+#.def serve_arquivos_json_upload_para_base
 
 @app.route('/rede/envia_json/<acao>', methods=['POST'])
 @limiter.limit(limiter_padrao)
 def serve_envia_json_acao(acao=''):
     if not usuarioLocal():
-        return jsonify({'mensagem':{'lateral':'', 'popup':'Opção apenas disponível para usuário local', 'confirmar':''}})
+        return jsonify({'mensagem':'Opção apenas disponível para usuário local'})
     nosLigacoes = request.get_json()
     #print(nosLigacoes)
     try:
         r = rede_acao.rede_acao(acao, nosLigacoes)
-        return jsonify({'retorno':'ok', 'mensagem':{'popup':r}})
+        return jsonify({'retorno':'ok', 'mensagem':r})
     except:
-        return jsonify({'mensagem':{'lateral':'', 'popup':'Servidor não foi configurada para esta ação', 'confirmar':''}})
+        return jsonify({'mensagem':'Servidor não foi configurada para esta ação'})
+#.def serve_envia_json_acao
+
+if bConsultaChaves: 
+    @app.route('/rede/busca_google', methods=['GET', 'POST'])
+    @limiter.limit(limiter_google)
+    async def serve_busca_google_chave():
+        pagina = request.args.get('pag', default = 1, type = int)
+        texto_busca = request.args.get('q', default = '', type = str)
+        n_palavras_chave = request.args.get('palavras_chave', default = 0, type = int)    
+        link = unquote(request.args.get('link', default = '', type = str))
+
+        if not texto_busca and not link:
+            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Sem texto'})
+        try:
+        #if True:
+            if texto_busca:
+                r = await rede_google.json_busca(texto_busca, pagina, n_palavras_chave)
+            elif link:
+                if link.startswith('LI_'):
+                    link = link[3:]
+                    r = await rede_google.json_busca_palavras_urls([link], n_palavras_chave)
+                elif link.startswith('AR_'):
+                    caminhoDoc = caminhoArquivoLocal(link[3:])
+                    r = rede_google.json_busca_palavras_doc(link, caminhoDoc,  n_palavras_chave)
+                    #await asyncio.sleep(0.01)
+            return r #jsonify({'retorno':'ok', 'mensagem':{'popup':r}})
+        except Exception as err:
+            print('erro em serve_busca_google', err)
+            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-A'})
+    #.def serve_busca_google assíncrono com chaves
+elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
+    @app.route('/rede/busca_google', methods=['GET', 'POST'])
+    @limiter.limit(limiter_google)
+    def serve_busca_google():
+        # if not bConsultaGoogle:# and not usuarioLocal():
+        #     return jsonify({'no':[], 'ligacao':[], 'mensagem':{'lateral':'', 'popup':'Servidor não foi configurado para busca-B', 'confirmar':''}})
+        pagina = request.args.get('pag', default = 1, type = int)
+        texto_busca = request.args.get('q', default = '', type = str)
+        n_palavras_chave = request.args.get('palavras_chave', default = 0, type = int)    
+        if n_palavras_chave:
+            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para extrair as chaves'})
+        if not texto_busca:
+            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Sem texto'})
+        try:
+            r = rede_google.json_google_chaves_sincrono(texto_busca, pagina, n_palavras_chave=0)
+            return r 
+        except:
+            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-C'})
+    #.def serve_busca_google síncrono sem chaves
 
 # @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
 # def serve_arquivos_download(arquivopath):
@@ -352,7 +431,15 @@ def serve_envia_json_acao(acao=''):
 @limiter.limit(limiter_padrao)
 def serve_dadosEmArquivo(formato='xlsx'):
     dados = json.loads(request.form['dadosJSON'])
-    return send_file(rede_relacionamentos.dadosParaExportar(dados), attachment_filename="rede_dados_cnpj.xlsx", as_attachment=True)
+    if formato=='xlsx':
+        return send_file(rede_relacionamentos.dadosParaExportar(dados), download_name="rede_dados_cnpj.xlsx", as_attachment=True)
+    elif formato=='anx':
+        try:
+            import i2
+            return send_file(i2.jsonParai2(dados), download_name="rede_dados_cnpj.anx", as_attachment=True)
+        except Exception as err:
+            print('erro na exportacao i2: ', err)
+#.def serve_dadosEmArquivo
 
 @app.route('/rede/formdownload.html', methods = ['GET','POST'])
 @limiter.limit(limiter_padrao)
@@ -367,6 +454,7 @@ def serve_form_download(): #formato='pdf'):
           </body>
         </html>
     '''
+#.def serve_form_download
     
 @app.route('/rede/abrir_arquivo/', methods = ['POST'])
 @limiter.limit(limiter_padrao)
@@ -396,13 +484,24 @@ def serve_abrirArquivoLocal():
             return jsonify({'retorno':False, 'mensagem':'Arquivo não localizado,'})
         else:
             return jsonify({'retorno':False, 'mensagem':'Não foi localizado na pasta arquivos do projeto.'})
-    if (extensao in ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg']) and os.path.exists(nomeArquivo):
+    if (extensao in kExtensaoDeArquivosPermitidos) and os.path.exists(nomeArquivo):
         os.startfile(nomeArquivo)
         #return HttpResponse(json.dumps({'retorno':True}), content_type="application/json")
         return jsonify({'retorno':True, 'mensagem':'Arquivo aberto,'})
     else:
         return jsonify({'retorno':False, 'mensagem':'Extensão de arquivo não autorizada,'})
 #.def serve_abrirArquivoLocal
+
+def caminhoArquivoLocal(nomeArquivo):
+    nomeSplit = os.path.split(nomeArquivo)
+    if not nomeSplit[0]: #sem caminho inteiro
+        nomeArquivo = os.path.join(local_file_dir, nomeArquivo)
+    extensao = os.path.splitext(nomeArquivo)[1].lower()
+    if not os.path.exists(nomeArquivo):
+        return ''
+    if (extensao in kExtensaoDeArquivosPermitidos) and os.path.exists(nomeArquivo):
+        return nomeArquivo
+#.def caminhoArquivoLocal
 
 def usuarioLocal():
     return request.remote_addr ==  '127.0.0.1'
@@ -427,6 +526,7 @@ def removeAcentos(data):
   if data is None:
     return ''
   return ''.join(x for x in unicodedata.normalize('NFKD', data) if x in string.printable)
+#.def removeAcentos
 
 @lru_cache(8)
 def imagensNaPastaF(bRetornaLista=True):
@@ -438,7 +538,8 @@ def imagensNaPastaF(bRetornaLista=True):
         return sorted(list(dic.keys()))
     else:
         return dic
-        
+#.def imagensNaPastaF
+   
 if __name__ == '__main__':
     import webbrowser
     webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 

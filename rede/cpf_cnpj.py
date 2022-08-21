@@ -9,8 +9,14 @@ def validar_cpf(cpf):
     """
     cpf = ''.join(re.findall('\d', str(cpf)))
     
-    if (not cpf) or len(cpf) > 11:
+    if (not cpf):
         return ''
+    
+    if (len(cpf) > 11):
+        if cpf[:len(cpf)-11]=='0'.zfill(len(cpf)-11):
+            cpf = cpf[len(cpf)-11:]
+        else:
+            return ''
     if (len(cpf) < 11):
         cpf = cpf.zfill(11)
 
@@ -36,9 +42,15 @@ def validar_cnpj(cnpj):
     """
 
     cnpj = ''.join(re.findall('\d', str(cnpj)))
-
-    if (not cnpj) or (len(cnpj) > 14):
-        return False
+    
+    if (not cnpj):
+        return ''
+    
+    if (len(cnpj) > 14):
+        if cnpj[:len(cnpj)-14]=='0'.zfill(len(cnpj)-14):
+            cnpj = cnpj[len(cnpj)-14:]
+        else:
+            return ''
     cnpj = cnpj.zfill(14)
     
     cnpj = ''.join(re.findall('\d', str(cnpj)))
