@@ -159,6 +159,7 @@ class Pyanx(object):
         texto = output_file.read()
         texto = texto.replace('b\'"','"')
         texto = texto.replace('"\'','"')
+        texto = texto.replace('''LineColour="0"''', ' ')
     with open(path, 'w') as output_file:
         output_file.write(texto)
 
@@ -182,5 +183,6 @@ class Pyanx(object):
     #o código foi feito para python 2.7, por isso há diferenças na questão de string e bytes. A linha abaixo é um ajuste muito feio para a rotina funcionar.
     texto = texto.replace('b\'"','"')
     texto = texto.replace('"\'','"')
+    texto = texto.replace('''LineColour="0"''', ' ') #este parâmetro é ok no chart reader mas dá pau no Analyst
     outputStream = io.BytesIO(texto.encode('utf8'))
     return outputStream
