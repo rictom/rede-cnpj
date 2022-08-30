@@ -109,6 +109,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - SubMenu Salvar/Abrir:
 
 - Salvar dados em Excel;
+- Salvar em formato i2 Chart Reader;
 - Salvar imagem em formato SVG;
 - Salvar Arquivo Json - salva dados do gráfico no formato json;
 - Abrir Arquivo Json;
@@ -148,12 +149,14 @@ https://fontawesome.com<br>
 
 ## Histórico de versões
 versão 0.8.6 (agosto/2022)
-- exportação para gráfico (ex-IBM) i2 Chart Reader ou Analyst's Notebook, pela opção no menu Salvar/Abrir>Salvar i2...:<br>![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)
+- exportação para gráfico no formato (ex-IBM) i2 Chart Reader ou Analyst's Notebook (.anx), pela opção no menu Salvar/Abrir>Salvar i2...:<br>![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)<br>
+- O i2 Chart Reader pode ser baixado gratuitamente no site https://i2group.com/i2-chart-reader?hsLang=en<br>
 
 - opção H para abrir árvore com links de busca na página do Google:![image](https://user-images.githubusercontent.com/71139693/185807100-2627141d-d67b-4325-92fa-0014cedaac7c.png)
 
 - opção SHIFT+H para abrir árvore com palavras chaves dos links da página do Google. Exemplo: 
-![image](https://user-images.githubusercontent.com/71139693/185806901-9151f0f7-4a98-408c-80ba-0050f61a0b9d.png)
+![image](https://user-images.githubusercontent.com/71139693/187549403-8252f372-5d5d-4147-b9cf-5f81984126cb.png)
+
 - para usar a opção SHIFT+H, deve-se instalar as bibliotecas pelo comando pip install -r requirements_chaves.txt<br> e depois instalar os módulos do spacy pelos comandos python -m spacy download en_core_web_sm e python -m spacy download pt_core_news_lg. No arquivo rede.ini, modifique o parâmetro para busca_chaves = 1
 - Como a opção de chaves é lenta, ela não foi habilitada para rodar no servidor. Utilize com a versão local do projeto.
 
