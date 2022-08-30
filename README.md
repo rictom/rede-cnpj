@@ -148,7 +148,7 @@ https://fontawesome.com<br>
 
 
 ## Histórico de versões
-versão 0.8.6 (agosto/2022)
+<b>versão 0.8.6 (agosto/2022)</b>
 - exportação para gráfico no formato (ex-IBM) i2 Chart Reader ou Analyst's Notebook (.anx), pela opção no menu Salvar/Abrir>Salvar i2...:<br>![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)<br>
 - O i2 Chart Reader pode ser baixado gratuitamente no site https://i2group.com/i2-chart-reader?hsLang=en<br>
 
@@ -160,21 +160,21 @@ versão 0.8.6 (agosto/2022)
 - para usar a opção SHIFT+H, deve-se instalar as bibliotecas pelo comando pip install -r requirements_chaves.txt<br> e depois instalar os módulos do spacy pelos comandos python -m spacy download en_core_web_sm e python -m spacy download pt_core_news_lg. No arquivo rede.ini, modifique o parâmetro para busca_chaves = 1
 - Como a opção de chaves é lenta, ela não foi habilitada para rodar no servidor. Utilize com a versão local do projeto.
 
-versão 0.8.5 (julho/2022)
+<b>versão 0.8.5 (julho/2022)</b>
 - visualização melhorada em celular Android;
 - alteração do script rede_relacionamentos.py para rede_sqlite_cnpj.py;
 - alteração do parâmetro gravidade, para diminuir a dispersão de grupos não conexos;
 - tutorial de instalação passo a passo.
 
-versão 0.8.4 (junho/2022)
+<b>versão 0.8.4 (junho/2022)</b>
 - aceita CNPJs ou CPFs com zeros à esquerda faltando.
 
-versão 0.8.3 (maio/2022)
+<b>versão 0.8.3 (maio/2022)</b>
 - inclusão de relacionamento de representante de sócio;
 - campo de busca de cpf/cnpj na linha do menu;
 - rotina cnpj_search.py para indexar coluna de razão social ou nome de sócio para busca por parte do nome.
 
-versão 0.8.2 (janeiro/2022)
+<b>versão 0.8.2 (janeiro/2022)</b>
 - opção no menu Salvar/Abrir>Baixar base CNPJ para abrir a página com o arquivo em SQLITE;
 - tecla A - se houver só um item selecionado, abre um gráfico em nova aba no link /rede/grafico/NUMERO_CAMADA/PJ_X, cujo link poderá ser compartilhado;
 - usando somente POST em algumas consultas;
@@ -182,19 +182,19 @@ versão 0.8.2 (janeiro/2022)
 - flask-limiter para diminuir excesso de consultas. Se precisar dos dados por api, rode o projeto localmente e altere os parâmetros limiter_padrao e limiter_dados do arquivo de configuração rede.ini.
 
 
-versão 0.7.4 (dezembro/2021)
+<b>versão 0.7.4 (dezembro/2021)</b>
 - O projeto online pode ser acessado em https://www.redecnpj.com.br;
 - usando certificado digital na versão online;
 
-versão 0.7.3 (setembro/2021)
+<b>versão 0.7.3 (setembro/2021)</b>
 - correção de erro em ligação em banco de dados local.
 
-versão 0.7.2 (setembro/2021)
+<b>versão 0.7.2 (setembro/2021)</b>
 - opção para alterar o nome da aba;
 - opção para selecionar todos os itens;
 - opção para inverter seleção;
 
-versão 0.7.1 (agosto/2021)
+<b>versão 0.7.1 (agosto/2021)</b>
 - opção para dividir gráficos em outras abas (tecla Q);
 - correção de erro quando se apertava tecla CTRL;
 - opção para selecionar itens adjacentes aos selecionados (tecla J);
@@ -209,7 +209,7 @@ versão 0.7.1 (agosto/2021)
 - opção para remover todas as ligações dos itens selecionados;
 - opção simplifica gráfico (remove itens que não são coloridos ou com comentário que tem apenas uma ligação).
 
-versão 0.6.3 (julho/2021)
+<b>versão 0.6.3 (julho/2021)</b>
 - melhoria para dar clique duplo em ícones;
 - correção de erro de ligação para empresa no exterior sem cnpj;
 - somente o ícone pode ser clicado;
@@ -218,25 +218,25 @@ versão 0.6.3 (julho/2021)
 - todas as tabelas de códigos (cnae, natureza jurídica, etc) foram incorporados ao arquivo sqlite;
 - OBSERVAÇÃO. A versão 0.6.3 só vai funcionar com a versão mais atualizada do arquivo cnpj.db referência 16/7/2021.
 
-versão 0.5.1 (junho/2021)
+<b>versão 0.5.1 (junho/2021)</b>
 - atualização da tabela sqlite cnpj.db com dados públicos de 18/06/2021.
 
-versão 0.5 (abril/2021)
+<b>versão 0.5 (abril/2021)</b>
 - alteração do código para layout novo das tabelas;
 - busca por Radical de CNPJ ou CPF de sócio (busca somente pelo miolo do CPF);
 
-versão 0.4 (janeiro/2021)
+<b>versão 0.4 (janeiro/2021)</b>
 - usando lock para evitar erro de consulta em requisições simultâneas;
 - opção para fazer busca do termo no Portal da Transparência da CGU;
 - correção de link para google search.
 
-versão 0.3.4 (janeiro/2021)
+<b>versão 0.3.4 (janeiro/2021)</b>
 - Possibilita ver o texto do lado direito do ícone;
 - diagramas de tabela hierárquica;
 - ver diagramas de arquivo com código em python;
 - mais opções por linha de comando.
 
-versão 0.3 (janeiro/2021)
+<b>versão 0.3 (janeiro/2021)</b>
 - Opção para inserção de novos itens para elaboração de mapas mentais;
 - Opções para inserir itens novos como link para sites e arquivos locais.
 - Opção para arrastar células do excel, leitura de arquivo csv;
@@ -244,9 +244,9 @@ versão 0.3 (janeiro/2021)
 - Itens selecionados ficam em destaque com linha animada;
 - Alteração no formato do arquivo de configuração rede.ini.
 
-versão 0.2 (dezembro/2020)
+<b>versão 0.2 (dezembro/2020)</b>
 - Suporte para busca por parte do nome na base de empresas;
 - Exportação/importação de gráfico no formato json para o servidor.
 
-versão 0.1 (setembro/2020)
+<b>versão 0.1 (setembro/2020)</b>
 - Primeira versão
