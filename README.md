@@ -59,16 +59,17 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - E - Editar dados do item (que não seja PF ou PJ) selecionado;
 - CRTL+Z – Desfaz Inserção;
 
-- SubMenu Ligar:
+- <b>SubMenu Ligar:</b>
 - U - Ligar para novo item;
 - L - Ligar itens selecionados, ligação tipo estrela (o primeiro ligado aos demais);
 - SHIFT+L - Remover ligação entre itens selecionados;
 - Remover Ligacoes - Remove todas as ligações dos itens selecionados;
 - K - Ligar itens selecionados, ligação tipo fila (o primeiro ligado ao segundo, o segundo ao terceiro, etc);
 
-- SubMenu Visualização:
+- <b>SubMenu Visualização:</b>
 - A - Gráfico em Nova Aba - Abre aba com os itens selecionados;
 - Q - Quebrar o gráfico em abas - Divide o gráfico em partes menores, mantendo as ligações
+- Abre OpenStreetMap - Abre Mapa com os endereços de empresas;
 - P - Fixar o nó na posição;
 - SHIFT+P - Desfixar todos os nós do gráfico;
 - CTRL+P - Fixa um nó em cada grupo conexo (para evitar que o gráfico se expanda indefinidamente);
@@ -106,7 +107,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - Jusbrasil - Busca no site Jusbrasil
 - Portal da Transparência - Busca no Portal da Transparência;
 
-- SubMenu Salvar/Abrir:
+- <b>SubMenu Salvar/Abrir:</b>
 
 - Salvar dados em Excel;
 - Salvar em formato i2 Chart Reader;
@@ -116,7 +117,7 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - Exportar/Importar JSON ao Servidor - Exportar ou importar dados do gráfico em formato JSON carregados no servidor;
 - Banco de Dados - Exporta dados para banco de dados sqlite (só para usuário local);
 
-- SubMenu Excluir
+- <b>SubMenu Excluir</b>
 
 - DEL – Excluir itens selecionados.
 - SHIFT+DEL – Excluir todos os itens.
