@@ -13,3 +13,5 @@ async
 aioflask
 aiohttp
 asgiref
+#para mapa
+folium

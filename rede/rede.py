@@ -50,6 +50,7 @@ limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip(
 limiter_google = config.config['ETC'].get('limiter_google', '4/minute').strip() 
 bConsultaGoogle = config.config['ETC'].getboolean('busca_google',False)
 bConsultaChaves = config.config['ETC'].getboolean('busca_chaves',False)
+ggeocode_max  = config.config['ETC'].getint('geocode_max', 15) 
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
@@ -65,9 +66,10 @@ try:
     gLock =  contextlib.suppress() #python <3.7 #context manager que não faz nada
     print('usando gUwsgiLock=True e gLock = contexlib.suppress()')
 except:
-    from threading import Lock
+    import threading
     gUwsgiLock=False
-    gLock = Lock() #prevenir erros de requisições seguidas. No servidor faz o esperado colocando só um thread no rede.wsgi.ini
+    gLock = threading.Lock() #prevenir erros de requisições seguidas. No servidor faz o esperado colocando só um thread no rede.wsgi.ini
+
 
 #sem usar lock, erro sqlite "database schema has changed"
 '''para remover o lock, necessita de um esquema para gerenciar tabelas temporárias.
@@ -160,7 +162,8 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'bBaseLocal': 1 if config.config['BASE'].get('base_local','') else 0,
                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
                      'referenciaBD':config.referenciaBD,
-                     'referenciaBDCurto':config.referenciaBD.split(',')[0]}
+                     'referenciaBDCurto':config.referenciaBD.split(',')[0],
+                     'geocode_max':ggeocode_max}
     #print(paramsInicial) 
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
@@ -310,7 +313,7 @@ def serve_arquivos_upload():
     return jsonify({'nomeArquivoServidor':filename})
 #.def serve_arquivos_upload
 
-@app.route('/rede/selecao_de_itens/', methods=['POST']) #usando post, não precisa criar arquivo temporário para abrir nova aba com itens selecionados
+@app.route('/rede/selecao_de_itens', methods=['POST']) #usando post, não precisa criar arquivo temporário para abrir nova aba com itens selecionados
 @limiter.limit(limiter_padrao)
 def serve_post_json():
     listaJson = request.form.get('data')
@@ -364,6 +367,116 @@ def serve_envia_json_acao(acao=''):
         return jsonify({'mensagem':'Servidor não foi configurada para esta ação'})
 #.def serve_envia_json_acao
 
+# @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
+# def serve_arquivos_download(arquivopath):
+#     if not config.par.bArquivosDownload:
+#         return Response("Solicitação não autorizada", status=400)
+#     pedacos = os.path.split(arquivopath)  
+#     #print(f'{arquivopath=}')
+#     #print(f'{pedacos=}')
+#     if not pedacos[0]:
+#         return send_from_directory(local_file_dir, pedacos[1]) #, as_attachment=True)
+#     if not usuarioLocal():
+#         return Response("Solicitação não autorizada", status=400)
+#     else:
+#         return send_file(arquivopath) #, as_attachment=True)
+
+      
+@app.route('/rede/dadosemarquivo/<formato>', methods = ['POST'])
+@limiter.limit(limiter_padrao)
+def serve_dadosEmArquivo(formato='xlsx'):
+    #dados = json.loads(request.form['dadosJSON']) #formato anterior
+    try: 
+        if gUwsgiLock:
+            uwsgi.lock()
+        with gLock:
+            dados = request.form.get('data')
+            try:
+                dados = json.loads(dados)
+            except Exception as err:
+                print('erro em dadosemarquivo:', err)
+                return 
+            if formato=='xlsx':
+                return send_file(rede_relacionamentos.dadosParaExportar(dados), download_name="rede_dados_cnpj.xlsx", as_attachment=True)
+            elif formato=='anx':
+                try:
+                    import i2
+                    return send_file(i2.jsonParai2(dados), download_name="rede_dados_cnpj.anx", as_attachment=True)
+                except Exception as err:
+                    print('erro na exportacao i2: ', err)
+                #return send_file('folium.html', download_name="mapa.html", as_attachment=False)
+    finally:
+        if gUwsgiLock:
+            uwsgi.unlock() 
+#.def serve_dadosEmArquivo
+
+@app.route('/rede/mapa', methods = ['POST'])
+@limiter.limit(limiter_padrao)
+def serve_mapa():
+    dados = request.form.get('data')
+    try:
+        dados = json.loads(dados)['no']
+    except Exception as err:
+        print('erro em mapa:', err)
+        return 
+    import mapa
+    outputStream = mapa.geraMapa(dados, ggeocode_max)
+    return send_file(outputStream, download_name="mapa.html", as_attachment=False)
+#.def serve_mapa
+
+# #formdowload substituido por outro método, cria form direto na página
+# @app.route('/rede/formdownload.html', methods = ['GET','POST'])
+# @limiter.limit(limiter_padrao)
+# def serve_form_download(): #formato='pdf'):
+#     return '''
+#         <html>
+#           <head></head>
+#           <body>
+#             <form id='formDownload' action="" method="POST">
+#               <textarea name="dadosJSON"></textarea>
+#             </form>
+#           </body>
+#         </html>
+#     '''
+# #.def serve_form_download
+    
+#@app.route('/rede/abrir_arquivo/', methods = ['POST'])
+@app.route('/rede/abrir_arquivo', methods = ['POST'])
+@limiter.limit(limiter_padrao)
+#def serve_abrirArquivoLocal(nomeArquivo=''):
+def serve_abrirArquivoLocal():
+    if not config.par.bArquivosDownload:
+        return Response("Solicitação não autorizada", status=400)
+   # print('remote addr', request.remote_addr)
+    #print('host url', request.host_url)
+    lista = request.get_json()
+    #print(lista)
+    nomeArquivo = lista[0]
+    #print(f'{nomeArquivo=}')
+    if not usuarioLocal():
+        print(f'serve_abrirArquivoLocal: {nomeArquivo}')
+        print('operação negada.', f'{request.remote_addr}')
+        return jsonify({'retorno':False, 'mensagem':'Operação não autorizada,'})
+    #arquivoParaAbrir = nomeArquivo #secure_filename(nomeArquivo) 
+    #if '/' not in nomeArquivo: #windows usa \
+    nomeSplit = os.path.split(nomeArquivo)
+    if not nomeSplit[0]: #sem caminho inteiro
+        nomeArquivo = os.path.join(local_file_dir, nomeArquivo)
+    extensao = os.path.splitext(nomeArquivo)[1].lower()
+    print(f'serve_abrirArquivoLocal: {nomeArquivo}')
+    if not os.path.exists(nomeArquivo):
+        if nomeSplit[0]:
+            return jsonify({'retorno':False, 'mensagem':'Arquivo não localizado,'})
+        else:
+            return jsonify({'retorno':False, 'mensagem':'Não foi localizado na pasta arquivos do projeto.'})
+    if (extensao in kExtensaoDeArquivosPermitidos) and os.path.exists(nomeArquivo):
+        os.startfile(nomeArquivo)
+        #return HttpResponse(json.dumps({'retorno':True}), content_type="application/json")
+        return jsonify({'retorno':True, 'mensagem':'Arquivo aberto,'})
+    else:
+        return jsonify({'retorno':False, 'mensagem':'Extensão de arquivo não autorizada,'})
+#.def serve_abrirArquivoLocal
+
 if bConsultaChaves: 
     @app.route('/rede/busca_google', methods=['GET', 'POST'])
     @limiter.limit(limiter_google)
@@ -411,86 +524,6 @@ elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
         except:
             return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-C'})
     #.def serve_busca_google síncrono sem chaves
-
-# @app.route('/rede/arquivos_download/<path:arquivopath>') #, methods=['GET'])
-# def serve_arquivos_download(arquivopath):
-#     if not config.par.bArquivosDownload:
-#         return Response("Solicitação não autorizada", status=400)
-#     pedacos = os.path.split(arquivopath)  
-#     #print(f'{arquivopath=}')
-#     #print(f'{pedacos=}')
-#     if not pedacos[0]:
-#         return send_from_directory(local_file_dir, pedacos[1]) #, as_attachment=True)
-#     if not usuarioLocal():
-#         return Response("Solicitação não autorizada", status=400)
-#     else:
-#         return send_file(arquivopath) #, as_attachment=True)
-
-      
-@app.route('/rede/dadosemarquivo/<formato>', methods = ['GET', 'POST'])
-@limiter.limit(limiter_padrao)
-def serve_dadosEmArquivo(formato='xlsx'):
-    dados = json.loads(request.form['dadosJSON'])
-    if formato=='xlsx':
-        return send_file(rede_relacionamentos.dadosParaExportar(dados), download_name="rede_dados_cnpj.xlsx", as_attachment=True)
-    elif formato=='anx':
-        try:
-            import i2
-            return send_file(i2.jsonParai2(dados), download_name="rede_dados_cnpj.anx", as_attachment=True)
-        except Exception as err:
-            print('erro na exportacao i2: ', err)
-#.def serve_dadosEmArquivo
-
-@app.route('/rede/formdownload.html', methods = ['GET','POST'])
-@limiter.limit(limiter_padrao)
-def serve_form_download(): #formato='pdf'):
-    return '''
-        <html>
-          <head></head>
-          <body>
-            <form id='formDownload' action="" method="POST">
-              <textarea name="dadosJSON"></textarea>
-            </form>
-          </body>
-        </html>
-    '''
-#.def serve_form_download
-    
-@app.route('/rede/abrir_arquivo/', methods = ['POST'])
-@limiter.limit(limiter_padrao)
-#def serve_abrirArquivoLocal(nomeArquivo=''):
-def serve_abrirArquivoLocal():
-    if not config.par.bArquivosDownload:
-        return Response("Solicitação não autorizada", status=400)
-   # print('remote addr', request.remote_addr)
-    #print('host url', request.host_url)
-    lista = request.get_json()
-    #print(lista)
-    nomeArquivo = lista[0]
-    #print(f'{nomeArquivo=}')
-    if not usuarioLocal():
-        print(f'serve_abrirArquivoLocal: {nomeArquivo}')
-        print('operação negada.', f'{request.remote_addr}')
-        return jsonify({'retorno':False, 'mensagem':'Operação não autorizada,'})
-    #arquivoParaAbrir = nomeArquivo #secure_filename(nomeArquivo) 
-    #if '/' not in nomeArquivo: #windows usa \
-    nomeSplit = os.path.split(nomeArquivo)
-    if not nomeSplit[0]: #sem caminho inteiro
-        nomeArquivo = os.path.join(local_file_dir, nomeArquivo)
-    extensao = os.path.splitext(nomeArquivo)[1].lower()
-    print(f'serve_abrirArquivoLocal: {nomeArquivo}')
-    if not os.path.exists(nomeArquivo):
-        if nomeSplit[0]:
-            return jsonify({'retorno':False, 'mensagem':'Arquivo não localizado,'})
-        else:
-            return jsonify({'retorno':False, 'mensagem':'Não foi localizado na pasta arquivos do projeto.'})
-    if (extensao in kExtensaoDeArquivosPermitidos) and os.path.exists(nomeArquivo):
-        os.startfile(nomeArquivo)
-        #return HttpResponse(json.dumps({'retorno':True}), content_type="application/json")
-        return jsonify({'retorno':True, 'mensagem':'Arquivo aberto,'})
-    else:
-        return jsonify({'retorno':False, 'mensagem':'Extensão de arquivo não autorizada,'})
-#.def serve_abrirArquivoLocal
 
 def caminhoArquivoLocal(nomeArquivo):
     nomeSplit = os.path.split(nomeArquivo)

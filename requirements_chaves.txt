@@ -3,6 +3,7 @@ aiohttp
 beautifulsoup4
 Flask
 Flask_Limiter
+folium
 langdetect
 nest_asyncio
 pandas

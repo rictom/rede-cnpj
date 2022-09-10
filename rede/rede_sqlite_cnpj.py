@@ -610,7 +610,7 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
             con.execute(sql)
         registros = con.execute(f'select count(*) from {tmp}_ids').fetchone()[0]
         if registros>kLimiteCamada:
-            mensagem='Alcançou apenas a camada {cam}, a camada {camada} não foi alcançada, pois se excedeu o limite de itens.'
+            mensagem=f'Alcançou apenas a camada {cam}, a camada {camada} não foi alcançada, pois se excedeu o limite de itens.'
             break
         if registros==registrosAnterior:
             mensagem = f'Alcançou a camada {cam}, não havia mais itens até a camada {camada}.'
@@ -759,14 +759,29 @@ def dadosDosNosCNPJs(con, cnpjs, nosaux, dicRazaoSocial, camadasIds):
             ''' #pode haver empresas fora da base de teste
     setCNPJsRecuperados = set()
     for k in con.execute(query).fetchall():
-        listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
-        logradouro = ', '.join(listalogradouro)
+        logradouro_complemento =  k['complemento'].strip() #strip(';')]
+        if k['uf']!='EX':
+            #listaaux.append(k['bairro']) #se for empresa no exterior, o bairro as vezes aparece como municipio
+            logradouro_complemento += ('-' + k['bairro'].strip()) if k['bairro'].strip() else ''
+            logradouro_complemento = logradouro_complemento.removeprefix('-')
+        #listalogradouro = [j.strip() for j in listaaux if j.strip()]
+        #listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
+        logradouro = ', '.join([k['logradouro'].strip(), k['numero'].strip()] )
+        if not logradouro.startswith(k['tipo_logradouro'].strip()):
+            logradouro = k['tipo_logradouro'].strip() + ' ' + logradouro
+        logradouro = re.sub("\s\s+", " ", logradouro)
+        logradouro_complemento = re.sub("\s\s+", " ", logradouro_complemento)
         no = {'id': cnpj2id(k['cnpj']), 'descricao': k['razao_social'], 
               'camada': camadasIds[cnpj2id(k['cnpj'])], 'tipo':0, 'situacao_ativa': int(k['situacao'])==2,
-              'logradouro': f'''{k['tipo_logradouro']} {logradouro}''',
-              'municipio': k['municipio'], 'uf': k['pais_'] if k['uf']=='EX' else k['uf'], 
+              'logradouro': logradouro,
+              'logradouro_complemento': logradouro_complemento, #quebrando complemento, para poder usar logradouro no openstreetmap
+              'municipio': k['municipio'], 
+              'uf':k['uf'], 
               'cod_nat_juridica':k['cod_nat_juridica']
               }
+        if k['uf']=='EX':
+            no['municipio']=k['bairro']
+            no['pais']=k['pais_']
         nosaux.append(copy.deepcopy(no))
         setCNPJsRecuperados.add(k['cnpj'])
     #trata caso excepcional com base de teste, cnpj que é sócio não tem registro na tabela empresas
@@ -910,13 +925,16 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
                 #            "camada":cam+1, "tipoDescricao":'link',"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
                 ligacao = {"origem":k['id1'], "destino":k['id2'], 
                            "cor": "silver" if  tipoLink=='endereco' else "gold", #"cor":"gray", 
-                           "camada":cam+1, "tipoDescricao":'link'} #"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
-
-                if tipoLink=='base_local':
+                           "camada":cam+1} #"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
+                if tipoLink=='endereco':
+                    ligacao['tipoDescricao'] = k['descricao']
+                    ligacao['label'] = k['descricao']
+                elif tipoLink=='base_local':
                     ligacao['label'] = k['descricao'] 
                     ligacao['tipoDescricao'] = 'base_local'
                 else:
                     ligacao['label'] = k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)
+                    ligacao['tipoDescricao'] = k['descricao'] 
                 ligacoes.append(copy.deepcopy(ligacao))
                 setLigacoes.add((k['id1'], k['id2']))
             else:
@@ -994,7 +1012,7 @@ def jsonDados(listaIds):
             '''
     camposPJ = ['cnpj', 'matriz_filial', 'razao_social', 'nome_fantasia', 'data_inicio_atividades', 'situacao_cadastral', 
 				'data_situacao_cadastral', 'motivo_situacao_cadastral', 'natureza_juridica', 'cnae_fiscal', 'porte_empresa', 'opcao_mei',
-				'endereco', 'municipio', 'uf', 'cep', 'nm_cidade_exterior', 'nome_pais', 'nm_cidade_exterior', 'nome_pais',
+				'endereco', 'municipio', 'uf', 'cep', 'nm_cidade_exterior', 'nome_pais', 'nm_cidade_exterior', 'pais',
 				'ddd1', 'telefone1', 'ddd2', 'telefone2', 'ddd_fax', 'fax', 'correio_eletronico', 'capital_social'
 				]
     dlista = []
@@ -1005,8 +1023,15 @@ def jsonDados(listaIds):
             d = dict(k)  
             capital = d['capital_social'] #capital social vem multiplicado por 100
             capital = f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.')
-            listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
+            # listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
+            # logradouro = ', '.join(listalogradouro)
+            # logradouro = re.sub("\s\s+", " ", logradouro)
+            listaaux = [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';')]
+            if k['uf']!='EX':
+                listaaux.append(k['bairro']) #se for empresa no exterior, o bairro as vezes aparece como municipio
+            listalogradouro = [j.strip() for j in listaaux if j.strip()]
             logradouro = ', '.join(listalogradouro)
+            logradouro = re.sub("\s\s+", " ", logradouro)
             #d['cnpj'] = f"{d['cnpj']} - {'Matriz' if d['matriz_filial']=='1' else 'Filial'}"       
             d['matriz_filial'] = 'Matriz' if d['matriz_filial']=='1' else 'Filial'
             d['data_inicio_atividades'] = ajustaData(d['data_inicio_atividades'])
@@ -1024,8 +1049,10 @@ def jsonDados(listaIds):
             d['capital_social'] = capital 
             d['municipio'] = d['municipio_texto']
             d['opcao_mei'] = d['opcao_mei'] if  d['opcao_mei']  else ''
-            d['uf'] = d['pais_'] if d['uf']=='EX' else d['uf']
-    
+            d['uf'] = d['uf'] #d['pais_'] if d['uf']=='EX' else d['uf']
+            if k['uf']=='EX':
+                d['municipio'] = k['bairro']
+                d['pais'] = k['pais_']
             d = {k:v for k,v in d.items() if k in camposPJ}
             d['id'] = 'PJ_'+ d['cnpj']
             dlista.append(copy.deepcopy(d))

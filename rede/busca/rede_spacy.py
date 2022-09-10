@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 21 15:09:01 2022
+Created on julho/2022
+@author: github rictom/rede-cnpj
+https://github.com/rictom/rede-cnpj
 
-@author: ricar
 pip install spacy
 pip install langdetect
 python -m spacy download en_core_web_sm

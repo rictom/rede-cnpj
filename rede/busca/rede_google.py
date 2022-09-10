@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jul 16 22:09:36 2022
-
-@author: ricar
+Created on julho/2022
+@author: github rictom/rede-cnpj
+https://github.com/rictom/rede-cnpj
 """
 import os, copy, json, sys, time, re, pathlib
 #from bs4 import BeautifulSoup as soup
@@ -13,7 +13,7 @@ import bs4
 import asyncio
 import aiohttp
 import platform
-if platform.system()=='Windows': #isso faz a função input não funcionar
+if platform.system()=='Windows': #isso faz dá algum erro no windows
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
 try:
@@ -33,13 +33,12 @@ debug = True
 imagens = []
 gsitesAIgnorar = None
 
-#kCamArquivoSitesBloqueados = 'rede_google_sites_bloqueados.txt'
-kCamArquivoSitesBloqueados = os.path.join(os.path.dirname(__file__), 'rede_google_sites_bloqueados.txt')
+kCamArquivoSitesAIgnorar = os.path.join(os.path.dirname(__file__), 'rede_google_sites_a_ignorar.txt')
 def pularSite(url):
     global gsitesAIgnorar
     if gsitesAIgnorar is None:
-        if os.path.exists(kCamArquivoSitesBloqueados):
-            gsitesAIgnorar = set(open(kCamArquivoSitesBloqueados).read().split('\n'))
+        if os.path.exists(kCamArquivoSitesAIgnorar):
+            gsitesAIgnorar = set(open(kCamArquivoSitesAIgnorar).read().split('\n'))
         else:
             gsitesAIgnorar = set()
     dominio = urlparse(url).netloc
