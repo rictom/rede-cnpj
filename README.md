@@ -22,7 +22,7 @@ Funciona parcialmente em celular, com menu errático.
 ## Versão em python:
 É preciso ter instalado no computador:
 - python <b>versão 3.9</b> ou posterior.<br> 
-- 40GB de espaço livre, para utilizar a base de CNPJs em sqlite.
+- 40GB de espaço livre em disco, para utilizar a base completa de CNPJs em sqlite.
 
 Use o comando<br>
 pip install -r requirements.txt<br>
