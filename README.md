@@ -149,6 +149,14 @@ https://fontawesome.com<br>
 
 
 ## Histórico de versões
+
+<b>versão 0.8.7 (setembro/2022)</b>
+- abre endereços com OpenStreetMap, pelo botão ![image](https://user-images.githubusercontent.com/71139693/189489292-d00f9e2f-f9e7-497d-a97a-c6fde790ad1d.png) no canto superior direito da tela: <br>
+ ![mapa](https://user-images.githubusercontent.com/71139693/189489167-bdb49057-aa1a-422b-866f-3b93c7cc94ff.png)
+<br>
+- o parâmetro geocode_max em rede.ini define a quantidade de endereços que serão buscados pela api do OpenStreetMap. Para evitar bloqueio, é feito uma pausa de um segundo entre cada chamada da api. Se a quantidade de endereços for maior que o parâmetro geocode_max, os endereços dos cnpjs serão substituidos pelas coordenadas dos municipios de acordo com tabela do IBGE.<br>
+- em cada popup de endereço, há quatro opções: a)abrir o endereço no Google Maps; b)abrir uma rede de relacionamentos do cnpj; c)exibir dados do cnpj; d)selecionar o item na rede original. <br><br>
+
 <b>versão 0.8.6 (agosto/2022)</b>
 - exportação para gráfico no formato (ex-IBM) i2 Chart Reader ou Analyst's Notebook (.anx), pela opção no menu Salvar/Abrir>Salvar i2...:<br>![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)<br>
 - O i2 Chart Reader pode ser baixado gratuitamente no site https://i2group.com/i2-chart-reader?hsLang=en<br>
@@ -156,7 +164,8 @@ https://fontawesome.com<br>
 - opção H para abrir árvore com links de busca na página do Google:![image](https://user-images.githubusercontent.com/71139693/185807100-2627141d-d67b-4325-92fa-0014cedaac7c.png)
 
 - opção SHIFT+H para abrir árvore com palavras chaves dos links da página do Google. Exemplo: 
-![image](https://user-images.githubusercontent.com/71139693/187549403-8252f372-5d5d-4147-b9cf-5f81984126cb.png)
+![chaves](https://user-images.githubusercontent.com/71139693/189489251-8aba03e6-8cb0-4c68-9a6e-e38655d6b748.png)
+
 
 - para usar a opção SHIFT+H, deve-se instalar as bibliotecas pelo comando pip install -r requirements_chaves.txt<br> e depois instalar os módulos do spacy pelos comandos python -m spacy download en_core_web_sm e python -m spacy download pt_core_news_lg. No arquivo rede.ini, modifique o parâmetro para busca_chaves = 1
 - Como a opção de chaves é lenta, ela não foi habilitada para rodar no servidor. Utilize com a versão local do projeto.
