@@ -12,11 +12,11 @@ from requests.utils import unquote
 import flask_limiter #pip install Flask-Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
-import os, sys, json, secrets, io, glob, copy, pathlib
+import os, sys, json, secrets, io, glob, copy, pathlib, unicodedata, string
 from functools import lru_cache
 import rede_config as config
 import pandas as pd
-
+ 
 try:
     import rede_sqlite_cnpj as rede_relacionamentos
     print('utilizando rede_sqlite como rede_relacionamentos')
@@ -28,11 +28,8 @@ except:
         raise Exception('não há módulo de relacionamentos!!!')
 
 sys.path.append('busca') #pasta com rotinas de busca
-try:
-    import rede_google
-except:
-    print('não importou módulo rede_google')
-    pass
+import i2, mapa, rede_google
+
 try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
     import rede_acao
 except:
@@ -43,7 +40,7 @@ except:
 app = Flask("rede")
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
-kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg']
+kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
 limiter = flask_limiter.Limiter(app, key_func=get_remote_address) #, default_limits=["200 per day", "50 per hour"])
 limiter_padrao = config.config['ETC'].get('limiter_padrao', '20/minute').strip() 
 limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip() 
@@ -96,7 +93,7 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     listaEntrada = ''
     listaJson = ''
     #camada = config.par.camadaInicial if config.par.camadaInicial else camada
-    camada = camada if camada else config.par.camadaInicial
+    #camada = camada if camada else config.par.camadaInicial
     camada = min(gp['camadaMaxima'], camada)
     #print(list(request.args.keys()))
     #print(request.args.get('mensagem_inicial'))
@@ -400,7 +397,6 @@ def serve_dadosEmArquivo(formato='xlsx'):
                 return send_file(rede_relacionamentos.dadosParaExportar(dados), download_name="rede_dados_cnpj.xlsx", as_attachment=True)
             elif formato=='anx':
                 try:
-                    import i2
                     return send_file(i2.jsonParai2(dados), download_name="rede_dados_cnpj.anx", as_attachment=True)
                 except Exception as err:
                     print('erro na exportacao i2: ', err)
@@ -419,8 +415,9 @@ def serve_mapa():
     except Exception as err:
         print('erro em mapa:', err)
         return 
-    import mapa
-    outputStream = mapa.geraMapa(dados, ggeocode_max)
+    #mostraTooltip = not(request.args.get('mobile', default = 0, type = int) and True)
+    mobile = any(word in request.headers.get('User-Agent') for word in ['Mobile','Opera Mini','Android'])
+    outputStream = mapa.geraMapa(dados, ggeocode_max, mostraTooltip=not mobile)
     return send_file(outputStream, download_name="mapa.html", as_attachment=False)
 #.def serve_mapa
 
@@ -515,7 +512,7 @@ elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
         texto_busca = request.args.get('q', default = '', type = str)
         n_palavras_chave = request.args.get('palavras_chave', default = 0, type = int)    
         if n_palavras_chave:
-            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para extrair as chaves'})
+            return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para extrair as chaves. Baixe o projeto no github e rode a Rede localmente com essa opção ativada.'})
         if not texto_busca:
             return jsonify({'no':[], 'ligacao':[], 'mensagem':'Sem texto'})
         try:
@@ -555,7 +552,7 @@ def nomeArquivoNovo(nome):
 #.def nomeArquivoNovo
 
 def removeAcentos(data):
-  import unicodedata, string
+  #import unicodedata, string
   if data is None:
     return ''
   return ''.join(x for x in unicodedata.normalize('NFKD', data) if x in string.printable)
@@ -574,7 +571,8 @@ def imagensNaPastaF(bRetornaLista=True):
 #.def imagensNaPastaF
    
 if __name__ == '__main__':
-    import webbrowser
-    webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 
+    import webbrowser, platform
+    if platform.system()=='Windows': 
+        webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 
     app.run(host='0.0.0.0',debug=True, use_reloader=False, port=config.par.porta_flask)
             #ssl_context=('certificado/rede_selfsigned.crf', 'certificado/rede_selfsigned.key'))

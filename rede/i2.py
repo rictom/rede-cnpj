@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Aug 20 15:19:17 2022
-
-@author: ricar
+Created on ago/2022
+@author: github rictom/rede-cnpj
+https://github.com/rictom/rede-cnpj
 
 biblioteca para gerar pyanx, ver 
 https://github.com/pcbje/pyanx
-"""
+""" 
 
 import sys, json
 sys.path.append('pyanx')
@@ -36,8 +36,9 @@ def jsonParai2(djson):
                    'icone-grafo-endereco.png':'Place',
                    'icone-grafo-email.png':'Email',
                    'Conta':'Account',
-                   'key.png':'Key', #verificar, ícone invalido
-                   'link.png':'Link' #verificar, ícone invalido
+                   'google.png':'Search',
+                   'key.png':'Search', #verificar, ícone invalido
+                   'link.png':'Document' #verificar, ícone invalido
                    #'':u'Cabinet',
                    #'':u'Office'
                    } 
@@ -65,7 +66,7 @@ def jsonParai2(djson):
         if tipo.startswith('end') or tipo.startswith('tel') or tipo.startswith('email') or tipo.startswith('chave'):
             tligacao = ''
         else:
-            tligacao = removeAcentos(campos['label']+(':'+campos['tipoDescricao'] if campos['tipoDescricao'] else ''))
+            tligacao = removeAcentos(campos['label']) #+(':'+campos['tipoDescricao'] if campos['tipoDescricao'] else ''))
         chart.add_edge(noi2[id1], noi2[id2], tligacao)
     #chart.create('demo.anx')
     return chart.createStream()

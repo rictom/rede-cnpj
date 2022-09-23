@@ -2,13 +2,15 @@
 <html>
 <head>
 <title>Rede</title>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta charset="utf-8" />
 <meta name="description" content="Visualização Gráfica de Empresas e de Sócios com dados abertos da Receita Federal do Brasil. Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."/>
 <meta name="keywords" content="CNPJ, Dados Abertos, Receita Federal"/>
 <meta name="author" content="https://github.com/rictom/rede-cnpj"/>
+<meta name="google-site-verification" content="6mPFyguPx-3Gmn2rMu4YXAv7BrAJGGDGZl6K0oCOtGg" />
 
-<!--meta name="viewport" content="width=device-width, initial-scale=1" -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" /> <!--, minimal-ui" /--> 
+<!--meta name="viewport" content="width=device-width, user-scalable=no" /-->
 
 <!-- 
 projeto disponível em https://github.com/rictom/rede-cnpj
@@ -381,7 +383,9 @@ graphics.node(function(node) {
 				//
 			} else {
 				selecionaNoid(node.id, false);
-				//menu_incluirCamada(node.id, 1);			
+				//menu_incluirCamada(node.id, 1);		
+				menu_incluir1Camada(node.id); 
+				/*
 				if (gparam.camadaIdExpandido[node.id]){ //se ícone já foi clicado, abre camada seguinte.
 					gparam.camadaIdExpandido[node.id]++;
 					menu_incluirCamada(node.id, gparam.camadaIdExpandido[node.id]);
@@ -390,7 +394,7 @@ graphics.node(function(node) {
 					//gparam.camadaIdExpandido[node.id] = 1;
 					gparam.camadaIdExpandido = {}; 
 					gparam.camadaIdExpandido[node.id]=1; //só mantem o último id selecionado
-				}
+				} */
 				
 			}
 		};
@@ -399,14 +403,18 @@ graphics.node(function(node) {
 	ui.ontouchstart = function(event) {
 		gparam.inicioToque = new Date().getTime();
 	};
+	
 	ui.ontouchend = function(event) {
-		//todo verificar posição
+		//TODO verificar posição
 		var currentTime = new Date().getTime();
 		var tempoToque = currentTime - gparam.ultimoToque;
+		gparam.ultimoToque = currentTime;
 		if ((tempoToque<500) && (tempoToque > 0)) {
 			//double tab ondblclick
 			selecionaNoid(node.id, false);
 			//menu_incluirCamada(node.id, 1);
+			menu_incluir1Camada(node.id); 
+			/*
 			if (gparam.camadaIdExpandido[node.id]){ //se ícone já foi clicado, abre camada seguinte.
 				gparam.camadaIdExpandido[node.id]++;
 				menu_incluirCamada(node.id, gparam.camadaIdExpandido[node.id]);
@@ -414,8 +422,7 @@ graphics.node(function(node) {
 				menu_incluirCamada(node.id, 1);
 				gparam.camadaIdExpandido = {}; 
 				gparam.camadaIdExpandido[node.id]=1;
-			}
-			menu_incluirCamada(node.id, 1);
+			} */
 			event.preventDefault();
 		} else {
 			var touchLength = currentTime - gparam.inicioToque;
@@ -428,7 +435,7 @@ graphics.node(function(node) {
 			selecionaNoid(node.id, event.shiftKey);
 			event.preventDefault();
 		}
-		gparam.ultimoToque = currentTime;
+				
 		return false;
 	};
 	ui.onmouseover = function(event) { 
@@ -492,7 +499,7 @@ graphics.link(function(link){
 		linkUI.attr("d", data);
 		var elemento = document.getElementById('link_label_'+linkUI.attr('id'));
 		elemento.attr("x", (from.x + to.x) / 2).attr("y", (from.y + to.y) / 2)
-			.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');;
+				.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');	
 		// se for grande, deixa o texto do link na horizontal, se for menor alinha com a ligacao.
 		if  (elemento.textContent.length <= 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
 			// calcula o angulo para exibir o rótulo inclinado
@@ -509,6 +516,12 @@ graphics.link(function(link){
 				+ parseInt((from.y + to.y) / 2) + ") translate(0," + baseline + ")")
 				.attr('text-anchor','middle')
 				.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');
+		} else { //se estava inclinado e o texto aumentou para ficar na horizontal, tem que remover o transform
+			/*
+			if (elemento.hasAttribute('transform')) {
+				elemento.removeAttribute('transform');
+			}
+			elemento.attr('text-anchor','start'); */
 		}
 })//.graphics.link(function(link)
 
@@ -582,7 +595,7 @@ function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	// quando node=null e shift_pressionado=false, remove todos os nós da seleção.
 	//selecionaRetangular=true, seleciona, não inverte
 	var nodeEstavaSelecionado = false;
-
+	//gparam.camadaIdExpandido = {}; //reseta memória de camada
 	if (nodeid) {
 		nodeEstavaSelecionado = gparam.idNosSelecionados.has(nodeid);
 		if (nodeEstavaSelecionado) {
@@ -1421,7 +1434,7 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 							//alert('Os dados foram inseridos na base local.');
 							var textoMensagem = 'Os dados foram inseridos na base local.';
 						}	
-						exibe_mensagem(textoMensagem, data.mensagem);
+						exibe_mensagem_sucesso_erro(textoMensagem, data.mensagem);
 					} else {
 						alertify.error('Aconteceu um erro. ' + data.mensagem);
 					}					
@@ -1635,7 +1648,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	if (!bNaoConfirma) {
 		if (kNosAInserir > gparam.confirmaAntesDeInserirNNos) {
 			let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?';
-			if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.\nApós carregar o gráfico, utilize a rotina no menu "Visualização>Quebrar o gráfico em partes"';
+			if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar.';  //\nApós carregar o gráfico, utilize a rotina no menu "Visualização>Quebrar o gráfico em partes"';
 			var resp = confirm(mensagem);
 			if (!resp) {
 				return;
@@ -1707,9 +1720,21 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			}
 			let uniao = new Set([...conjLabel, ...conjNovo]);
 			uniao.delete('');
-			ligExistente.data.label = [...uniao].join(';')
-			document.getElementById('link_label_'+ligExistente.data.id).text(filtraTextoLigacao(ligExistente.data.label));
-		} else { //if (!graph.hasLink(ligaux.origem, ligaux.destino)) { 
+			var labelLigacaoNovo = [...uniao].join(';');
+			if (labelLigacaoNovo != labelLigacao) {
+				ligExistente.data.label = labelLigacaoNovo;
+				var ligacaoElementoAux = document.getElementById('link_label_'+ligExistente.data.id); //ttt
+				ligacaoElementoAux.text(filtraTextoLigacao(ligExistente.data.label)); //.attr('title',filtraTextoLigacao(ligExistente.data.label)); 
+				// && (filtraTextoLigacao(labelLigacao).length > 2*20) 
+				if (ligacaoElementoAux.hasAttribute('transform')) { //remove rotação (se o texto for longo, não será rotacionado)
+					ligacaoElementoAux.removeAttribute('transform');
+				}
+				ligacaoElementoAux.attr('text-anchor','start');
+				//ajusta tooltip
+				//talvez não seja necessário //if (ligacaoElementoAux.children[0]) ligacaoElementoAux.children[0].remove();
+				ligacaoElementoAux.insertAdjacentHTML('beforeEnd','<title>'+filtraTextoLigacao(ligExistente.data.label)+'</title>');
+			}
+		} else { //ligacao Nova
 			ligaux.id = gparam.kligacoes;
 			if (1) { //((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino))) {
 				try { //dava erro com a rede de teste
@@ -1745,7 +1770,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		}
 	}
 	if ((!kn) && (!kl)) textoMensagem += ' Não encontrou novos itens';
-	exibe_mensagem(textoMensagem, jsonIn.mensagem); 
+	exibe_mensagem_sucesso_erro(textoMensagem, jsonIn.mensagem); 
 	if (kn  && !gparam.bRenderAtivado) { //ativa leiaute por 1 segundo para exibir novos itens
 		gparam.renderer.resume();
 		setTimeout(
@@ -1758,7 +1783,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	}
 }//.function inserirJson
 
-function exibe_mensagem(textoMensagem, mensagem) {
+function exibe_mensagem_sucesso_erro(textoMensagem, mensagem) {
 	if (textoMensagem) {
 		alertify.success(textoMensagem)
 	}
@@ -1766,7 +1791,7 @@ function exibe_mensagem(textoMensagem, mensagem) {
 		alertify.error(mensagem);
 	}
 
-}//.exibe_mensagem
+}//.function exibe_mensagem
 
 function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	//if idin='', manda dados dos nós selecionados
@@ -1788,11 +1813,15 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 			}	
 		}
 	}
+	if ((gparam.idNosSelecionados.size ==1) && gparam.idnoSelecionado && ([ 'EN_','TE_', 'EM_'].includes(gparam.idnoSelecionado.substr(0,3))) && (camada>1)) {
+		alertify.warning('A rotina só expande endereço, telefone ou email em camada 1. Para expandir os itens relacionados, selecione-os primeiro com a tecla J (menu Filtrar/Localizar>Adjacentes)');
+	}
 	if (tipo=='links') {
 		dialogoParametrosLink();
 	} else {
 			if (camada>10) {
 				alertify.error('O número de camadas é limitado em 10.');
+				return;
 			}
 			camada = Math.min(camada, 10);
 		url = base + 'grafojson/cnpj/' + camada + '/';
@@ -1805,7 +1834,7 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 		idin = ([ 'LI_', 'AR_'].includes(idin.substr(0,3)))? 'LI' : idin;
 		let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]); //TODO: remover os LI_ da requisição para o servidor
 		//url += idin ? idin : gparam.idnoSelecionado;
-		url += idin ? idin : (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) ? 'LI' : gparam.idnoSelecionado); //aqui colocando LI porque o flask exige um identificador
+		url += idin ? idin : (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) ? 'LI' : gparam.idnoSelecionado); //aqui colocando LI porque o flask exige um identificador... de fato os parâmetros estão indo via bodyjson 
 		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
@@ -1820,7 +1849,9 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 				//console.log(data);
 				document.body.style.cursor = 'default';
 				if (data.no.length) {
-					inserirJson(data, idin + ' em camada ' + camada +'. ', bNaoConfirma);
+					//var textoInserir = data.mensagem ? idin + '. ': idin + ' em camada ' + camada +'. ';
+					var textoInserir = data.mensagem ? idin + '. ': junta(idin, ' em ', 'camada ' + camada +'. ');
+					inserirJson(data, textoInserir, bNaoConfirma);
 				} else if (bAbriuAbaLink) {
 					;
 				} else {
@@ -1905,6 +1936,21 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 	}
 }//.function menu_incluirCamada
 
+function menu_incluir1Camada(idin) {
+	//para tratar 1 camada, se clicar repetidamente o mesmo item, vai aumentando as camadas.
+	var idref = idin;
+	var camada = 1;
+	if (!idin) {
+		idref = [...gparam.idNosSelecionados][0];
+	}
+	if (gparam.camadaIdExpandido[idref]){ //se ícone já foi clicado, abre camada seguinte.
+		camada = gparam.camadaIdExpandido[idref] + 1;
+	}
+	menu_incluirCamada(idin, camada);
+	gparam.camadaIdExpandido = {}; //reseta, expansão gradativa só de 1 item por vez.
+	gparam.camadaIdExpandido[idref]=camada;
+}//.function menu_incluir1Camada
+
 function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	if (teclaCtrl) {
 		return;
@@ -1924,16 +1970,16 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	else {
 		itensDefault = document.getElementById('input_cnpj').value;
 	}
-	var textoPrompt = 'Digite CNPJ, radical do CNPJ, Razão Social Completa, Nome Completo do Sócio ou vários CNPJs separados por ponto e virgula (;). ';
+	var textoPrompt = 'Digite CNPJ, CNPJs separados por ponto e virgula (;), radical do CNPJ, Razão Social completa, Nome Fantasia completo ou Nome completo do Sócio. ';
 	if (!gparam.mobile) {
 		if (gparam.inicio.bBaseFullTextSearch) {
-			textoPrompt += ' Para realizar busca por parte do nome, utilize * (curinga de palavra), ? ( 1 caractere) ou aspas (mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, F?LANO DE TAL , "FULANO DE"*, EMPRESA* BRASILEIRA.';
+			textoPrompt += ' Para realizar busca por parte do nome, utilize * (curinga de palavra), ? ( 1 caractere) ou aspas (mesma sequência de palavras). Por ex: FULANO DE *, *DE TAL, *FULANO*, "FULANO DE"*, F?LANO DE TAL, EMPRESA* BRASILEIRA. ';
 		} else {
 			textoPrompt += ' Não foi implementada busca parcial.';
 		}
 		textoPrompt += ' A busca por nome está limitada por padrão a 10 registros. Se desejar mais registros, coloque o nome seguido de @ e número, por exemplo, FULANO@20 para 20 registros. Para exibir Matriz e 10 filiais, digite apenas o Radical do CNPJ seguido de @10. Digite TESTE para visualizar um CNPJ aleatório.';
 	}
-	alertify.prompt( 'Inserir item no gráfico', textoPrompt , itensDefault
+	alertify.prompt( 'Rede - Inserir elemento', textoPrompt , itensDefault
                , function(evt, cnpjs) { 
 					gparam.inserirDefault = cnpjs;
 					try {
@@ -1954,13 +2000,19 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 						if (isNumeric(cnaux) && (cnaux.length==11)) { 
 							alertify.warning('A busca por CPF pode apresentar resultados incorretos, pois a tabela de sócios não tem todos os dígitos do identificador.');
 						}
-						if (camada==0) {
-							camada = prompt('Quantidade de Camadas (ou Níveis da consulta)', 1);
+						if (gparam.mobile) {
+							if (camada==0) {
+								camada = prompt('Quantidade de Camadas (Níveis da consulta)', 1);
+							}
+						} else {
+							camada = 1 //ttt teste, sem prompt para pedir camada
+							alertify.warning('Pressione as teclas 1 a 9 para inserir a camada correspondente ao número.'); //alerta temporario
 						}
 						if (camada) {
 							menu_incluirCamada(cn, camada);
 							gparam.numeroInsercoes += 1;
 						}
+						
 					}
 					ativaAtalhos(true);
 				}, function() { ativaAtalhos(true);}
@@ -2102,7 +2154,7 @@ function menu_GoogleMaps() {
 function menu_abrirNovaAba(idno, bNosSelecionados) {
 	var novaJanela=null;
 	if ((!idno)&&(!bNosSelecionados)) {
-		novaJanela = window.open(base + '?pula_mensagem=sim');
+		novaJanela = window.open(base); // + '?pula_mensagem=sim');
 		novaJanela.focus(); 
 		return;
 	}
@@ -2349,18 +2401,40 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 		}
 		return;
 	}
+	//ligação já existe, então edita, apaga a ligação e cria nova.
+	if ((gparam.idNosSelecionados.size==2) && !nomeLigacao) {
+		var id1 = [...gparam.idNosSelecionados][0], 
+			id2=  [...gparam.idNosSelecionados][1];
+		var labelLigacao = '';	
+		var ligExistente = graph.hasLink(id1, id2);
+		if (ligExistente) {
+			labelLigacao = ligExistente.data.label ? ligExistente.data.label : '';
+		} else { 
+			ligExistente = graph.hasLink(id2, id1);
+			if (ligExistente) { 
+				labelLigacao = ligExistente.data.label ? ligExistente.data.label : '';
+				gparam.idNosSelecionados = new Set([id2, id1]); //inverte ordem para a direção da seta permanecer a mesma
+			}
+		} 
+		if (ligExistente) {
+			nomeLigacao = prompt('Digite o texto da ligação:', labelLigacao);
+			if (nomeLigacao===null) return;
+			menu_desligar_selecionados(false);
+		}
+	}	
 	let label = nomeLigacao?nomeLigacao:'';
 	let primeiroNo = [...gparam.idNosSelecionados][0];
 	
 	if (!bSemMensagem) {
 		var mensagem = bEstrela ? 'Deseja ligar o item ' +  primeiroNo + ' aos itens ' + (gparam.idNosSelecionados.size-1) + ' selecionados?' : 'Deseja ligar os ' + gparam.idNosSelecionados.size + ' itens selecionados?';
-		mensagem += '\nDigite o texto da ligaçao (opcional):';
+		//mensagem += '\nDigite o texto da ligaçao (opcional):';
 		if (!nomeLigacao) {
 			if (nomeLigacao==='') {
 				if (!confirm(mensagem)) {
 					label = null;
 				} 
 			} else {
+				mensagem += '\nDigite o texto da ligaçao (opcional):';
 				label = prompt(mensagem, '');
 			}
 		}
@@ -3465,57 +3539,6 @@ function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto
 	downloadLink.click();
 }//.function saveTextAsFile
 
-/*
-function destroyClickedElement(event){
-	document.body.removeChild(event.target);
-}//.function destroyClickedElement
-*/
-
-/*
-function exportaIdsParaDownloadExcel() {
-	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
-	var idArray = getRedeNosLigacoes();
-	var dadosJSON = JSON.stringify(idArray); //não aceita stringify de set
-	//var mime={type:"application/json"};
-	//mime = {type:"application/octet-stream"};
-	iframeAuxiliar.onload = null;
-	var iframeDocumento = iframeAuxiliar.contentDocument || iframeAuxiliar.contentWindow.document;
-	var form = iframeDocumento.getElementById('formDownload');
-	form.dadosJSON.value = dadosJSON;
-	form.action = base + 'dadosemarquivo/xlsx' ;
-	form.submit();
-}//.function exportaIdsParaDownloadExcel
-
-function menu_exportaExcel_x(bSoSelecionados) {
-	var formato='xlsx';
-	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
-	iframeAuxiliar.onload = exportaIdsParaDownloadExcel;
-	iframeAuxiliar.src = base + 'formdownload.html';
-	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
-}//.function menu_exportaExcel
-
-function exportaIdsParai2() {
-	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
-	var idArray = getRedeNosLigacoes();
-	var dadosJSON = JSON.stringify(idArray); //não aceita stringify de set
-	//var mime={type:"application/json"};
-	iframeAuxiliar.onload = null;
-	var iframeDocumento = iframeAuxiliar.contentDocument || iframeAuxiliar.contentWindow.document;
-	var form = iframeDocumento.getElementById('formDownload');
-	form.dadosJSON.value = dadosJSON;
-	form.action = base + 'dadosemarquivo/anx' ;
-	form.submit();
-}//.function exportaIdsParai2
-
-function menu_exportai2_x(bSoSelecionados) {
-	var formato='xlsx';
-	var iframeAuxiliar = document.getElementById('iframeAuxiliarDownload');
-	iframeAuxiliar.onload = exportaIdsParai2;
-	iframeAuxiliar.src = base + 'formdownload.html';
-	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
-}//.function menu_exportaExcel
-*/
-
 function menu_exportaExcel(bSoSelecionados) {
 	menu_exportaArquivo(bSoSelecionados, 'xlsx');
 }//.function menu_exportaExcel(bSoSelecionados)
@@ -3527,6 +3550,10 @@ function menu_exportai2(bSoSelecionados) {
 function menu_exportaArquivo(bSoSelecionados, tipo) {
 	var jsonDados, url;
 	jsonDados = getRedeNosLigacoes(bSoSelecionados);
+	if (jsonDados['no'].length==0) {
+		alertify.error('Não há itens para exportar.');
+		return;
+	}
 	if (tipo=='xlsx') {
 		url = 'dadosemarquivo/xlsx';
 	} else if (tipo=='anx') {
@@ -3977,7 +4004,11 @@ function menuOnClick(e){
 function menu_botao(event) {
 	event.preventDefault();
 	// menu funciona no chrome do android mas não no firefox (não fecha o menu)
-	showMenu(7,30);
+	if (gparam.mobile) {
+		showMenu(7,80);
+	} else {
+		showMenu(7,30);
+	}
 	setTimeout(function(){
         document.addEventListener(gparam.eventclick, menuOnClick, false);
 	},1000);
@@ -4105,7 +4136,11 @@ function evento_teclasDown(e) {
 			if (ns=='0') {
 				menu_incluirCamada('', 10, tipo);
 			} else {
-				menu_incluirCamada('', parseInt(ns), tipo);
+				if ((parseInt(ns)==1)&&(tipo=='cnpj')) {
+					menu_incluir1Camada('');
+				} else {
+					menu_incluirCamada('', parseInt(ns), tipo);
+				}
 			}
 			e.preventDefault();
 			return;
@@ -4225,7 +4260,8 @@ alertifyfake = {
 	},
 	'alert':function(titulo, texto, func) {
 		menuOnClick();
-		texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '; ')
+		//texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '; ')
+		texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '\n')
 		setTimeout(function(){ alert(titulo + '\n\n' + texto);}, 500);	
 	},
 	'success':function(texto) {
@@ -4262,54 +4298,50 @@ function ajustaAmbiente_adicionarListaIconesAoMenu() {
 }//.function ajustaAmbiente_adicionarListaIconesAoMenu
 
 function ajustaAmbiente() {
-	if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ //mobile
+	menu = document.querySelector('.menu');
+	if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ //mobile
+		alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, abra um issue na página do projeto no github. Tente em um computador com o Firefox, Chrome ou Edge.');
 		//mobile. gambiarra, o alertify não funciona no ipad, no android fica muito pequeno
-		alertify.set('notifier','position', 'top-center'); //se fica de lado, os alertas não aparecem no mobile
+		alertify.set('notifier','position', 'top-left'); //se fica de lado, os alertas não aparecem no mobile
 		gparam.mobile = true;
 		gparam.inserirDefault = 'TESTE'; //como é dificil digitar no mobile, coloca um valor padrão
-		if (/Android/i.test(navigator.userAgent)) { //android
+		alertify.prompt = alertifyfake.prompt;
+		alertify.confirm = alertifyfake.confirm;
+		alertify.alert = alertifyfake.alert; 
+		alertify.warning = alertifyfake.warning;
+		if (true) { // (/Android/i.test(navigator.userAgent)) { //android
 			//no android, tenta usar menu contextual. Aumenta o tamanho do menu para poder visualizar.
 			//document.getElementsByClassName('menu')[0].style.scale=2;
-			document.querySelectorAll('.menu-btn').forEach(function(element,key) {element.style.fontSize='30px'});
-			document.querySelectorAll('.menu-text').forEach(function(element,key) {element.style.marginLeft='50px'});
-			document.querySelector('.menu').style.width='500px';
-			menu = document.querySelector('.menu');
-			document.querySelector('body').style.fontSize='xx-large'; //para alterar tamanho do texto no alertify
-			for (let botao of document.getElementsByClassName('botaosuperior')) { 
-				botao.style.fontSize = '60px'; //="font-size:60px;";
-			}
-			alertify.prompt = alertifyfake.prompt;
-			alertify.confirm = alertifyfake.confirm;
-			alertify.alert = alertifyfake.alert; 
-			alertify.warning = alertifyfake.warning;
-		} else 	{ //safari
+			document.querySelector('.menu').style.width='300px';	
+			document.querySelectorAll('.menu-btn').forEach(function(element,key) {element.style.fontSize='20px'});
+			document.querySelectorAll('.menu-text').forEach(function(element,key) {element.style.marginLeft='20px'});
+			//document.querySelector('body').style.fontSize='xx-large'; //para alterar tamanho do texto no alertify, não é necessário com viewpot=display-width
+			document.querySelectorAll('.botaosuperior').forEach(function(element,key) { if (element.style.display!='hidden') { element.style.fontSize ='20px'; }});
+		} else 	{ //safari antigo (parou de funcionar). Safari novo no ipad = versão desktop
 			gparam.safari = true;
-			alertify.prompt = alertifyfake.prompt;
-			alertify.confirm = alertifyfake.confirm;
-			alertify.alert = alertifyfake.alert; 
-			alertify.warning = alertifyfake.warning;
-			//alertify.success = alertifyfake.success;
-			//alertify.error = alertifyfake.error;	
 			//safari, trocar onclick por ontouchend nos botoes
     		var botoes = document.getElementsByClassName('botaosuperior');
     		for (var i=0; i<botoes.length; i++) { //ipad antigo não aceita let
     			botoes[i].ontouchend=botoes[i].onclick;
-    		}
-    		document.querySelectorAll('.menu-btn').forEach( function(element,key) {element.ontouchend = element.onclick;});
-			menu = document.querySelector('.menu');
+    		} 
 			gparam.eventclick = 'touchend';
+    		document.querySelectorAll('.menu-btn').forEach( function(element,key) {element.ontouchend = element.onclick;});
 			//no safari, redimensiona botoes por css
 			document.querySelectorAll('.menu-btn').forEach(function(element,key) {element.style.fontSize='10px'});
 			document.querySelectorAll('.menu-text').forEach(function(element,key) {element.style.marginLeft='40px'});
 			document.querySelector('.menu').style.width='300px';
-			//document.getElementById('botaoDadosBasicos').ontouchend = "";
 		} 
-		document.getElementById("drop_area").style.display = "none"; //esconde área de drop em mobile
-		document.getElementById("btn_srf").style.display = "none"; //esconde botão receita em mobile
-		document.getElementById("div_referencia").style.display = "none"; //esconde referência
-		document.getElementById("input_cnpj").style.display = "none"; //esconde referência
-		//document.getElementById('div_referencia').textContent=""; //apaga referencia
-		alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, tente em um computador com o Firefox, Chrome ou Edge.');
+		//adiciona espaço entre os botões
+		document.querySelectorAll('.botaosuperior').forEach(function(element,key) { 
+				element.style.marginRight='5px'; 
+				element.style.marginBottom='5px'; 
+				element.style.borderRadius='5px';
+		});		
+		// display=none foi colocado na definição dos botões
+		//document.getElementById("drop_area").style.display = "none"; //esconde área de drop em mobile
+		//document.getElementById("btn_srf").style.display = "none"; //esconde botão receita em mobile
+		//document.getElementById("div_referencia").style.display = "none"; //esconde referência
+		//document.getElementById("input_cnpj").style.display = "none"; //esconde referência
 	} else { //desktop
 		try {
 			//document.getElementById('btn_menu').textContent="Menu";
@@ -4323,16 +4355,13 @@ function ajustaAmbiente() {
 			document.getElementById("btn_srf").style.display = "inline"; //esconde botão receita em mobile
 			document.getElementById("div_referencia").style.display = "inline"; //esconde referência
 			document.getElementById("input_cnpj").style.display = "inline"; //esconde referência
-			
-			
 		} catch (e) {;}
-		menu = document.querySelector('.menu');
 		document.addEventListener('contextmenu', onContextMenu, false); //menu contextual em toda a tela
 		ajustaAmbiente_adicionarListaIconesAoMenu();
+		try {
+			document.getElementById('input_cnpj').value = gparam.inserirDefault;
+		} catch (e) {;};		
 	}
-	try {
-		document.getElementById('input_cnpj').value = gparam.inserirDefault;
-	} catch (e) {;};
 }//.function ajustaAmbiente
 
 function main() {
@@ -4352,8 +4381,8 @@ function main() {
 	gparam.renderer.run();
 	gparam.geom = Viva.Graph.geom();
 	if (gparam.mobile) {
-		menu_zoomin(false, false);
-		menu_zoomin(false, false);
+		//menu_zoomin(false, false);
+		//menu_zoomin(false, false);
 	} else {
 		//Ajusta região para drag and drop de arquivo ou do excel
 		ajustaRegiaoDrop();
@@ -4370,11 +4399,17 @@ function main() {
 		inserirJson(gparam.inicio.json, 'Json informado. ', true);
 	} else {
 		const urlParams = new URLSearchParams(window.location.search);
-		if (urlParams.get('pula_mensagem')!='sim') {
+		//if (urlParams.get('pula_mensagem')!='sim') {
 			if (gparam.inicio.mensagem) {
-				alert(gparam.inicio.mensagem);
+				//console.log(localStorage.getItem( 'horaAbrePopup' ));
+				var horaAbrePopup = localStorage.getItem( 'horaAbrePopup' );
+				if (!horaAbrePopup || !(horaAbrePopup>new Date())) {
+					alert(gparam.inicio.mensagem);
+					var expira = new Date();
+					localStorage.setItem( 'horaAbrePopup', expira.setHours(expira.getHours() + 4)); //exibe de novo em 4 horas
+				}
 			}
-		}
+		// }
 		if (gparam.inicio.bMenuInserirInicial) {
 			menu_inserir();
 		}
@@ -4419,15 +4454,16 @@ function main() {
     display: flex;
     justify-content: left;
 }
+
 </style>
 </head>
-<body id='corpo' onload='main()' style='overflow:hidden;'>
+<body id='corpo' onload='main()' style='overflow:hidden; '>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
 <!--div id="block_container"-->
 	<div id='div_botoes'>
 		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
 		{% if parametros.bBaseReceita %}
-		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github. '>Rede</button>
+		<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github.&#10;Todos os dados exibidos são públicos, provenientes da página de dados públicos da Secretaria da Receita Federal.&#10;O autor não se responsibiliza pela utilização desses dados, pelo mau uso das informações ou incorreções.'>Rede</button>
 		<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj')" title='Clique para abrir a página de dados públicos de CNPJ da Receita Federal do Brasil' hidden>Dados</button>
 		{% endif %}
 		<input type="text" id="input_cnpj" name="input_cnpj" size="18" value='TESTE' onkeydown='menu_input_cnpj(this)' 
@@ -4436,7 +4472,7 @@ function main() {
 			hidden
 		>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
-		<button class='botaosuperior' type="button" onclick="javascript:menu_incluirCamada('', 1);" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_incluir1Camada('');" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(false)" title='Exibir Dados do Item (D)'><i class="fa fa-newspaper"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>
@@ -4451,7 +4487,7 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="javascript:menu_exportaArquivo(false, 'osm');" title='Abre endereços de cnpjs com OpenStreetMap'><i class="fa fa-globe"></i></button>
 	</div>
 
-<div id="principal" style="width: 100%; height: 100%; position: absolute;" charset="utf-8" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  > 
+<div id="principal" style="width: 100%; height: 100%; position: absolute; " charset="utf-8" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  > 
 <!-- top=0 desativa botoes-->
 	<div id="principal_overlay" class="graph-overlay" style="cursor:crosshair;" ></div>
 </div>
@@ -4461,7 +4497,7 @@ function main() {
 		<button type="button" class="menu-btn" title="Expande vinculos de sócios. Aperte a tecla 1-9 para ativar estas opções"> <i class="fa fa-layer-group"></i> <span class="menu-text">Incluir Camadas</span> </button>
 		<menu class="menu">
 			<li class="menu-item">
-				<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('', 1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção, ou faça clique duplo no ícone.">
+				<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_incluirCamada('',1);" title="Expande vinculos de sócios. Aperte a tecla 1 para ativar esta opção, ou faça clique duplo no ícone.">
 				<i class="fa fa-layer-group"></i><span class="menu-text">1 (Tecla 1)</span> </button>
 			</li>
 			<li class="menu-item">

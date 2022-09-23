@@ -149,6 +149,13 @@ https://fontawesome.com<br>
 
 
 ## Histórico de versões
+<b>versão 0.8.8 (setembro/2022)</b>
+- busca por Nome Fantasia de cnpj;<br>
+- alteração no espaçamento dos botões para Android;<br>
+- popup de mensagem inicial vai aparecer menos;<br>
+- melhoria no visual do popup nos mapas;<br>
+- remoção de caixa de entrada para perguntar a camada do item a ser inserido. Aperte uma tecla de 2 a 9 para inserir mais camadas;<br>
+- clicar no botão camada, duplo-clique ou pressionar tecla 1 de forma repetida irá trazer mais camadas.<br>
 
 <b>versão 0.8.7 (setembro/2022)</b>
 - abre endereços com OpenStreetMap, pelo botão ![image](https://user-images.githubusercontent.com/71139693/189489292-d00f9e2f-f9e7-497d-a97a-c6fde790ad1d.png) no canto superior direito da tela: <br>

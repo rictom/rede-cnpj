@@ -28,7 +28,7 @@ camMapaMun = os.path.join(os.path.dirname(__file__), 'mapa_municipios_lat_long.j
 with open(camMapaMun, 'r') as infile:
     dicMun = json.load(infile)
 
-def geraMapa(dados, qteMaximaGeocoding=10):
+def geraMapa(dados, qteMaximaGeocoding=10, mostraTooltip=True):
     '''dados é uma lista, normalmente o json_dados['no'] 
         por exemplo:
         dados = [{'id':'PJ_11111', 'descricao':'Nome Empresa X', pais:'Brasil', 'uf':'GO', 'municipio':'Goiania',
@@ -79,25 +79,28 @@ def geraMapa(dados, qteMaximaGeocoding=10):
         urlgoogle = r'https://www.google.com.br/maps/place/' + quote(k.get('logradouro','').removesuffix('S/N')) + ',' + quote(k.get('municipio','')) 
         urlgoogle += '' if k.get('uf','EX')=='EX' else '-'+ k.get('uf','EX')
         urlgoogle += ' ' + k.get('pais','')
-
-        ttip = f"""{k['id'].removeprefix('PJ_')}  <br>{k['descricao']}<br>{logradouro}"""
+        if k['id'].startswith('PJ'):
+            ttip = 'CNPJ ' + '<b>' + k['id'].removeprefix('PJ_') + '</b>'
+        else:
+            ttip = '<b>' + k['id'] + '</b>'
+        ttip += f"""<br><br><b>{k['descricao']}</b><br><br>{logradouro}"""
         ttip += f"<br>{k['logradouro_complemento']}" if k.get('logradouro_complemento','') else ''
         ttip += f"<br>{k['municipio']}" if k['municipio'] else ''
         ttip += f"{'/' + k.get('uf','') if k.get('uf','') not in ('EX','') else ''}"
         ttip += f' - {pais}' if pais!='Brasil' else ''
-        ttip += f"<br>{comentario}" if comentario else ''
+        ttip += f"<br><br>{comentario}" if comentario else ''
         linkGoogle = f"""<a href={urlgoogle} target='_blank' title='Abrir no Google Maps'><img src="../static/imagem/google.png" alt="Google" style="width:11px;height:11px;" ></a>"""
         linkGoogle += f"""   <a href='/rede/grafico/1/{k['id']}' target='_blank' title='Abrir Rede deste cnpj em nova aba'><img src="../static/imagem/favicon.ico?v=1" alt="Rede" style="width:11px;height:11px;" /></a>"""
         linkGoogle += f"""   <button onclick='javascript:window.opener.menu_dados(true, "{k['id']}");' title='Dados do cnpj'><img src="../static/imagem/drivers-license-o.png" alt="Dados" style="width:11px;height:11px;" /></button>"""
         linkGoogle += f"""   <button onclick='javascript:window.opener.selecionaNoid("{k['id']}", false); javascript:window.blur(); javascript:window.opener.focus();' title='Seleciona na Rede de origem'><img src="../static/imagem/hand-o-left.png" alt="Dados" style="width:11px;height:11px;" /></button><br>"""
-
-        folium.Marker(
-          location=[lat , long],
-          popup=linkGoogle + f""" {ttip.replace('<br>',' - ').replace(' - ','',1)}""",
-          tooltip=folium.Tooltip(ttip)
-          ).add_to(m)
-        #tooltip=folium.Tooltip("test", permanent=True)
+        #tpopup = linkGoogle + f""" {ttip.replace('<br>',' - ').replace(' - ','',1)}"""
+        tpopup = linkGoogle + ttip
         
+        if mostraTooltip:
+            folium.Marker(location=[lat , long], popup=tpopup, tooltip=folium.Tooltip(ttip)).add_to(m)
+        else:
+            folium.Marker(location=[lat , long], popup=tpopup).add_to(m)        
+        #tooltip=folium.Tooltip("test", permanent=True)
     #m.save('folium.html')
     import io
     outputStream = io.BytesIO() #io.StringIO()
@@ -110,18 +113,28 @@ def geocode(k):
     urlBase=r'https://nominatim.openstreetmap.org/search?'
     logradouro = k.get('logradouro','').replace('S/N' ,' ')
     if k.get('pais', 'Brasil') == 'Brasil':
-        url = urlBase + f"country=Brasil&state={quote(k.get('uf',''))}&city={quote(k.get('municipio',''))}&street={quote(logradouro)}&format=json"
+        url = urlBase + f"country=Brasil&state={quote(k.get('uf',''))}&city={quote(k.get('municipio',''))}&street={quote(logradouro)}"
     else:
-        url = urlBase + f"country={quote(k.get('pais','Brasil'))}&city={quote(k.get('municipio',''))}&format=json"
-    r = requests.get(url)
+        pais = k.get('pais','Brasil')
+        pais = pais.replace('(',',').split(',')[0] #quebra o nome do país com por vírgula
+        municipio = k.get('municipio','')
+        if municipio in pais: #pais estrangeiro, as vezes aparecendo repetido
+            municipio = ''
+        url = urlBase + f"country={quote(pais)}" + (f"&city={quote(municipio)}" if municipio else '')
+        # if logradouro.strip().removesuffix(' S/N').removesuffix(' 0').strip(): #não melhora muito.
+        #    url +=  '&street=' + quote(logradouro.strip().removesuffix(' S/N').removesuffix(' 0').strip())
+        print(url)
+    r = requests.get(url+'&format=json')
     dadosgeo = None
     try:
+        if len(r.json())==0: #se não encontrou nada, r.json()==[]
+            return None
         dadosgeo = r.json()[0] #pega o primeiro da lista
         #print(dadosgeo)
         time.sleep(1)
     except Exception as err:
         print('exception em geocode: ', err)
-        pass
+        dadosgeo = None
     return dadosgeo
 #.def geocode
 

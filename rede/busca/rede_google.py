@@ -4,7 +4,7 @@ Created on julho/2022
 @author: github rictom/rede-cnpj
 https://github.com/rictom/rede-cnpj
 """
-import os, copy, json, sys, time, re, pathlib
+import os, copy, json, time, re, pathlib
 #from bs4 import BeautifulSoup as soup
 import requests
 from requests.utils import quote
@@ -16,7 +16,7 @@ import platform
 if platform.system()=='Windows': #isso faz dá algum erro no windows
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
-try:
+try: #spacy usa muita memória. Se não for utilizar, não colocar rede_spacy na pasta busca.
     import rede_spacy
     bspacy = True
 except Exception as err:

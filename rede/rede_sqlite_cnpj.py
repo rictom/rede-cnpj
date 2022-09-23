@@ -8,8 +8,7 @@ json a partir da tabela sqlite
 Não fazer Create table ou criar índice para uma tabela a ser criada ou modificada pelo pandas 
 2022-07-20 - Parâmetro WAL no sqlite para consultas concorrentes.
 """
-import os, sys, glob
-import time, copy, re, string, unicodedata, collections, json, secrets
+import sys, time, copy, re, string, unicodedata, collections, json, secrets
 from functools import lru_cache
 import pandas as pd, sqlalchemy
 from fnmatch import fnmatch 
@@ -41,7 +40,8 @@ except:
     sys.exit('o arquivo sqlite não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto.')
 if not caminhoDBReceita: #se não houver db da receita, carrega um template para evitar erros nas consultas
     caminhoDBReceita = 'base_cnpj_vazia.db'
-caminhoDBReceitaFTS = config.config['BASE'].get('base_receita_fulltext','').strip()
+#caminhoDBReceitaFTS = config.config['BASE'].get('base_receita_fulltext','').strip()
+bfull_text =  config.config['BASE'].getboolean('base_receita_fulltext', False)
 caminhoDBEnderecoNormalizado = config.config['BASE'].get('base_endereco_normalizado', '').strip()
 caminhoDBLinks = config.config['BASE'].get('base_links', '').strip()
 
@@ -50,6 +50,7 @@ caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '').strip()
 logAtivo = config.config['ETC'].getboolean('logativo',False) #registra cnpjs consultados
 ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
 kLimiteCamada = config.config['ETC'].getint('limite_registros_camada', 1000)
+kTempoMaxConsulta = config.config['ETC'].getfloat('tempo_maximo_consulta', 10) #em segundos
 
 gEngineExecutionOptions = {"sqlite_raw_colnames": True, 'pool_size':1} #poll_size=1 força usar só uma conexão??
 #ttt gEngineExecutionOptions = {"sqlite_raw_colnames": True} #poll_size=1 força usar só uma conexão??
@@ -152,8 +153,11 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
             nomeMatch = nomeMatch[1:].strip()
         if '?' in nomeMatch: #? não é aceito em match do sqlite, mas pode ser usado no fnmatch
             nomeMatch = nomeMatch.replace('?', '*')
-        if caminhoDBReceitaFTS:
-            confts = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceitaFTS}", execution_options=gEngineExecutionOptions)
+        # if caminhoDBReceitaFTS:
+        #     #if caminhoDBReceita!=caminhoDBReceitaFTS:
+        #         print('Observação, a partir da versão 0.8.8, a indexação full text ser feita no mesmo arquivo da base de cnpjs.')
+        #         raise Exception('erro na base full text')
+            #confts = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceitaFTS}", execution_options=gEngineExecutionOptions)
         nomeMatch = ''.join(x for x in unicodedata.normalize('NFKD', nomeMatch) if x in string.printable).upper()
         #nomeMatch = re.sub(r'[^a-zA-Z0-9_ *""]', '', nomeMatch)
     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
@@ -163,27 +167,39 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
     #nome = re.sub(r'[^a-zA-Z0-9_ *""]', '', nome)
     cjs, cps = set(), set()
 
-    cursor = []
+    #cursor = []
     if nomeMatch:
-         if not caminhoDBReceitaFTS: #como não há tabela, não faz consulta por match
+         if not bfull_text: #caminhoDBReceitaFTS: #como não há tabela, não faz consulta por match
              #con = None
              return set(), set()
-         queryfts = f'''
-                SELECT DISTINCT  nome_socio as nome
-                FROM socios_search 
-                where nome_socio match :nomeMatch
-                limit {limite*20}
-            ''' 
-         df_busca_nomesPF = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
-         df_busca_nomesPF.to_sql(f'{tmp}_busca_nomePF', con, if_exists='replace', index=None)
+         # queryfts = f'''
+         #        SELECT DISTINCT  nome_socio as nome
+         #        FROM socios_search 
+         #        where nome_socio match :nomeMatch
+         #        limit {limite*20}
+         #    ''' 
+         # df_busca_nomesPF = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
+         # df_busca_nomesPF.to_sql(f'{tmp}_busca_nomePF', con, if_exists='replace', index=None)
+         # df_busca_nomesPF = None
+         # query = f'''
+         #            SELECT distinct cnpj_cpf_socio, nome_socio
+         #            from {tmp}_busca_nomePF tn 
+         #            left join socios ts on tn.nome=ts.nome_socio
+         #            where cnpj_cpf_socio not null and nome_socio<>"" and length(cnpj_cpf_socio)=11
+         #            limit {limite*2}       
+         # '''
          query = f'''
                     SELECT distinct cnpj_cpf_socio, nome_socio
-                    from {tmp}_busca_nomePF tn 
+                    from (
+                        SELECT DISTINCT  nome_socio as nome
+                        FROM socios_search 
+                        where nome_socio match :nomeMatch
+                        limit {limite*20}) tn 
                     left join socios ts on tn.nome=ts.nome_socio
                     where cnpj_cpf_socio not null and nome_socio<>"" and length(cnpj_cpf_socio)=11
                     limit {limite*2}       
          '''
-         cursor = con.execute(query)
+         cursor = con.execute(query, {'nomeMatch':nomeMatch})
         #obs 26/4/2021, a rigor não seria necessário length(cnpj_cpf_socio)=11, o problema é que a base está com erro no nome de sócios em que são empresas
     elif nomeIn=='TESTE':
         query = 'select cnpj_cpf_socio, nome_socio from socios where rowid > (abs(random()) % (select (select max(rowid) from socios)+1)) LIMIT 1;'
@@ -215,25 +231,37 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
         con = None
         return cjs, cps
     con.execute(f'drop table if exists {tmp}_busca_nomePF')
-    #pega cnpjs
-    cursor = []
+    #busca cnpjs pelo Razão Social
+    #cursor = []
     if nomeMatch:
-        queryfts = f'''
-                SELECT DISTINCT  razao_social as nome
-                FROM empresas_search
-                where razao_social match :nomeMatch
-                limit {limite*20}
-            ''' 
-        df_busca_nomesPJ = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
-        df_busca_nomesPJ.to_sql(f'{tmp}_busca_nomePJ', con, if_exists='replace', index=None)
+        # queryfts = f'''
+        #         SELECT DISTINCT  razao_social as nome
+        #         FROM empresas_search
+        #         where razao_social match :nomeMatch
+        #         limit {limite*20}
+        #     ''' 
+        # df_busca_nomesPJ = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
+        # df_busca_nomesPJ.to_sql(f'{tmp}_busca_nomePJ', con, if_exists='replace', index=None)
+        # df_busca_nomesPJ = None
+        # query = f'''
+        #             SELECT te.cnpj, t.razao_social
+        #             from {tmp}_busca_nomePJ tn
+        #             inner join empresas t on tn.nome = t.razao_social
+        #             left join estabelecimento te on te.cnpj_basico=t.cnpj_basico --inner join fica lento??
+        #             limit {limite*2}
+        #     '''       
         query = f'''
                     SELECT te.cnpj, t.razao_social
-                    from {tmp}_busca_nomePJ tn
+                    from (
+                        SELECT DISTINCT  razao_social as nome
+                        FROM empresas_search
+                        where razao_social match :nomeMatch
+                        limit {limite*20}) tn
                     inner join empresas t on tn.nome = t.razao_social
                     left join estabelecimento te on te.cnpj_basico=t.cnpj_basico --inner join fica lento??
                     limit {limite*2}
-            '''         
-        cursor = con.execute(query)
+            '''     
+        cursor = con.execute(query, {'nomeMatch':nomeMatch})
     else:
         # pra fazer busca por razao_social, a coluna deve estar indexada
         query = f'''
@@ -252,6 +280,54 @@ def buscaPorNome(nomeIn, limite=10): #nome tem que ser completo. Com Teste, pega
                 continue
         cjs.add(r.cnpj)    
         contagemRegistros +=1
+    #busca cnpjs pelo Nome Fantasia
+    try:
+        if nomeMatch:
+            # queryfts = f'''
+            #         SELECT DISTINCT nome_fantasia as nome
+            #         FROM estabelecimento_nomefantasia_search
+            #         where nome_fantasia match :nomeMatch
+            #         limit {limite*10}
+            #     ''' 
+            # df_busca_nomesPJ = pd.read_sql(queryfts, confts, index_col=None, params={'nomeMatch':nomeMatch})
+            # df_busca_nomesPJ.to_sql(f'{tmp}_busca_nomePJ', con, if_exists='replace', index=None)
+            # df_busca_nomesPJ = None
+            # query = f'''
+            #             SELECT te.cnpj, te.nome_fantasia as nome
+            #             from {tmp}_busca_nomePJ tn
+            #             inner join estabelecimento te on tn.nome = te.nome_fantasia
+            #             limit {limite*2}
+            #     '''         
+            query = f'''
+                        SELECT te.cnpj, te.nome_fantasia as nome
+                        from (
+                                SELECT DISTINCT nome_fantasia as nome
+                                    FROM estabelecimento_nomefantasia_search
+                                    where nome_fantasia match :nomeMatch
+                                    limit {limite*10}) tn
+                        inner join estabelecimento te on tn.nome = te.nome_fantasia
+                        limit {limite*2}
+                '''                    
+            cursor = con.execute(query, {'nomeMatch':nomeMatch})
+        else:
+            # pra fazer busca por razao_social, a coluna deve estar indexada
+            query = f'''
+                        SELECT te.cnpj, te.nome_fantasia as nome
+                        FROM estabelecimento te 
+                        where te.nome_fantasia=:nome 
+                        limit {limite}
+                    '''        
+            cursor = con.execute(query, {'nome':nome})
+        for r in cursor.fetchall(): #con.execute(query):
+            if contagemRegistros>=limite:
+                break
+            if nomeMatch:
+                if not fnmatch(r.nome.strip(), nomeMatchInicial): #strip porque tem espaço no começo da razão social
+                    continue
+            cjs.add(r.cnpj)    
+            contagemRegistros +=1
+    except Exception as err:
+        print('erro na busca por nome fantasia: ', err)
     con.execute(f'drop table if exists {tmp}_busca_nomePJ')
     con = None
     return cjs, cps
@@ -470,7 +546,8 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
     camadasIds, cnpjs, cpfnomes, tmp  = criaTabelasTmpParaCamadas(con, listaIds=listaIds, grupo=grupo)
     dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
     registrosAnterior = 0
-    for cam in range(camada):  
+    tempoInicio = time.time()
+    for cam in range(1, camada+1):  
         whereMatriz = ''
         if bjson and not ligacaoSocioFilial:
             if cam==-1:
@@ -525,6 +602,7 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
             
         ) as taux 
         ; 
+        
         
         --inclui filiais
         Insert INTO {tmp}_ligacao (origem, nome_origem, cnpj_cpf_socio, nome_socio, cod_qualificacao) 
@@ -609,12 +687,17 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
         for sql in query.split(';'):
             con.execute(sql)
         registros = con.execute(f'select count(*) from {tmp}_ids').fetchone()[0]
-        if registros>kLimiteCamada:
-            mensagem=f'Alcançou apenas a camada {cam}, a camada {camada} não foi alcançada, pois se excedeu o limite de itens.'
-            break
-        if registros==registrosAnterior:
-            mensagem = f'Alcançou a camada {cam}, não havia mais itens até a camada {camada}.'
-            break
+        if cam<camada:
+            if registros>kLimiteCamada:
+                mensagem=f'A camada {camada} não foi alcançada, pois excedeu o limite de itens. Chegou até a camada {cam}.'
+                break
+            if registros==registrosAnterior and cam>1:
+                mensagem = f'A camada {camada} não foi alcançada,  pois não havia mais itens. Chegou na camada {cam-1}.'
+                break
+            if (time.time()-tempoInicio)>kTempoMaxConsulta:
+                #print('xxx', time.time()-tempoInicio)
+                mensagem=f'A camada {camada} não foi alcançada, pois excedeu o tempo máximo de consulta. Chegou até a camada {cam}.'
+                break
         registrosAnterior = registros
     #.for cam in range(camada): 
     if camada==0:
@@ -887,7 +970,7 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     #cnt1 = collections.Counter() #contadores de links para o id1 e id2
     #cnt2 = collections.Counter()    
     cntlink = collections.Counter()
-    for cam in range(camada):       
+    for cam in range(1, camada+1):       
         #no sqlite, o order by é feito após o UNION.
         #ligacoes = [] #tem que reiniciar a cada loop
 
@@ -912,9 +995,9 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
             cntlink[k['id2']] += 1
             
             if k['id1'] not in camadasIds:
-                camadasIds[k['id1']] = cam+1            
+                camadasIds[k['id1']] = cam           
             if k['id2'] not in camadasIds:
-                camadasIds[k['id2']] = cam+1
+                camadasIds[k['id2']] = cam
             #neste caso, não deve haver ligação repetida, mas é necessário colocar uma verificação se for ligações generalizadas
             # if orig_destAnt == ('PJ_'+k['cnpj'], destino):
             #     print('repetiu ligacao', orig_destAnt)
@@ -925,7 +1008,7 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
                 #            "camada":cam+1, "tipoDescricao":'link',"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
                 ligacao = {"origem":k['id1'], "destino":k['id2'], 
                            "cor": "silver" if  tipoLink=='endereco' else "gold", #"cor":"gray", 
-                           "camada":cam+1} #"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
+                           "camada":cam} #"label":k['descricao'] + ':' + ajustaValor(k['valor'], bValorInteiro)}
                 if tipoLink=='endereco':
                     ligacao['tipoDescricao'] = k['descricao']
                     ligacao['label'] = k['descricao']
@@ -940,7 +1023,7 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
             else:
                 print('####ligacao repetida. A implementar')
         #.for k in con.execute(query):
-        listaProximaCamada = [item for item in camadasIds if camadasIds[item]>cam]
+        listaProximaCamada = [item for item in camadasIds if camadasIds[item]>cam-1]
         dftmptable = pd.DataFrame({'identificador' : listaProximaCamada})
         dftmptable['grupo'] = grupo
         dftmptable['camada'] = dftmptable['identificador'].apply(lambda x: camadasIds[x])
@@ -1045,7 +1128,7 @@ def jsonDados(listaIds):
             #d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(int(d['cnae_fiscal']),'')}"
             d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(d['cnae_fiscal'],'')}"
             d['porte_empresa'] = f"{d['porte_empresa']}-{gdic.dicPorteEmpresa.get(d['porte_empresa'],'')}"
-            d['endereco'] = f"{d['tipo_logradouro']} {logradouro}"
+            d['endereco'] = logradouro if logradouro.startswith(d['tipo_logradouro']) else f"{d['tipo_logradouro']} {logradouro}"
             d['capital_social'] = capital 
             d['municipio'] = d['municipio_texto']
             d['opcao_mei'] = d['opcao_mei'] if  d['opcao_mei']  else ''

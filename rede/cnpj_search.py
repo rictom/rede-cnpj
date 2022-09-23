@@ -39,6 +39,12 @@ if not bCriaSearchEmCNPJDB: #cria cnpj_search.db
     Select razao_social
     from cnpj.empresas;
     
+    CREATE virtual TABLE estabelecimento_nomefantasia_search using fts5 (nome_fantasia);
+    
+    insert into estabelecimento_nomefantasia_search
+    Select nome_fantasia
+    from cnpj.estabelecimento;
+    
     CREATE virtual TABLE socios_search using fts5 (nome_socio);
     
     insert into socios_search
@@ -71,11 +77,19 @@ else: #cria indice full text em cnpj.db
     Select razao_social
     from empresas;
     
+    CREATE virtual TABLE estabelecimento_nomefantasia_search using fts5 (nome_fantasia);
+    
+    insert into estabelecimento_nomefantasia_search
+    Select nome_fantasia
+    from estabelecimento
+    where nome_fantasia<>'';
+    
     CREATE virtual TABLE socios_search using fts5 (nome_socio);
     
     insert into socios_search
     select nome_socio
-    from socios;
+    from socios
+    where nome_socio<>'';
     '''
     print(time.ctime(), f'Inicio - indexando full text {camDbSqliteBaseCompleta}')
     for k,sql in enumerate(sqlMatchEmcnpjdb.split(';')):
