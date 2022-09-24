@@ -81,12 +81,13 @@ para executar a rede-cnpj<br>
 - Coloque base_endereco_normalizado = cnpj_links_ete.db. Salve o rede.ini e reinicie o projeto.
 
  ## Para realizar busca por parte do nome de empresa ou sócio com *
- - Rode o script cnpj_search.py, pelo comando python cnpj_search.py no console. Isso vai levar cerca de 20 minutos.<br>
+ - Rode o script cnpj_search.py, pelo comando python cnpj_search.py no console. Isso vai levar cerca de 30 minutos.<br>
   ![image](https://user-images.githubusercontent.com/71139693/179335842-6c9fea19-1b46-4c8d-83db-63a2a8c56330.png)
  - No arquivo de configuração rede.ini, edite a linha <br>
-   base_receita_fulltext =<br>
+   base_receita_fulltext = 0<br>
    e coloque<br>
-   base_receita_fulltext = cnpj.db<br>
+   base_receita_fulltext = 1<br>
+ - Observação: Até a versão 0.8.7, a base fulltext poderia ser outro arquivo. A partir da versão 0.8.8 a indexação full text tem que ser feita na mesma base cnpj.db.
  - Reinicie o projeto para fazer efeito.<br>
 
   
