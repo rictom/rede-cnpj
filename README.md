@@ -16,7 +16,7 @@ Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Ex
 
 ## Versão online com base completa de dados públicos de CNPJ:
 https://www.redecnpj.com.br<br>
-Leia as informações iniciais. Para fazer uma consulta, digite um CNPJ, o radical de CNPJ, a Razão Social Completa, o Nome Completo de Sócio ou CPF do Sócio (dá resultado impreciso). Para exibir um CNPJ aleatório, digite "TESTE". Pode-se inserir vários CNPJs de uma só vez, separando-os por (;). Para fazer busca por parte da Razão Social ou parte do nome de Sócio, utilize o asterisco (*) na parte que faltar do nome.
+Leia as informações iniciais. Para fazer uma consulta, digite um CNPJ, o radical de CNPJ, a Razão Social completa, Nome Fantasia completo (versão 0.8.8), o Nome Completo de Sócio ou CPF do Sócio (dá resultado impreciso). Para exibir um CNPJ aleatório, digite "TESTE". Pode-se inserir vários CNPJs de uma só vez, separando-os por (;). Para fazer busca por parte da Razão Social ou parte do nome de Sócio, utilize o asterisco (*) na parte que faltar do nome.
 Funciona parcialmente em celular, com menu errático.
 
 ## Versão em python:
