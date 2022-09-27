@@ -155,14 +155,13 @@ https://fontawesome.com<br>
 - popup de mensagem inicial vai aparecer menos;<br>
 - melhoria no visual do popup nos mapas;<br>
 - remoção de caixa de entrada para perguntar a camada do item a ser inserido. Aperte uma tecla de 2 a 9 para inserir mais camadas;<br>
-- clicar no botão camada, duplo-clique ou pressionar tecla 1 de forma repetida irá trazer mais camadas.<br>
+- clicar no botão camada, duplo-clique ou pressionar tecla 1 de forma repetida irá trazer mais camadas.
 
 <b>versão 0.8.7 (setembro/2022)</b>
-- abre endereços com OpenStreetMap, pelo botão ![image](https://user-images.githubusercontent.com/71139693/189489292-d00f9e2f-f9e7-497d-a97a-c6fde790ad1d.png) no canto superior direito da tela: <br>
- ![mapa](https://user-images.githubusercontent.com/71139693/189489167-bdb49057-aa1a-422b-866f-3b93c7cc94ff.png)
-<br>
+- abre mapa com endereços das empresas no OpenStreetMap, pelo botão ![image](https://user-images.githubusercontent.com/71139693/189489292-d00f9e2f-f9e7-497d-a97a-c6fde790ad1d.png) no canto superior direito da tela: <br>
+ ![image](https://user-images.githubusercontent.com/71139693/192645610-cf763429-af6c-4a82-9e2a-691130c07c40.png)
 - o parâmetro geocode_max em rede.ini define a quantidade de endereços que serão buscados pela api do OpenStreetMap. Para evitar bloqueio, é feito uma pausa de um segundo entre cada chamada da api. Se a quantidade de endereços for maior que o parâmetro geocode_max, os endereços dos cnpjs serão substituidos pelas coordenadas dos municipios de acordo com tabela do IBGE.<br>
-- em cada popup de endereço, há quatro opções: a)abrir o endereço no Google Maps; b)abrir uma rede de relacionamentos do cnpj; c)exibir dados do cnpj; d)selecionar o item na rede original. <br><br>
+- em cada popup de endereço, há quatro opções: a) abrir o endereço no Google Maps; b) abrir uma rede de relacionamentos do cnpj; c) exibir dados do cnpj; d) selecionar o item na rede original.
 
 <b>versão 0.8.6 (agosto/2022)</b>
 - exportação para gráfico no formato (ex-IBM) i2 Chart Reader ou Analyst's Notebook (.anx), pela opção no menu Salvar/Abrir>Salvar i2...:<br>![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)<br>
