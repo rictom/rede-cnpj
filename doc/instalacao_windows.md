@@ -56,11 +56,12 @@ para executar a rede-cnpj<br>
  - Copie o arquivo cnpj.db para a pasta rede: <br>
   ![image](https://user-images.githubusercontent.com/71139693/179335685-d193dcf6-738e-4628-8221-b5132896c27a.png)
 
+ - A partir da versão 0.9, é preciso gerar um arquivo rede.db. Para isso, rode o comando <b>python rede_cria_tabela.py</b><br>
  - Para utilizar a base completa na rede-cnpj, abra o arquivo o rede.ini no Bloco de Notas:<br>
-  ![image](https://user-images.githubusercontent.com/71139693/179335706-a13ba2eb-e69f-4960-9394-91393d45852c.png)
+ ![image](https://user-images.githubusercontent.com/71139693/208316096-b29c636e-6af1-4cbd-810a-1d7a3eec4a3f.png)
 
- - O arquivo vai estar com # na linha com cnpj.db. (# é uma linha com comentário) Altere o parâmetro base_receita para cnpj.db<br>
-  ![image](https://user-images.githubusercontent.com/71139693/179335719-89f1c2c8-7d6e-4404-b1ab-92f8a2aea2ef.png)
+ - Altere o parâmetro base_rede para rede.db e base_receita para cnpj.db<br>
+![image](https://user-images.githubusercontent.com/71139693/208316115-0054e118-df41-46d6-8474-ae2618039fef.png)
 
  - Altere também a mensagem_advertencia para não causar confusão. Tire o # do primeiro mensagem_advertencia e coloque #  no segundo mensagem_advertencia. <br>
    ![image](https://user-images.githubusercontent.com/71139693/179335724-39085411-4caf-4ee5-ac5b-275ff195a8a8.png)
@@ -80,15 +81,6 @@ para executar a rede-cnpj<br>
 ![image](https://user-images.githubusercontent.com/71139693/179335812-edc5461b-1bee-45ee-8741-d1171e919b9b.png)
 - Coloque base_endereco_normalizado = cnpj_links_ete.db. Salve o rede.ini e reinicie o projeto.
 
- ## Para realizar busca por parte do nome de empresa ou sócio com *
- - Rode o script cnpj_search.py, pelo comando python cnpj_search.py no console. Isso vai levar cerca de 30 minutos.<br>
-  ![image](https://user-images.githubusercontent.com/71139693/179335842-6c9fea19-1b46-4c8d-83db-63a2a8c56330.png)
- - No arquivo de configuração rede.ini, edite a linha <br>
-   base_receita_fulltext = 0<br>
-   e coloque<br>
-   base_receita_fulltext = 1<br>
- - Observação: Até a versão 0.8.7, a base fulltext poderia ser outro arquivo. A partir da versão 0.8.8 a indexação full text tem que ser feita na mesma base cnpj.db.
- - Reinicie o projeto para fazer efeito.<br>
 
   
   
