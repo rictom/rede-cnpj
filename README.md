@@ -12,17 +12,16 @@ Aumentar tamanho da ligação: https://youtu.be/7hy74LE8e7A <br>
 Exportar dados como json: https://youtu.be/WKn02G9yHbQ <br>
 Arrastar células do Excel: https://youtu.be/Oxze-d4V7kE <br>
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
-Foi testada nos navegadores Firefox, Edge e Chrome. NÃO FUNCIONA no Internet Explorer. <br>
+Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 
 ## Versão online com base completa de dados públicos de CNPJ:
 https://www.redecnpj.com.br<br>
-Leia as informações iniciais. Para fazer uma consulta, digite um CNPJ, o radical de CNPJ, a Razão Social Completa, o Nome Completo de Sócio ou CPF do Sócio (dá resultado impreciso). Para exibir um CNPJ aleatório, digite "TESTE". Pode-se inserir vários CNPJs de uma só vez, separando-os por (;). Para fazer busca por parte da Razão Social ou parte do nome de Sócio, utilize o asterisco (*) na parte que faltar do nome.
-Funciona parcialmente em celular, com menu errático.
+Leia as informações iniciais. As consultas podem ser feitas por CNPJ, o radical de CNPJ, Razão Social, Nome Fantasia, o Nome de Sócio ou CPF do Sócio (dá resultado impreciso). Pode-se inserir vários CNPJs de uma só vez, separando-os por Ponto e vírgula (;) ou ESPAÇO. Utilize o asterisco (*) na parte que faltar do nome.<br>
 
 ## Versão em python:
 É preciso ter instalado no computador:
 - python <b>versão 3.9</b> ou posterior.<br> 
-- 40GB de espaço livre, para utilizar a base de CNPJs em sqlite.
+- 50GB de espaço livre, para utilizar a base de CNPJs em sqlite.
 
 Use o comando<br>
 pip install -r requirements.txt<br>
@@ -31,14 +30,16 @@ Para iniciar o script, em um console digite<br>
 python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
-A pasta contém um arquivo <b>cnpj_teste.db</b>, que é o banco de dados com poucos itens para testar o funcionamento da rotina.<br> 
+A pasta contém os arquivos <b)rede_teste.db</b> e <b>cnpj_teste.db</b>, que são banco de dados com poucos itens para testar o funcionamento da rotina.<br> 
 Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
 O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
 O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
 O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
-Para utilizar a base completa <b>cnpj.db</b> na <b>REDE-CNPJ</b>, altere o arquivo de configuração rede.ini, mudando a linha de configuração para<br>
+<B>IMPORTANTE:</B>Após gerar o arquivo cnpj.db, será necessário gerar também o arquivo <b>rede.db</b> que é uma tabela pré-processada com os vínculos entre empresas e sócios, com o uso do script rede_cria_tabela.py.<br>
+Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
+<b>base_rede = rede.db</b><br>
 <b>base_receita = cnpj.db</b><br>
 
 ## Opções:
@@ -149,20 +150,33 @@ https://fontawesome.com<br>
 
 
 ## Histórico de versões
+<b>versão 0.9 (dezembro/2022)</b>
+- Grande melhoria de desempenho (10X mais rápido!!!);<br>
+- Utilizando tabelas temporárias em memória do sqlite3;<br>
+- Inclusão de flag quando houver dados adicionais no cpf/cnpj;<br>
+- SHIFT+D exibe sócios de empresas;<br>
+- Exibição do CNAE Secundário;<br>
+- Aba com dados de empresas no Excel em lista;<br>
+- Nome Fantasia no tooltip;<br>
+- Busca por nome mais flexível;<br>
+- Alteração no sentido das setas;<br>
+- Busca de empresa por Nome Fantasia.<br>
+- <b>Observação: </b>A partir desta versão, é necessário criar um arquivo <b>rede.db</b> para a rotina funcionar.<br>
+
+
 <b>versão 0.8.8 (setembro/2022)</b>
 - busca por Nome Fantasia de cnpj;<br>
 - alteração no espaçamento dos botões para Android;<br>
 - popup de mensagem inicial vai aparecer menos;<br>
 - melhoria no visual do popup nos mapas;<br>
 - remoção de caixa de entrada para perguntar a camada do item a ser inserido. Aperte uma tecla de 2 a 9 para inserir mais camadas;<br>
-- clicar no botão camada, duplo-clique ou pressionar tecla 1 de forma repetida irá trazer mais camadas.<br>
+- clicar no botão camada, duplo-clique ou pressionar tecla 1 de forma repetida irá trazer mais camadas.
 
 <b>versão 0.8.7 (setembro/2022)</b>
-- abre endereços com OpenStreetMap, pelo botão ![image](https://user-images.githubusercontent.com/71139693/189489292-d00f9e2f-f9e7-497d-a97a-c6fde790ad1d.png) no canto superior direito da tela: <br>
- ![mapa](https://user-images.githubusercontent.com/71139693/189489167-bdb49057-aa1a-422b-866f-3b93c7cc94ff.png)
-<br>
+- abre mapa com endereços das empresas no OpenStreetMap, pelo botão ![image](https://user-images.githubusercontent.com/71139693/189489292-d00f9e2f-f9e7-497d-a97a-c6fde790ad1d.png) no canto superior direito da tela: <br>
+ ![image](https://user-images.githubusercontent.com/71139693/192645610-cf763429-af6c-4a82-9e2a-691130c07c40.png)
 - o parâmetro geocode_max em rede.ini define a quantidade de endereços que serão buscados pela api do OpenStreetMap. Para evitar bloqueio, é feito uma pausa de um segundo entre cada chamada da api. Se a quantidade de endereços for maior que o parâmetro geocode_max, os endereços dos cnpjs serão substituidos pelas coordenadas dos municipios de acordo com tabela do IBGE.<br>
-- em cada popup de endereço, há quatro opções: a)abrir o endereço no Google Maps; b)abrir uma rede de relacionamentos do cnpj; c)exibir dados do cnpj; d)selecionar o item na rede original. <br><br>
+- em cada popup de endereço, há quatro opções: a) abrir o endereço no Google Maps; b) abrir uma rede de relacionamentos do cnpj; c) exibir dados do cnpj; d) selecionar o item na rede original.
 
 <b>versão 0.8.6 (agosto/2022)</b>
 - exportação para gráfico no formato (ex-IBM) i2 Chart Reader ou Analyst's Notebook (.anx), pela opção no menu Salvar/Abrir>Salvar i2...:<br>![image](https://user-images.githubusercontent.com/71139693/185807202-2e0a7243-d952-470f-bee0-5ef4d45ed38e.png)<br>

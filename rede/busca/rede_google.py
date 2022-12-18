@@ -13,7 +13,7 @@ import bs4
 import asyncio
 import aiohttp
 import platform
-if platform.system()=='Windows': #isso faz dá algum erro no windows
+if platform.system()=='Windows': #evitar um erro no windows
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
 try: #spacy usa muita memória. Se não for utilizar, não colocar rede_spacy na pasta busca.

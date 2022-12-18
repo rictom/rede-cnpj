@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Rede</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta charset="utf-8" />
+<meta name="description" content="Visualização Gráfica de Empresas e de Sócios com dados abertos da Receita Federal do Brasil. Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."/>
+<meta name="keywords" content="CNPJ, Dados Abertos, Receita Federal, OSINT"/>
+<meta name="author" content="https://github.com/rictom/rede-cnpj"/>
+<meta name="google-site-verification" content="6mPFyguPx-3Gmn2rMu4YXAv7BrAJGGDGZl6K0oCOtGg" />
+
+<!-- 
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" /> 
+<meta name="viewport" content="width=device-width, user-scalable=no" / -->
+
+<meta property="og:title" content="Rede CNPJ" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.redecnpj.com.br" />
+<meta property="og:image" content="https://www.redecnpj.com.br/static/imagem/favicon.jpg"/>
+<!-- <meta property="og:image" content=""/> --->
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- google fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300&display=swap" rel="stylesheet"> 
+
+<style>
+
+
+* {
+  box-sizing: border-box;
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+.row {
+  display: flex; /* equal height of the children */
+}
+
+/* Create three unequal columns that floats next to each other */
+.column {
+  float: left;
+}
+
+.left, .right {
+  width: 25%;
+}
+
+.middle {
+  {% if dados.desktop %}
+    width: 50%;
+  {% endif %}
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+h2 {text-align: center;}
+
+table {
+border-collapse: collapse;
+}
+th, td {
+border: 1px solid black;
+padding: 10px;
+text-align: left;
+}
+
+</style>
+<!-- google ads script -->
+{% if not dados.usuario_local %}
+<!--
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5410090554067443" crossorigin="anonymous"></script>
+-->
+{% endif %}				 
+
+<script>
+//var urlbase = '127.0.0.1:5000/';
+var cnpjAtual = "{{dados.cnpj}}";
+function consulta_cnpj() {
+	var cnpjin = document.getElementById('input_cnpj').value;
+	//var url = 'consulta?cnpj='+cnpjin;
+	var url = '?cnpj='+cnpjin;
+	window.location.assign(url);
+
+}
+function consulta_proximo_cnpj(prox){
+	//var url = 'consulta?cnpj='+cnpjAtual + '&proximo='+prox;
+	var url = '?cnpj='+cnpjAtual + '&proximo='+prox;
+	window.location.assign(url);
+}
+
+function main() {
+
+}
+
+</script>
+
+</head>
+<body id='corpo'> 
+
+<h2 class="blue-text"  style="background-color: #d8f5ff;">{{dados.textoH2}}</h2>
+<div class="row">
+  {% if dados.desktop %}
+	  <div class="column left" style="background-color:#d0d3d4 ;">
+		<h2>Links</h2>
+		<a href="https://www.redecnpj.com.br" title='Relacionamentos entre empresas e sócios de forma gráfica.'>Rede CNPJ</a><br>
+		<a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" title='Abra a página de consulta de CNPJ na Receita Federal'>Consulta Receita Federal</a><br>
+		<a href="https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj" title='Abra a página de dados abertos de CNPJ na Receita Federal'>Dados Abertos Receita Federal</a><br>
+		<a href="https://www.portaltransparencia.gov.br/" title='Abra a página do Portal da Transparência'>Portal da Transparência do Governo Federal</a><br>
+		<a href="https://www.in.gov.br/servicos/diario-oficial-da-uniao" title='Abra a página do Diário Oficial da União'>Diário Oficial da União</a><br>
+		<a href="https://github.com/osintbrazuca/osint-brazuca" title='Abra a página no github do projeto Osint Brazuca'>OSINT Brazuca</a><br>
+		<a href="https://dadosabertos.social/" title='Abra a página do Fórum Dados Abertos'>Fórum Dados Abertos</a><br>		
+	  </div>
+  {% endif %}
+  <div class="column middle">
+    <h2>DADOS DO CNPJ</h2>
+	{% if dados.cnpj_formatado %}
+		<b>CNPJ:</b> <a href="?cnpj={{dados.cnpj}}">{{dados.cnpj_formatado}}</a>
+		&nbsp;&nbsp;
+		<a href='/rede/grafico/1/{{dados.cnpj}}' target='_blank' title='Abrir Rede CNPJ'><img src="/static/imagem/favicon.ico" alt="Rede" style="width:11px;height:11px;" /></a>
+		&nbsp;
+		<a onclick='javascript:window.opener.selecionaNoid("PJ_{{dados.cnpj}}", false); javascript:window.blur(); javascript:window.opener.focus();' title='Seleciona na Rede de origem'><img src="/static/imagem/hand-o-left.png" alt="Seleciona Item no gráfico" style="width:11px;height:11px;" /></a>
+		<br> <!-- - {{dados.cnpj}} <br> -->
+		<b>Razão Social:</b> {{dados.razao_social}}<br>
+		<b>Nome Fantasia:</b> {{dados.nome_fantasia}}<br>
+		<b>Matriz/Filial:</b> {{dados.matriz_filial}}<br>
+		<b>Data início atividades:</b> {{dados.data_inicio_atividades}}<br>
+		<b>Situação:</b> {{dados.situacao_cadastral}} <br>
+		<b>Data Situação:</b> {{dados.data_situacao_cadastral}}<br>
+		<b>Motivo situação:</b> {{dados.motivo_situacao_cadastral}}<br>
+		<b>Natureza jurídica:</b> {{dados.natureza_juridica}}<br>
+		<b>Porte empresa:</b> {{dados.porte_empresa}}<br><b>Opção MEI:</b> {{dados.opcao_mei}}<br>
+		<b>Capital Social:</b> R$ {{dados.capital_social}}<br>
+		<b>Endereço:</b> {{dados.endereco}}<br>
+		<b>Municipio:</b> {{dados.municipio}}/{{dados.uf}}<br>
+		<b>CEP:</b> {{dados.cep}}<br>
+		<b>Telefone:</b> {{dados.ddd1}} {{dados.telefone1}}   {{dados.ddd2}} {{dados.telefone2}}<br>
+		<b>Fax:</b> {{dados.ddd_fax}} {{dados.fax}}<br>
+		<b>Email:</b> {{dados.correio_eletronico}}<br>
+		<b>CNAE:</b> {{dados.cnae_fiscal}}<br>
+		<b>CNAE Secundária:</b> {{dados.cnae_secundaria}}<br>
+		{% if dados.dados_socios %}
+			<h3>Sócios:</h2>
+			<table class='tsocios'>
+			<tr class='tsocios'>
+			   <th><b>Id</b></th>
+			   <th><b>Nome do Sócio</b></th>
+			   <th><b>Qualificação</b></th>
+			   <th><b>Data de Entrada</b></th>
+			   <th><b>Faixa Etária</b></th>
+			</tr>
+			{% for d in dados.dados_socios %}
+				<tr class='tsocios'>
+				   <td>{{d.cnpj_cpf_socio}}</td>
+				   <td>{{d.nome_socio}}</td>
+				   <td>{{d.cod_qualificacao}}</td>
+				   <td>{{d.data_entrada_sociedade[-2:]}}/{{d.data_entrada_sociedade[4:6]}}/{{d.data_entrada_sociedade[:4]}}</td>
+				   <td>{{d.faixa_etaria}}</td>
+				</tr>
+			{% endfor %}			
+			</table>
+		{% endif %}
+	{% else %}
+		{% if dados.cnpj %}
+			<b>CNPJ:</b> <a href="?cnpj={{dados.cnpj}}">{{dados.cnpj}}</a> não foi encontrado!!!<br>
+		{% else %}
+			<p>Este site extrai os dados abertos da Receita Federal e gera esta consulta para fácil consumo. Basta digitar os CNPJs, sem necessidade de cadastro ou preenchimento de captcha.<p><br>
+			<br>
+			<b>Digite um CNPJ ou radical de CNPJ com 8 dígitos.</b><br><p>O CNPJ pode ser copiado com traços, ponto e barras, que serao removidos. Se for digitado menos de 14 dígitos, serão adicionados zeros à esquerda.</p>
+		{% endif %}
+	{% endif %}
+	<br><br>
+	{% if not dados.desktop %}
+		<div class="propaganda_mobile" style="background-color:#d0d3d4;">
+
+
+		</div>
+	{% endif %}
+	
+	
+		<b>Digite CNPJ: </b><input type="text" id="input_cnpj" name="input_cnpj" size="18" value='{{dados.cnpj_default}}' 
+			onkeydown = "if (event.keyCode == 13) consulta_cnpj();"   
+			title='Digite o CNPJ. Pode ter pontos, traços ou barra.'
+		>
+		<button type="button" onclick="javascript:consulta_cnpj();" title='Consultar'>Consultar</button><br>
+		<p><a href="?cnpj=00.000.000/0001-91" title='Exemplo, CNPJ do Banco do Brasil'>Exemplo</a>
+		<!--
+		<a href="javascript:consulta_proximo_cnpj(-1);" title='Consultar CNPJ Anterior'>Anterior</a> 
+		{% if dados.proximo_cnpj %}
+			<a href="?cnpj={{dados.proximo_cnpj}}" title='Consultar CNPJ seguinte'>Próximo</a>
+		{% endif %}
+		-->
+		</p>
+  </div>
+  {% if dados.desktop %}
+	  <div class="column right" style="background-color:#d0d3d4;">
+
+
+	  </div>
+  {% endif %}
+</div>
+
+<div>
+<p>Os dados exibidos neste site são públicos e disponíveis na página de dados abertos da <a href="https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj">Receita Federal do Brasil</a>. A base contém {{dados.cnpj_qtde}} CNPJs (matrizes e filiais). A data de referência da base é {{dados.data_referencia}}.</p>
+</div>
+
+</body>
+</html>

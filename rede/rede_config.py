@@ -19,8 +19,8 @@ else:
 
 def runParser():
     parser = argparse.ArgumentParser(description='descrição', epilog='rictom')
-    parser.add_argument('-i', '--inicial', action='store', dest='cpfcnpjInicial', default=config['INICIO'].get('cpfcnpj', ''), type=str, help='1 ou mais cnpj separados por ponto e vírgula; Nome ou Razao Social Completa')
-    parser.add_argument('-c', '--camada', action='store', dest='camadaInicial', type=int, default=config['INICIO'].getint('camada',1), help='camada')
+    parser.add_argument('-i', '--inicial', action='store', dest='cpfcnpjInicial', default='', type=str, help='1 ou mais cnpj separados por ponto e vírgula; Nome ou Razao Social Completa')
+    parser.add_argument('-c', '--camada', action='store', dest='camadaInicial', type=int, default=1, help='camada')
     parser.add_argument('-k', '--conf_file', action='store', default='rede.ini',help="defina arquivo de configuração", metavar="FILE")
     parser.add_argument('-j', '--json', action='store', dest='idArquivoServidor', default='', type=str, help='nome json no servidor')
     parser.add_argument('-a', '--lista', action='store', dest='arquivoEntrada', default='',help="inserir itens de arquivo em gráfico", metavar="FILE")
@@ -66,8 +66,6 @@ if par.arquivoEntrada:
 #         raise argparse.ArgumentTypeError(f"{path} não é um caminho válido")
         
 referenciaBD = config['BASE'].get('referencia_bd','')
-# if referenciaBD:
-#     referenciaBD = 'Referência - ' + referenciaBD + '.'
     
 #dic = vars(pr) #converte para dicionario 
 # cpfcnpjInicial = par.cpfcnpjInicial

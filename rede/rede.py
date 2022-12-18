@@ -6,29 +6,25 @@ https://github.com/rictom/rede-cnpj
 
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response, redirect
+from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
-import os, sys, json, secrets, io, glob, copy, pathlib, unicodedata, string
+import os, sys, json, secrets, io, glob, pathlib, unicodedata, string, importlib, time
 from functools import lru_cache
 import rede_config as config
 import pandas as pd
- 
-try:
-    import rede_sqlite_cnpj as rede_relacionamentos
-    print('utilizando rede_sqlite como rede_relacionamentos')
-except:
-    try:
-        import rede_sql as rede_relacionamentos
-        print('utilizando rede_sql como rede_relacionamentos')
-    except:
-        raise Exception('não há módulo de relacionamentos!!!')
+
+nome_modulo_relacionamento = config.config['BASE'].get('modulo_relacionamento', 'rede_sqlite_cnpj').strip()
+print(f'Carregando {nome_modulo_relacionamento}')
+rede_relacionamentos = importlib.import_module(nome_modulo_relacionamento)
+print(f'Utilizando {nome_modulo_relacionamento} como rede_relacionamentos.')
 
 sys.path.append('busca') #pasta com rotinas de busca
-import i2, mapa, rede_google
+sys.path.append('pyanx') #rotina do i2 chart reader
+import rede_google, mapa, rede_i2
 
 try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
     import rede_acao
@@ -130,10 +126,9 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
             #print(listaEntrada)
             df = None            
     elif not cpfcnpj and not idArquivoServidor: #define cpfcnpj inicial, só para debugar.
-        cpfcnpj = config.par.cpfcnpjInicial
-
-        if  config.par.bExibeMensagemInicial:
-            mensagemInicial = config.config['INICIO'].get('mensagem_advertencia','').replace('\\n','\n')
+        #cpfcnpj = config.par.cpfcnpjInicial
+        mensagemInicial = config.config['INICIO'].get('mensagem_advertencia','').replace('\\n','\n').strip()
+        if  mensagemInicial:
             mensagemInicial += rede_relacionamentos.mensagemInicial()
             #inserirDefault = 'TESTE'     
         # else:
@@ -149,7 +144,7 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'camada':camada,
                      'mensagem':mensagemInicial,
                      'bMenuInserirInicial': config.par.bMenuInserirInicial,
-                     'inserirDefault':'TESTE',
+                     'inserirDefault':'', #'TESTE',
                      'idArquivoServidor':idArquivoServidor,
                      'lista':listaEntrada,
                      'json':listaJson,
@@ -160,7 +155,11 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
                      'referenciaBD':config.referenciaBD,
                      'referenciaBDCurto':config.referenciaBD.split(',')[0],
-                     'geocode_max':ggeocode_max}
+                     'geocode_max':ggeocode_max,
+                     'bbusca_chaves': config.config['ETC'].getboolean('busca_chaves', False),
+                     'mobile':any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android']),
+                     'usuarioLocal': usuarioLocal()
+                    }
     #print(paramsInicial) 
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
@@ -168,7 +167,8 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     return render_template('rede_template.html', parametros=paramsInicial)
 #.def serve_html_pagina
 
-@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>',  methods=['GET', 'POST']) #methods=['POST'])
+#@lru_cache #isto pode dar inconsistência com parametros via post??
+@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>', methods=['GET','POST'])
 @limiter.limit(limiter_padrao)
 def serve_rede_json_cnpj(cpfcnpj='', camada=1):
     # if request.remote_addr in ('xxx'):
@@ -188,6 +188,9 @@ def serve_rede_json_cnpj(cpfcnpj='', camada=1):
         with gLock:
             noLig = rede_relacionamentos.camadasRede(listaIds=listaIds, camada=camada, grupo='', bjson=True)
             r = jsonify(noLig)
+
+    except Exception as e:
+        print("ERROR : "+str(e))
     finally:
         if gUwsgiLock:
             uwsgi.unlock()
@@ -216,15 +219,29 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
     return r
 #.def serve_rede_json_links
 
-@app.route('/rede/dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST'])
+#@lru_cache #isto pode dar inconsistência com parametros via post??
+@app.route('/rede/dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST']) 
 @limiter.limit(limiter_dados)
 def serve_dados_detalhes(cpfcnpj):
     try: 
         if gUwsgiLock:
             uwsgi.lock()
         with gLock:
-            r = rede_relacionamentos.jsonDados([cpfcnpj,])
+            r = rede_relacionamentos.jsonDados(cpfcnpj)
             return jsonify(r)
+    finally:
+        if gUwsgiLock:
+            uwsgi.unlock()    
+#.def serve_dados_detalhes
+
+@app.route('/rede/consulta_cnpj/', methods=['GET', 'POST']) 
+@limiter.limit(limiter_dados)
+def serve_dados_html():
+    try: 
+        if gUwsgiLock:
+            uwsgi.lock()
+        with gLock:
+            return rede_relacionamentos.dados_html_cnpj(request, render_template)
     finally:
         if gUwsgiLock:
             uwsgi.unlock()    
@@ -394,10 +411,12 @@ def serve_dadosEmArquivo(formato='xlsx'):
                 print('erro em dadosemarquivo:', err)
                 return 
             if formato=='xlsx':
-                return send_file(rede_relacionamentos.dadosParaExportar(dados), download_name="rede_dados_cnpj.xlsx", as_attachment=True)
+                return send_file(rede_relacionamentos.dadosParaExportar(dados), 
+                                 download_name="rede_cnpj-"+time.strftime("%Y-%m-%d_%Hh%Mm")+".xlsx", as_attachment=True)
             elif formato=='anx':
                 try:
-                    return send_file(i2.jsonParai2(dados), download_name="rede_dados_cnpj.anx", as_attachment=True)
+                    return send_file(rede_i2.jsonParai2(dados), 
+                                     download_name="rede_cnpj-"+time.strftime("%Y-%m-%d_%Hh%Mm")+".anx", as_attachment=True)
                 except Exception as err:
                     print('erro na exportacao i2: ', err)
                 #return send_file('folium.html', download_name="mapa.html", as_attachment=False)

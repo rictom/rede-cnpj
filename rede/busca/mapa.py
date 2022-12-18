@@ -20,7 +20,7 @@ https://medium.com/@nargessmi87/how-to-customize-the-openstreetmap-marker-icon-a
 
 """
 
-import folium, pandas as pd, json, random, time, os
+import folium, pandas as pd, json, random, time, os, io
 import requests
 from requests.utils import quote
 
@@ -102,7 +102,6 @@ def geraMapa(dados, qteMaximaGeocoding=10, mostraTooltip=True):
             folium.Marker(location=[lat , long], popup=tpopup).add_to(m)        
         #tooltip=folium.Tooltip("test", permanent=True)
     #m.save('folium.html')
-    import io
     outputStream = io.BytesIO() #io.StringIO()
     m.save(outputStream, close_file=False)
     outputStream.seek(0)

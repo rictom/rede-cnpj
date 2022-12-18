@@ -1,5 +1,7 @@
 aiofiles
+aioflask
 aiohttp
+asgiref
 beautifulsoup4
 Flask
 Flask_Limiter
