@@ -30,14 +30,14 @@ Para iniciar o script, em um console digite<br>
 python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
-A pasta contém os arquivos <b)rede_teste.db</b> e <b>cnpj_teste.db</b>, que são banco de dados com poucos itens para testar o funcionamento da rotina.<br> 
+A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são banco de dados com uma amostra de itens para testar o funcionamento da rotina.<br> 
 Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
 O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
 O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
 O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
-<B>IMPORTANTE:</B>Após gerar o arquivo cnpj.db, será necessário gerar também o arquivo <b>rede.db</b> que é uma tabela pré-processada com os vínculos entre empresas e sócios, com o uso do script rede_cria_tabela.py.<br>
+<b>IMPORTANTE: </b>Após gerar o arquivo cnpj.db, será necessário gerar também o arquivo <b>rede.db</b> que é uma tabela pré-processada com os vínculos entre empresas e sócios, com o uso do script rede_cria_tabela.py.<br>
 Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
 <b>base_rede = rede.db</b><br>
 <b>base_receita = cnpj.db</b><br>
