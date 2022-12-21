@@ -30,7 +30,7 @@ Para iniciar o script, em um console digite<br>
 python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
-A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são banco de dados com uma amostra de itens para testar o funcionamento da rotina.<br> 
+A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são amostras dos bancos de dados para testar o funcionamento da rotina.<br> 
 Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ## Como utilizar o Banco de dados públicos completo de CNPJs:
@@ -160,7 +160,8 @@ https://fontawesome.com<br>
 - Nome Fantasia no tooltip;<br>
 - Busca por nome mais flexível;<br>
 - Alteração no sentido das setas;<br>
-- Busca de empresa por Nome Fantasia.<br>
+- Busca de empresa por Nome Fantasia;<br>
+- Troca de fonte.<br>
 - <b>Observação: </b>A partir desta versão, é necessário criar um arquivo <b>rede.db</b> para a rotina funcionar.<br>
 
 
