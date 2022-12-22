@@ -132,7 +132,7 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 
 ## Fonte dos dados:
 
-Base de CNPJ está disponível em https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj ou http://200.152.38.155/CNPJ/ em formato csv.<br>
+Base de CNPJ está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica-cnpj ou https://dadosabertos.rfb.gov.br/CNPJ/ (http://200.152.38.155/CNPJ/).<br>
 Arquivo CNPJ.db sqlite já tratado pelo projeto https://github.com/rictom/cnpj-sqlite está disponível em 
 https://github.com/rictom/cnpj-sqlite#arquivo_sqlite. Eu tento atualizar esse arquivo mensalmente.<br>
 Baixe o arquivo CNPJ.7z e descompacte usando o 7zip (https://www.7-zip.org/download.html). O arquivo descompactado tem cerca de 25GB.<br>
