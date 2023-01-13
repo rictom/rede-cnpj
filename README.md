@@ -42,7 +42,7 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 <b>base_rede = rede.db</b><br>
 <b>base_receita = cnpj.db</b><br>
 
-## Opções:
+## Opções:<a id="ajuda"></a>
 
 A roda do mouse expande ou diminui o tamanho da exibição.<br>
 Fazendo click duplo em um ícone, a rotina expande as ligações. Por exemplo, clique duplo no ícone de uma pessoa, exibirá todas as empresas que esta é sócia. Clique duplo em um ícone de CNPJ, exibirá todos os sócios da empresa.<br>
