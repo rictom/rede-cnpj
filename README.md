@@ -137,7 +137,7 @@ Arquivo CNPJ.db sqlite já tratado pelo projeto https://github.com/rictom/cnpj-s
 https://github.com/rictom/cnpj-sqlite#arquivo_sqlite. Eu tento atualizar esse arquivo mensalmente.<br>
 Baixe o arquivo CNPJ.7z e descompacte usando o 7zip (https://www.7-zip.org/download.html). O arquivo descompactado tem cerca de 25GB.<br>
 
-## Outras referências:
+## Bibliotecas e outros projetos utilizados:
 Biblioteca em javascript para visualização:<br>
 https://github.com/anvaka/VivaGraphJS<br>
 
@@ -147,6 +147,11 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 Ícones:<br>
 https://www.flaticon.com<br>
 https://fontawesome.com<br>
+
+## Referências de utilização do projeto:
+https://youtu.be/F9riMfkW8CY?t=1095 Prática Trabalhista em Execução - Marcelo Segal<br>
+https://youtu.be/8daLHoVn8io?t=1946 Como Localizar Bens na Internet - Execução Efetiva<br>
+https://www.instagram.com/p/Cj5KpSivWyD/ Rede CNPJ - Aquele Gostinho de Sniper - Gilmar Batista<br>
 
 
 ## Histórico de versões
