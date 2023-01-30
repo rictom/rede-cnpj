@@ -1,4 +1,4 @@
-# REDE-CNPJ - Visualização de dados públicos de CNPJ
+# RedeCNPJ - Visualização de dados públicos de CNPJ
 
 Ferramenta para observar o relacionamento entre empresas e sócios, a partir dos dados públicos disponibilizados pela Receita Federal.<br>
 
