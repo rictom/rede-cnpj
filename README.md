@@ -148,7 +148,7 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
-## Referências de utilização do RedeCNPJ:
+## Referências de utilização da RedeCNPJ:
 https://youtu.be/F9riMfkW8CY?t=1095 - Prática Trabalhista em Execução - Marcelo Segal<br>
 https://youtu.be/8daLHoVn8io?t=1946 - Como Localizar Bens na Internet - Execução Efetiva<br>
 https://youtu.be/pWrUV2u3-98?t=2890 - ... Devedor a a execução trabalhista - 
