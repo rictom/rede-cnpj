@@ -148,13 +148,14 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
-## Referências de utilização da RedeCNPJ:
+## Vídeos mencionando a RedeCNPJ:
 https://youtu.be/F9riMfkW8CY?t=1095 - Prática Trabalhista em Execução - Marcelo Segal<br>
 https://youtu.be/8daLHoVn8io?t=1946 - Como Localizar Bens na Internet - Execução Efetiva<br>
 https://youtu.be/pWrUV2u3-98?t=2890 - ... Devedor a a execução trabalhista - 
 Élisson Miessa<br>
-https://www.youtube.com/watch?v=d-GK993j9cA - ... Alcançando outros responsáveis pela execução-[Aula 2] - 
+https://youtu.be/d-GK993j9cA?t=3719 - ... Alcançando outros responsáveis pela execução-[Aula 2] - 
 Élisson Miessa<br>
+https://youtu.be/D2gr-kPPoPw?t=3271 - Execução Trabalhista - Danilo Cunha Diniz<br>
 https://www.instagram.com/p/Cj5KpSivWyD/ - Rede CNPJ - Aquele Gostinho de Sniper - Gilmar Batista<br>
 
 
