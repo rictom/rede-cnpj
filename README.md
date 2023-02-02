@@ -14,33 +14,9 @@ Arrastar células do Excel: https://youtu.be/Oxze-d4V7kE <br>
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 
-## Versão online com base completa de dados públicos de CNPJ:
+## Versão online da RedeCNPJ:
 https://www.redecnpj.com.br<br>
-Leia as informações iniciais. As consultas podem ser feitas por CNPJ, o radical de CNPJ, Razão Social, Nome Fantasia, o Nome de Sócio ou CPF do Sócio (dá resultado impreciso). Pode-se inserir vários CNPJs de uma só vez, separando-os por Ponto e vírgula (;) ou ESPAÇO. Utilize o asterisco (*) na parte que faltar do nome.<br>
-
-## Versão em python:
-É preciso ter instalado no computador:
-- python <b>versão 3.9</b> ou posterior.<br> 
-- 50GB de espaço livre, para utilizar a base de CNPJs em sqlite.
-
-Use o comando<br>
-pip install -r requirements.txt<br>
-para instalar as bibliotecas utilizadas no projeto.<br><br>
-Para iniciar o script, em um console digite<br>
-python rede.py<br>
-A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
-As opções por linha de comando são exibidas fazendo python rede.py -h<br>
-A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são amostras dos bancos de dados para testar o funcionamento da rotina.<br> 
-Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
-
-## Como utilizar o Banco de dados públicos completo de CNPJs:
-O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
-O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
-O código foi ajustado para o formato disponibilizado pela Receita Federal em 2021 e 2022.<br> 
-<b>IMPORTANTE: </b>Após gerar o arquivo cnpj.db, será necessário gerar também o arquivo <b>rede.db</b> que é uma tabela pré-processada com os vínculos entre empresas e sócios, com o uso do script rede_cria_tabela.py.<br>
-Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
-<b>base_rede = rede.db</b><br>
-<b>base_receita = cnpj.db</b><br>
+Este projeto está funcionando online neste endereço. Leia as informações iniciais. As consultas podem ser feitas por CNPJ, o radical de CNPJ, Razão Social, Nome Fantasia, o Nome de Sócio ou CPF do Sócio (dá resultado impreciso). Pode-se inserir vários CNPJs de uma só vez, separando-os por Ponto e vírgula (;) ou ESPAÇO. Utilize o asterisco (*) na parte que faltar do nome.<br>
 
 ## Opções:<a id="ajuda"></a>
 
@@ -52,7 +28,6 @@ Clicar no botão do meio do mouse (roda) faz aparecer janela para editar uma Not
 
 Outras opções da rede estão no menu contextual do mouse (botão direito), sendo configuradas teclas de atalho correspondentes aos comandos:
  
-
 ## Tecla – Descrição do comando.
 - TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
 - I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
@@ -129,6 +104,31 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 Os comandos valem para o último nó selecionado ou nós selecionados, que ficam em destaque com a animação no contorno ods ícones.
 Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão ou para Expansão de vínculos.
 Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrastar arquivos csv ou json.
+
+## Versão em python (execução local):
+É preciso ter instalado no computador:
+- python <b>versão 3.9</b> ou posterior.<br> 
+- 50GB de espaço livre, para utilizar a base de CNPJs em sqlite.
+
+Faça um clone do código deste projeto.
+Use o comando<br>
+pip install -r requirements.txt<br>
+para instalar as bibliotecas utilizadas.<br><br>
+Para iniciar o script, em um console digite<br>
+python rede.py<br>
+A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
+As opções por linha de comando são exibidas fazendo python rede.py -h<br>
+A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são amostras dos bancos de dados para testar o funcionamento da rotina.<br> 
+Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
+
+## Como utilizar o Banco de dados completo de CNPJs com a versão em Python:
+O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
+O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
+O código foi ajustado para o formato disponibilizado pela Receita Federal a partir de 2021.<br> 
+<b>IMPORTANTE: </b>Após gerar o arquivo cnpj.db, será necessário gerar também o arquivo <b>rede.db</b> que é uma tabela pré-processada com os vínculos entre empresas e sócios, com o uso do script rede_cria_tabela.py.<br>
+Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
+<b>base_rede = rede.db</b><br>
+<b>base_receita = cnpj.db</b><br>
 
 ## Fonte dos dados:
 
