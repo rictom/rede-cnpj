@@ -37,7 +37,7 @@ app = Flask("rede")
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
 kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
-limiter = flask_limiter.Limiter(app, key_func=get_remote_address) #, default_limits=["200 per day", "50 per hour"])
+limiter = flask_limiter.Limiter(app=app, key_func=get_remote_address) #, default_limits=["200 per day", "50 per hour"])
 limiter_padrao = config.config['ETC'].get('limiter_padrao', '20/minute').strip() 
 limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip() 
 limiter_google = config.config['ETC'].get('limiter_google', '4/minute').strip() 
