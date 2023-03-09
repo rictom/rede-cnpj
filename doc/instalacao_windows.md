@@ -56,7 +56,7 @@ para executar a rede-cnpj<br>
  - Copie o arquivo cnpj.db para a pasta rede: <br>
   ![image](https://user-images.githubusercontent.com/71139693/179335685-d193dcf6-738e-4628-8221-b5132896c27a.png)
 
- - A partir da versão 0.9, é preciso gerar um arquivo rede.db. Para isso, rode o comando <b>python rede_cria_tabela.py</b><br>
+ - A partir da versão 0.9, é preciso gerar um arquivo rede.db. Para isso, rode o comando <b>python rede_cria_tabela.py</b>, ou baixe o arquivo já processado em https://www.mediafire.com/folder/q9sm4azxeh71u/redecnpj<br>
  - Para utilizar a base completa na rede-cnpj, abra o arquivo o rede.ini no Bloco de Notas:<br>
  ![image](https://user-images.githubusercontent.com/71139693/208316096-b29c636e-6af1-4cbd-810a-1d7a3eec4a3f.png)
 
