@@ -124,7 +124,7 @@ Orientações detalhadas para instalação em Windows no link https://github.com
 ## Como utilizar o Banco de dados completo de CNPJs com a versão em Python:
 O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa. 
 O link para a base completa em sqlite já tratada está disponível em https://github.com/rictom/cnpj-sqlite#arquivo_sqlite.<br>
-Em https://www.mediafire.com/folder/q9sm4azxeh71u/redecnpj estão os links para baixar os arquivos rede.db e cnpj_links_ete.db.<br>
+Em https://www.mediafire.com/folder/q9sm4azxeh71u/redecnpj estão os links para baixar os arquivos rede.db  (ligações entre empresas e sócios)  e cnpj_links_ete.db (ligações referentes a endereços, telefones e email em comum) .<br>
 Observação: Para rodar o projeto localmente com a base completa, é necessário ter os arquivos cnpj.db e rede.db. O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
 O código foi ajustado para o formato disponibilizado pela Receita Federal a partir de 2021.<br> 
 Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
@@ -135,10 +135,6 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 
 #### Base de CNPJ
 Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-jurdica---cnpj ou https://dadosabertos.rfb.gov.br/CNPJ/ (http://200.152.38.155/CNPJ/).<br>
-Arquivo CNPJ.db sqlite já tratado pelo projeto https://github.com/rictom/cnpj-sqlite está disponível em 
-https://github.com/rictom/cnpj-sqlite#arquivo_sqlite. Eu tento atualizar esse arquivo mensalmente.<br>
-Baixe o arquivo CNPJ.7z e descompacte usando o 7zip (https://www.7-zip.org/download.html). O arquivo descompactado tem cerca de 25GB.<br>
-Os arquivos rede.db (ligações entre empresas e sócios) e cnpj_links_ete.db (ligações referentes a endereços, telefones e email em comum) já processados estão disponíveis em https://www.mediafire.com/folder/q9sm4azxeh71u/redecnpj<br>
 
 #### Doações e Pagamentos - Eleições 2022
 https://dadosabertos.tse.jus.br/dataset/dadosabertos-tse-jus-br-dataset-prestacao-de-contas-eleitorais-2022
