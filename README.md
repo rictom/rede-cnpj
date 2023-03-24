@@ -145,6 +145,7 @@ https://www.portaltransparencia.gov.br/download-de-dados/ceaf<br>
 https://www.portaltransparencia.gov.br/download-de-dados/ceis<br>
 https://www.portaltransparencia.gov.br/download-de-dados/cnep<br>
 https://www.portaltransparencia.gov.br/download-de-dados/acordos-leniencia<br>
+https://portaldatransparencia.gov.br/download-de-dados/despesas-favorecidos<br>
 
 #### Devedores PGFN
 https://www.gov.br/pgfn/pt-br/assuntos/divida-ativa-da-uniao/transparencia-fiscal-1/copy_of_dados-abertos
