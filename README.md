@@ -29,8 +29,9 @@ Clicar no botão do meio do mouse (roda) faz aparecer janela para editar uma Not
 Outras opções da rede estão no menu contextual do mouse (botão direito), sendo configuradas teclas de atalho correspondentes aos comandos:
  
 ## Tecla – Descrição do comando.
-- TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
 - I - Inserir CNPJ, Razão Social completa ou nome completo de sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).
+- TECLAS de 1 a 9 - Inserir camadas correspondente ao número sobre o nó selecionado;
+- SHIFT + TECLAS de 1 a 9 - Inserir camadas correspondente a ligações com valores, como dados do TSE de doadores/pagamentos das eleições 2022, recebimento por favorecido pelo Governo Federal com dados do Portal da Transparência da CGU ou pagamentos de municípios paulistas com dados do TCE/SP;
 - U - Criar item novo (que não seja PF ou PJ) e ligar aos itens selecionados;
 - E - Editar dados do item (que não seja PF ou PJ) selecionado;
 - CRTL+Z – Desfaz Inserção;
@@ -176,6 +177,11 @@ https://www.instagram.com/p/Cj5KpSivWyD/ - Rede CNPJ - Aquele Gostinho de Sniper
 
 
 ## Histórico de versões
+<b>versão online 0.9.1 (mar/2022)</b>
+- Dados de devedores em situação de cobrança na PGFN;<br>
+- Dados de pagamento para favorecidos do Portal da Transparência da CGU;<br>
+- Marcador de servidor público federal com dados do Portal da CGU.<br>
+
 <b>versão 0.9 (dezembro/2022)</b>
 - Grande melhoria de desempenho (10X mais rápido!!!);<br>
 - Utilizando tabelas temporárias em memória do sqlite3;<br>
