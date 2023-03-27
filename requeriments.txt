@@ -1,7 +1,7 @@
 flask
 flask-limiter
 pandas
-sqlalchemy
+sqlalchemy==1.4.47
 xlrd
 xlsxwriter
 requests
