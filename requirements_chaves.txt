@@ -13,7 +13,7 @@ Pygments
 PyPDF2
 requests
 spacy
-SQLAlchemy
+SQLAlchemy==1.4.47
 textract
 urllib3
 Werkzeug
