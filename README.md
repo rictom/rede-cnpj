@@ -135,7 +135,7 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 ## Fonte dos dados:
 
 #### Base de CNPJ
-Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-jurdica---cnpj ou https://dadosabertos.rfb.gov.br/CNPJ/ (http://200.152.38.155/CNPJ/).<br>
+Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj ou https://dadosabertos.rfb.gov.br/CNPJ/ (http://200.152.38.155/CNPJ/).<br>
 
 #### Doações e Pagamentos - Eleições 2022
 https://dadosabertos.tse.jus.br/dataset/dadosabertos-tse-jus-br-dataset-prestacao-de-contas-eleitorais-2022
