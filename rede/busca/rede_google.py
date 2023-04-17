@@ -443,8 +443,9 @@ async def json_busca(termos, pagina=1, n_palavras_chave=20):
     #print(termos, pagina, n_palavras_chave)
     gs.search(termos, pagina, n_palavras_chave)
     tjson = gs.json_google()
-    tjsonc = await json_busca_palavras_urls(gs.links, n_palavras_chave)
-    juntaJson(tjson, tjsonc)
+    if n_palavras_chave:
+        tjsonc = await json_busca_palavras_urls(gs.links, n_palavras_chave)
+        juntaJson(tjson, tjsonc)
     return tjson
 #.async def json_busca
 
