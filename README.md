@@ -3,16 +3,15 @@
 Ferramenta para observar o relacionamento entre empresas e sócios, a partir dos dados públicos disponibilizados pela Receita Federal.<br>
 
 ### Vídeo no youtube<br>
-[![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)
+[![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)<br>
 
-<br>Outros vídeos de utilização:<br>
-Opções básicas dos botões: https://youtu.be/-Ug6ToTRnE4 <br>
-Criar uma ligação no gráfico: https://youtu.be/8I0oNb4U9Rw <br>
-Aumentar tamanho da ligação: https://youtu.be/7hy74LE8e7A <br>
-Exportar dados como json: https://youtu.be/WKn02G9yHbQ <br>
-Arrastar células do Excel: https://youtu.be/Oxze-d4V7kE <br>
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. <br>
+
+### Diagrama da RedeCnpj na RedeCNPJ<br>
+![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
+https://www.redecnpj.com.br/rede/grafico_no_servidor/rede_cnpj_diagrama.json
+
 
 ## Versão online da RedeCNPJ:
 https://www.redecnpj.com.br<br>
@@ -50,12 +49,10 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - P - Fixar o nó na posição;
 - SHIFT+P - Desfixar todos os nós do gráfico;
 - CTRL+P - Fixa um nó em cada grupo conexo (para evitar que o gráfico se expanda indefinidamente);
-- SubMenu Visualização>Rótulos:
+- <b>SubMenu Visualização>Rótulos:</b>
 - E - Editar rótulo; 
 - N - Rótulo - Exibe apenas o primeiro nome;
 - SHIFT+N - Oculta/exibe texto da ligação;
-
-
 - Alterar Ícone;
 - C - Colorir os nós selecionados;
 - Escolher Cor;
@@ -76,13 +73,18 @@ Outras opções da rede estão no menu contextual do mouse (botão direito), sen
 - Grupos com duas cores;
 - CTRL+A - Seleciona todos os itens;
 - CTRL+SHIFT+A - Inverte seleção;
-- SubMenu - Busca em sites:
+- <b>SubMenu - Busca em sites:</b>
+- B - Abre abas dos sites deste submenu;
+- Jusbrasil - Busca no site Jusbrasil;
+- Escavador - Busco no site Escavador;
+- Portal da Transparência - Busca no Portal da Transparência da CGU;
+- Bing - Busca no Bing;
+- DuckDuckGo - Busca no DuckDuckGo;
+- Reclame Aqui - Busca no Reclame Aqui;
 - G – Abre o nó numa aba do site Google;
 - SHIFT+G – Abre o endereço no Google Maps (só CNPJs);
 - H ou CTRL+G - Raspa a página do Google e coloca links;
 - SHIFT+H - Raspa a página do Google e busca palavras chave nos links;
-- Jusbrasil - Busca no site Jusbrasil
-- Portal da Transparência - Busca no Portal da Transparência;
 
 - <b>SubMenu Salvar/Abrir:</b>
 
@@ -165,19 +167,14 @@ https://www.cssscript.com/beautiful-multi-level-context-menu-with-pure-javascrip
 https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
-## Vídeos mencionando a RedeCNPJ:
-https://youtu.be/F9riMfkW8CY?t=1095 - Prática Trabalhista em Execução - Marcelo Segal<br>
-https://youtu.be/8daLHoVn8io?t=1946 - Como Localizar Bens na Internet - Execução Efetiva<br>
-https://youtu.be/pWrUV2u3-98?t=2890 - ... Devedor a a execução trabalhista - 
-Élisson Miessa<br>
-https://youtu.be/d-GK993j9cA?t=3719 - ... Alcançando outros responsáveis pela execução-[Aula 2] - 
-Élisson Miessa<br>
-https://youtu.be/D2gr-kPPoPw?t=3271 - Execução Trabalhista - Danilo Cunha Diniz<br>
-https://www.instagram.com/p/Cj5KpSivWyD/ - Rede CNPJ - Aquele Gostinho de Sniper - Gilmar Batista<br>
-
-
 ## Histórico de versões
-<b>versão online 0.9.1 (mar/2022)</b>
+<b>versão online 0.9.1 (abril/2022)</b>
+- Opção Menu> Filtrar/Localizar> Busca em sites> Abre Busca em Abas (Tecla B) - Abre abas com busca no Google, Bing, DuckDuckGo, etc.<br>
+- Arrastar link traz o favicon do site correspondente.<br>
+
+<b>versão online 0.9.1 (março/2022)</b>
+- Opção para buscar caminhos;<br>
+- Opção para apagar arquivo json no servidor.<br>
 - Dados de devedores em situação de cobrança na PGFN;<br>
 - Dados de pagamento para favorecidos do Portal da Transparência da CGU;<br>
 - Marcador de servidor público federal com dados do Portal da CGU.<br>
