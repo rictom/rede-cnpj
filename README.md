@@ -169,6 +169,7 @@ https://fontawesome.com<br>
 
 ## Histórico de versões
 <b>versão online 0.9.1 (abril/2022)</b>
+- Botão Copy/Drag para copiar itens selecionados para uma nova aba da RedeCNPJ;<br>
 - Opção Menu> Filtrar/Localizar> Busca em sites> Abre Busca em Abas (Tecla B) - Abre abas com busca no Google, Bing, DuckDuckGo, etc.<br>
 - Arrastar link traz o favicon do site correspondente.<br>
 
