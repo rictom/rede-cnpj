@@ -168,11 +168,11 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
-<b>versão online 0.9.1 (abril/2022)</b>
+<b>versão online 0.9.1 (abril/2023)</b>
 - Opção Menu> Filtrar/Localizar> Busca em sites> Abre Busca em Abas (Tecla B) - Abre abas com busca no Google, Bing, DuckDuckGo, etc.<br>
 - Arrastar link traz o favicon do site correspondente.<br>
 
-<b>versão online 0.9.1 (março/2022)</b>
+<b>versão online 0.9.1 (março/2023)</b>
 - Opção para buscar caminhos;<br>
 - Opção para apagar arquivo json no servidor.<br>
 - Dados de devedores em situação de cobrança na PGFN;<br>
