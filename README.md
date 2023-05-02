@@ -168,7 +168,11 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
-<b>versão online 0.9.1 (abril/2023)</b>
+<b>versão online 0.9.3 (maio/2023)</b>
+- Botões Gravar no Navegador e Adicionar: Possibilita guardar o gráfico e recuperar os dados em outra sessão;<br>
+- Opções Copiar (CTRL+C) e Colar (CTRL+V) itens entre abas da RedeCNPJ.<br>
+
+<b>versão online 0.9.2 (abril/2023)</b>
 - Botão Copy/Drag para copiar itens selecionados para uma nova aba da RedeCNPJ;<br>
 - Opção Menu> Filtrar/Localizar> Busca em sites> Abre Busca em Abas (Tecla B) - Abre abas com busca no Google, Bing, DuckDuckGo, etc.<br>
 - Arrastar link traz o favicon do site correspondente.<br>
