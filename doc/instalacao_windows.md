@@ -46,17 +46,11 @@ para executar a rede-cnpj<br>
  
   
  ## USAR A BASE COMPLETA DE CNPJS: <br>
- - Para baixar a base inteira de cnpj, vá para a página https://github.com/rictom/cnpj-sqlite#arquivo_sqlite <br>
-  ![image](https://user-images.githubusercontent.com/71139693/179335625-98c0087b-ce6b-457a-8cca-f95983413328.png)
- 
- - Clique no link http://www.mediafire.com...<br>
-  ![image](https://user-images.githubusercontent.com/71139693/179335636-451a2164-84d4-4265-9980-17096ca1253b.png)
-
- - Baixe o arquivo cnpj.db.20aa-xx-xx.7z, que tem cerca de 7GB. Faça o download do 7zip https://www.7-zip.org/download.html e descompacte o arquivo cnpj.db com o 7-zip.<br>
+ - As instruções para gerar a base completa de CNPJs estão na página https://github.com/rictom/cnpj-sqlite <br>
  - Copie o arquivo cnpj.db para a pasta rede: <br>
   ![image](https://user-images.githubusercontent.com/71139693/179335685-d193dcf6-738e-4628-8221-b5132896c27a.png)
 
- - A partir da versão 0.9, é preciso gerar um arquivo rede.db. Para isso, rode o comando <b>python rede_cria_tabela.py</b>, ou baixe o arquivo já processado em https://www.mediafire.com/folder/q9sm4azxeh71u/redecnpj<br>
+ - A partir da versão 0.9, é preciso gerar um arquivo rede.db. Para isso, rode o comando <b>python rede_cria_tabela.py</b><br>
  - Para utilizar a base completa na rede-cnpj, abra o arquivo o rede.ini no Bloco de Notas:<br>
  ![image](https://user-images.githubusercontent.com/71139693/208316096-b29c636e-6af1-4cbd-810a-1d7a3eec4a3f.png)
 
@@ -73,10 +67,9 @@ para executar a rede-cnpj<br>
  - Agora o projeto está rodando localmente com a base completa de cnpjs.<br>
   
  ## Para visualizar os links de endereços, telefones e e-mails
- - Baixe o arquivo cnpj_links:<br>
- ![image](https://user-images.githubusercontent.com/71139693/179335797-85f19fdf-30bc-4e4c-afc9-d2550209dedd.png)
+ - Gere o arquivo cnpj_links_ete.db pelo comando <b>python cnpj_normaliza_enderecos.py</b><br>
 
- - Descompacte e coloque na pasta rede.<br>
+
  - Altere o arquivo de configuração rede.ini<br>
 ![image](https://user-images.githubusercontent.com/71139693/179335812-edc5461b-1bee-45ee-8741-d1171e919b9b.png)
 - Coloque base_endereco_normalizado = cnpj_links_ete.db. Salve o rede.ini e reinicie o projeto.
