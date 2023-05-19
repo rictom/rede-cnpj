@@ -1,0 +1,17 @@
+spacy
+langdetect
+textract
+pdftotext
+flask
+flask-limiter
+pandas
+sqlalchemy==1.4.47
+xlrd
+xlsxwriter
+requests
+bs4
+async
+aioflask
+aiohttp
+asgiref
+folium
