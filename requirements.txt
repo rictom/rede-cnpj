@@ -1,3 +1,7 @@
+spacy
+langdetect
+textract
+pdftotext
 flask
 flask-limiter
 pandas
@@ -6,12 +10,8 @@ xlrd
 xlsxwriter
 requests
 bs4
-#se for rodar em linux com nginx/uwsgi
-#uwsgi
-#se for usar com busca de chaves google
 async
 aioflask
 aiohttp
 asgiref
-#para mapa
 folium

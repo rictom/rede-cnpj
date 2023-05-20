@@ -18,5 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copie o código do aplicativo para o diretório de trabalho
 COPY . .
 
+# Define o diretório de trabalho como "rede"
+WORKDIR /app/rede
+
 # Defina o comando padrão para executar o aplicativo
 CMD ["python", "rede.py"]
