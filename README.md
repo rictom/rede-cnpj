@@ -14,12 +14,12 @@ docker build -t redecpnj:latest .
 
 3. Execute o container, mapeando um diretório local com o diretório da aplicação dentro do container:
 ```
-docker run -v /caminho/do/projeto/:/app redecpnj:latest
+docker run --name redecnpj -v /caminho/do/projeto/:/app redecpnj:latest
 ```
 ou, se estiver no mesmo diretório do projeto local:
 
 ```
-docker run -v $PWD:/app redecpnj:latest
+docker run --name redecnpj -v $PWD:/app redecpnj:latest
 ```
 
 # RedeCNPJ - Visualização de dados públicos de CNPJ
