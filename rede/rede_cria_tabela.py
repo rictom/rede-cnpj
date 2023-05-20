@@ -121,7 +121,7 @@ where te.matriz_filial is '1'
 UNION ALL
 select 'PJ_' || te.cnpj ||'-' || te.nome_fantasia  as id_descricao 
 from cnpj.estabelecimento te 
-where trim(te.nome_fantasia) <>''
+-- where trim(te.nome_fantasia) <>'' --isso fazia pegar menos filiais, apenas as com nome fantasia
 UNION ALL
 select  id1  as id_descricao
 from ligacao
@@ -136,32 +136,6 @@ group by id_descricao --talvez group by seja mais rápido que distinct
 
 '''
 
-parte_old = '''
-
-
----------------------------------------------------------------------
--- indexação full text
--- cria tabelas de busca por parte de texto no cnpj.db 
-CREATE virtual TABLE empresas_search using fts5 (razao_social);
-
-insert into empresas_search
-Select razao_social
-from empresas;
-
-CREATE virtual TABLE estabelecimento_nomefantasia_search using fts5 (nome_fantasia);
-
-insert into estabelecimento_nomefantasia_search
-Select nome_fantasia
-from estabelecimento
-where nome_fantasia<>'';
-
-CREATE virtual TABLE socios_search using fts5 (nome_socio);
-
-insert into socios_search
-select nome_socio
-from socios
-where nome_socio<>'';
-'''
 
 if os.path.exists(camDBrede):
     print('o arquivo ' + camDBrede + ' já existe. Apague-o primeiro.')
