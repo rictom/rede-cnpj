@@ -9,17 +9,17 @@ cd rede
 
 2. Crie a imagem a partir do Dockerfile:
 ```
-docker build -t redecpnj:latest .
+docker build -t redecnpj . 
 ```
 
 3. Execute o container, mapeando um diretório local com o diretório da aplicação dentro do container:
 ```
-docker run -v /caminho/do/projeto/:/app redecpnj:latest
+docker run --name redecnpj -v /caminho/do/projeto/:/app -p 5000:5000 -d redecnpj
 ```
 ou, se estiver no mesmo diretório do projeto local:
 
 ```
-docker run -v $PWD:/app redecpnj:latest
+docker run --name redecnpj -v $PWD:/app -p 5000:5000 -d redecnpj
 ```
 
 # RedeCNPJ - Visualização de dados públicos de CNPJ
