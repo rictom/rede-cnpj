@@ -10,12 +10,12 @@ Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 
 ### Diagrama da RedeCNPJ na RedeCNPJ<br>
 ![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
-https://www.redecnpj.com.br/rede/grafico_no_servidor/rede_cnpj_diagrama.json
+<s>https://www.redecnpj.com.br/rede/grafico_no_servidor/rede_cnpj_diagrama.json</s>
 
 
-## Versão online da RedeCNPJ:
-https://www.redecnpj.com.br<br>
-Este projeto está funcionando online neste endereço. Leia as informações iniciais. As consultas podem ser feitas por CNPJ, o radical de CNPJ, Razão Social, Nome Fantasia, o Nome de Sócio ou CPF do Sócio (dá resultado impreciso). Pode-se inserir vários CNPJs de uma só vez, separando-os por Ponto e vírgula (;) ou ESPAÇO. Utilize o asterisco (*) na parte que faltar do nome.<br>
+## <s>Versão online da RedeCNPJ:</s>
+<s>https://www.redecnpj.com.br<br>
+Este projeto está funcionando online neste endereço. Leia as informações iniciais. As consultas podem ser feitas por CNPJ, o radical de CNPJ, Razão Social, Nome Fantasia, o Nome de Sócio ou CPF do Sócio (dá resultado impreciso). Pode-se inserir vários CNPJs de uma só vez, separando-os por Ponto e vírgula (;) ou ESPAÇO. Utilize o asterisco (*) na parte que faltar do nome.<br></s>
 
 ## Opções:<a id="ajuda"></a>
 
