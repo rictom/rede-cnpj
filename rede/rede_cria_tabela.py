@@ -12,16 +12,20 @@ Esta rotina:
 O arquivo cnpj.db deve estar na mesma pasta que este script. 
 """
 
-import sqlalchemy, time, sys, sqlite3, os
+import sqlalchemy, time, sys, sqlite3, os, psutil
 
 #camDbSqliteBaseCompleta = r"cnpj.db" #aqui precisa ser a tabela completa
 camDBcnpj = r"cnpj.db" #aqui precisa ser a tabela completa
 camDBrede = 'rede.db'
 
+if psutil.virtual_memory().total < 17005105152: #16GB
+    print('ATENÇÃO. Como este script tenta gerar a tabela primeiro na memória RAM, há um requisito minimo de 16GB. Por isso este script possivelmente dará erro. Ao invés deste, utilize o script rede_cria_tabela_rede.db.HD.py, que vai gerar a tabela diretamente no dísco rígido.')
+    sys.exit()
+
 resp = input(f'Este script vai criar ou alterar a base {camDBrede}. Leva cerca de 1,5 horas. Deseja prosseguir (y,n)?')
 if resp.lower()!='y' and resp.lower()!='s':
     sys.exit()
-
+    
 #engine = sqlalchemy.create_engine(f'sqlite:///{camDbSqliteBaseCompleta}')
 #engine = sqlite3.connect(camDBrede)
 engine = sqlite3.connect(':memory:')
