@@ -5,7 +5,7 @@ base_rede = rede.db
 base_receita = cnpj.db
 
 #caminho da base de endereços normalizada
-base_endereco_normalizado = cnpj_links_ete.db
+base_endereco_normalizado =
 #caminho da base de ligações adicional (TSE e TCE)
 base_links =
 #base_local é uma base com dados adicional. estrutura do banco_dados_modelo.db. Pode armazenar informações adicionadas manualmente no gráfico, dados dos nós e de ligações
