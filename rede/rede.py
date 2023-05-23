@@ -6,7 +6,7 @@ https://github.com/rictom/rede-cnpj
 
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, redirect, url_for, render_template, send_from_directory, send_file, jsonify, Response
+from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
@@ -16,7 +16,6 @@ import os, sys, json, secrets, io, glob, pathlib, unicodedata, string, importlib
 from functools import lru_cache
 import rede_config as config
 import pandas as pd
-import requests
 
 nome_modulo_relacionamento = config.config['BASE'].get('modulo_relacionamento', 'rede_sqlite_cnpj').strip()
 print(f'Carregando {nome_modulo_relacionamento}')
@@ -48,7 +47,6 @@ ggeocode_max  = config.config['ETC'].getint('geocode_max', 15)
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
-auth_server_url = 'http://10.11.82.76:3890/auth'  # URL do servidor de autenticaÁ„o
 
 #como √© usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisi√ß√µes simult√¢neas ocorre colis√£o. 
 #o lock faz esperar terminar as requisi√ß√µes por ordem.
@@ -80,21 +78,7 @@ if False: #bloqueia em rede_sqlite_cnpj.py
 # @app.route("/")
 # def raiz():
 #     return redirect("/rede/", code = 302)
-@app.route('/')
-def index():
-    return render_template('index.html')  # Renderiza a p·gina de autenticaÁ„o
 
-@app.route('/auth', methods=['POST'])
-def authenticate():
-    username = request.form['username']
-    password = request.form['password']
-    
-    response = requests.post(auth_server_url, json={'username': username, 'password': password})
-    
-    if response.status_code == 200:
-        return redirect(url_for('rede'))  # AutenticaÁ„o bem-sucedida, redireciona para a rota '/rede'
-    else:
-        return render_template('index.html', error=response.json()['error'])
 @app.route("/rede/")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
