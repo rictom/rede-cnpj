@@ -11,6 +11,7 @@ xlsxwriter
 requests
 bs4
 async
+requests
 aioflask
 aiohttp
 asgiref
