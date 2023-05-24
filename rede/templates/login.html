@@ -59,18 +59,10 @@
             <label for="password">Senha:</label>
             <input type="password" name="password" id="password" placeholder="Insira sua senha..." required />
             <button type="submit" class="login-button" value="Login">Entrar</button>
-            <label id="error-label" style="color: red;"></label>
+
         </form>
 
-        <script>
-            // Verifica se há uma mensagem de erro vinda do servidor e exibe no label
-            const errorLabel = document.getElementById("error-label");
-            const errorMessage = "{{ error_message }}";  // Substitua pelo valor retornado pelo Flask
 
-            if (errorMessage) {
-                errorLabel.textContent = errorMessage;
-            }
-        </script>
 
 </body>
 

@@ -101,10 +101,9 @@ def login():
             session['username'] = username
             return redirect("/rede")
         else:
-            error_message = "Usuário ou senha inválidos"
-            return render_template('login.html', error_message=error_message)
+            return "Usuário ou senha inválidos"
     else:
-        return render_template('login.html', error_message="")
+        return login_html
 
 @app.route("/logout")
 def logout():
