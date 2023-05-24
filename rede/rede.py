@@ -103,7 +103,7 @@ def login():
         else:
             return "Usuário ou senha inválidos"
     else:
-        return login_html
+        return render_template('login.html')
 
 @app.route("/logout")
 def logout():
