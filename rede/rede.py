@@ -135,11 +135,6 @@ def logout():
 #     return redirect("/rede/", code = 302)
 
 @app.route("/rede/")
-def rede():
-    if 'username' in session:
-        return render_template('rede_template.html')
-    else:
-        return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
 @limiter.limit(limiter_padrao)
