@@ -34,10 +34,7 @@ except:
 
 #rede_relacionamentos.gtabelaTempComPrefixo=False
 
-@app.route("/rede/")
-def serve_rede():
-    if 'username' not in session:
-        return redirect("/login")
+app = Flask("rede")
 app.secret_key = '+_5(hu=eva((beu_wbm5d_4s8g)*!)xmw&pfw^w4bw$2^r$h&s'  # Defina uma chave secreta para usar na sessão
 API_URL = 'http://10.11.82.76:3890/auth'  # URL da API de autenticação
 app.config['MAX_CONTENT_PATH'] = 100000000
@@ -137,7 +134,11 @@ def logout():
 # def raiz():
 #     return redirect("/rede/", code = 302)
 
+
 @app.route("/rede/")
+def serve_rede():
+    if 'username' not in session:
+        return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
 @limiter.limit(limiter_padrao)
