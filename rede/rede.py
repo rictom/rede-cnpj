@@ -51,26 +51,6 @@ ggeocode_max  = config.config['ETC'].getint('geocode_max', 15)
 gp = {}
 gp['camadaMaxima'] = 10
 
-# Página de login HTML
-login_html = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Login</title>
-</head>
-<body>
-    <h1>Login</h1>
-    <form action="/login" method="POST">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required><br><br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
-        <input type="submit" value="Login">
-    </form>
-</body>
-</html>
-'''
-
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
 #no linux, quando se usa nginx e uwsgi, usar lock do uwsgi, senão lock do threading (funciona no linux quando só tem 1 worker)
@@ -121,9 +101,10 @@ def login():
             session['username'] = username
             return redirect("/rede")
         else:
-            return "Usuário ou senha inválidos"
+            error_message = "Usuário ou senha inválidos"
+            return render_template('login.html', error_message=error_message)
     else:
-        return login_html
+        return render_template('login.html', error_message="")
 
 @app.route("/logout")
 def logout():
