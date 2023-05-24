@@ -136,7 +136,7 @@ def logout():
 
 
 @app.route("/rede/")
-def serve_rede():
+def rede():
     if 'username' not in session:
         return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
