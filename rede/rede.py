@@ -137,7 +137,7 @@ def logout():
 @app.route("/rede/")
 def rede():
     if 'username' in session:
-        return render_template('rede_template.html', parametros=paramsInicial)
+        return render_template('rede_template.html')
     else:
         return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
