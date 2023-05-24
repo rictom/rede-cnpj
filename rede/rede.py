@@ -134,10 +134,10 @@ def logout():
 # def raiz():
 #     return redirect("/rede/", code = 302)
 
-@app.route("/rede/")
+@app.route("/rede")
 def rede():
     if 'username' in session:
-        return "Página principal da aplicação"
+        return render_template('rede_template.html', parametros=paramsInicial)
     else:
         return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
