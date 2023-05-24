@@ -136,9 +136,6 @@ def logout():
 
 
 @app.route("/rede/")
-def rede():
-    if 'username' not in session:
-        return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
 @limiter.limit(limiter_padrao)
@@ -223,7 +220,11 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
     config.par.cpfcnpjInicial=''
-    return render_template('rede_template.html', parametros=paramsInicial)
+    if 'username' in session:
+        return render_template('rede_template.html', parametros=paramsInicial)
+    else:
+        return redirect("/login")
+    
 #.def serve_html_pagina
 
 #@lru_cache #isto pode dar inconsistência com parametros via post??
