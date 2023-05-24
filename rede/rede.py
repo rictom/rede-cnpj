@@ -51,6 +51,79 @@ ggeocode_max  = config.config['ETC'].getint('geocode_max', 15)
 gp = {}
 gp['camadaMaxima'] = 10
 
+# Página de login HTML
+login_html = '''
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>REDE-CNPJ - AUTENTICAÇÃO CGE</title>
+    <link rel="stylesheet" href="/static/menu/sislog.css" />
+    <link rel="icon" href="/static/imagem/favicon-cge.ico?v=1" type="imagem/x-icon" />
+    <style>
+        .auth {
+            position: relative;
+        }
+
+        .auth.loading:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1;
+        }
+
+        .auth.loading:after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px solid #ccc;
+            border-top-color: #005a92;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+            z-index: 2;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth">
+        <form action="/login" method="POST" class="auth-form">
+            <img src="/static/imagem/LOGO_CGE_COR_HORIZONTAL.png" class="auth-logo" alt="CGE" />
+            <h1 style="color: rgb(0, 90, 146); font-size: 3.2em; margin-top: 10px;">REDECNPJ</h1>
+            <label for="username">Nome de usuário:</label>
+            <input type="username" name="usersname" id="username" placeholder="Insira seu nome de usuário..."
+                required />
+            <label for="password">Senha:</label>
+            <input type="password" name="password" id="password" placeholder="Insira sua senha..." required />
+            <button type="submit" class="login-button" value="Login">Entrar</button>
+
+        </form>
+
+
+
+</body>
+
+</html>
+'''
+
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
 #no linux, quando se usa nginx e uwsgi, usar lock do uwsgi, senão lock do threading (funciona no linux quando só tem 1 worker)
@@ -103,7 +176,7 @@ def login():
         else:
             return "Usuário ou senha inválidos"
     else:
-        return render_template('login.html')
+        return login_html
 
 @app.route("/logout")
 def logout():
