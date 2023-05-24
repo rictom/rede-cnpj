@@ -6,7 +6,8 @@ https://github.com/rictom/rede-cnpj
 
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
+from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response, redirect, session
+import requests
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
@@ -34,6 +35,8 @@ except:
 #rede_relacionamentos.gtabelaTempComPrefixo=False
 
 app = Flask("rede")
+app.secret_key = '+_5(hu=eva((beu_wbm5d_4s8g)*!)xmw&pfw^w4bw$2^r$h&s'  # Defina uma chave secreta para usar na sessão
+API_URL = 'http://10.11.82.76:3890/auth'  # URL da API de autenticação
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
 kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
@@ -47,6 +50,26 @@ ggeocode_max  = config.config['ETC'].getint('geocode_max', 15)
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
+
+# Página de login HTML
+login_html = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form action="/login" method="POST">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+        <input type="submit" value="Login">
+    </form>
+</body>
+</html>
+'''
 
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
@@ -75,11 +98,48 @@ if False: #bloqueia em rede_sqlite_cnpj.py
     gLock =  contextlib.suppress()
     gUwsgiLock = False
 
+def autenticar_usuario(username, password):
+    # Função para autenticar o usuário na API REST de autenticação
+    response = requests.get(API_URL, params={'username': username, 'password': password})
+    if response.status_code == 200 and response.json().get('message') == 'Ok':
+        return True
+    return False
+
+@app.route("/")
+def index():
+    if 'username' in session:
+        return redirect("/rede")
+    else:
+        return redirect("/login")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if autenticar_usuario(username, password):
+            session['username'] = username
+            return redirect("/rede")
+        else:
+            return "Usuário ou senha inválidos"
+    else:
+        return login_html
+
+@app.route("/logout")
+def logout():
+    session.pop('username', None)
+    return redirect("/login")
+
 # @app.route("/")
 # def raiz():
 #     return redirect("/rede/", code = 302)
 
 @app.route("/rede/")
+def rede():
+    if 'username' in session:
+        return "Página principal da aplicação"
+    else:
+        return redirect("/login")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
 @limiter.limit(limiter_padrao)
