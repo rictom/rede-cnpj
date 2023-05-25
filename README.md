@@ -1,3 +1,27 @@
+# Docker CGE
+
+# Comandos Docker para executar imagem "redecpnj"
+
+1. Acesse o diretório "rede":
+```
+cd rede
+```
+
+2. Crie a imagem a partir do Dockerfile:
+```
+docker build -t redecnpj . 
+```
+
+3. Execute o container, mapeando um diretório local com o diretório da aplicação dentro do container:
+```
+docker run --name redecnpj -v /caminho/do/projeto/:/app -p 5000:5000 -d redecnpj
+```
+ou, se estiver no mesmo diretório do projeto local:
+
+```
+docker run --name redecnpj -v $PWD:/app -p 5000:5000 -d redecnpj
+```
+
 # RedeCNPJ - Visualização de dados públicos de CNPJ
 
 Ferramenta para observar o relacionamento entre empresas e sócios, a partir dos dados públicos disponibilizados pela Receita Federal.<br>
@@ -122,7 +146,7 @@ python rede.py<br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são amostras dos bancos de dados para testar o funcionamento da rotina.<br> 
-Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
+Orientações detalhadas para instalação em Windows no link https://github.com/cge-rj/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ## Como utilizar o Banco de dados completo de CNPJs com a versão em Python:
 O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa.<br>

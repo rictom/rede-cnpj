@@ -6,7 +6,8 @@ https://github.com/rictom/rede-cnpj
 
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
+from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response, redirect, session
+import requests
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
@@ -34,6 +35,8 @@ except:
 #rede_relacionamentos.gtabelaTempComPrefixo=False
 
 app = Flask("rede")
+app.secret_key = '+_5(hu=eva((beu_wbm5d_4s8g)*!)xmw&pfw^w4bw$2^r$h&s'  # Defina uma chave secreta para usar na sessão
+API_URL = 'http://10.11.82.76:3890/auth'  # URL da API de autenticação
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
 kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
@@ -47,6 +50,129 @@ ggeocode_max  = config.config['ETC'].getint('geocode_max', 15)
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
+
+# Página de login HTML
+login_html = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>REDE</title>
+<style>
+    /* Fonte */
+    @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap");
+
+    :root {
+        --primary-color: #044c8d;
+        --primary-color-dark: #005a92;
+        --secondary-color: #ffffff;
+        --secondary-color-light: #f5f5f5;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Montserrat", sans-serif;
+        outline: none;
+    }
+
+    body {
+         background-color: var(--secondary-color-light);
+    }
+
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background-color: var(--secondary-color-light);
+        padding: 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    header img {
+        max-width: 250px;
+    }
+
+    .container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--secondary-color-light);
+    }
+
+    form {
+        width: 375px;
+        height: auto;
+        background-color: var(--secondary-color);
+        display: flex;
+        flex-direction: column;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 14px;
+        color: #000;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background-color: #f7f7f7;
+    font-size: 16px;
+    color: var(--primary-color-dark);
+    }
+
+    input[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        background-color: var(--primary-color-dark);
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .title {
+        text-align: center;
+        font-size: 40px;
+        margin: 0 auto;
+        color: var(--primary-color-dark);
+    }
+</style>
+
+    <link rel="icon" type="image/x-icon" href="/static/imagem/favicon-cge.ico">
+</head>
+<body>
+    <header>
+        <img src="/static/imagem/LOGO_CGE_COR_HORIZONTAL.png" alt="Logo">
+    </header>
+
+    <div class="container">
+       <form action="/login" method="POST" id="login-form">
+            <h2 class="title">REDECNPJ</h2><br><br>
+            <label for="username">Nome de usuário:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">Senha:</label>
+            <input type="password" id="password" name="password" required>
+            <input type="submit" value="Entrar">
+        </form>
+    </div>
+</body>
+</html>
+'''
 
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
@@ -75,9 +201,42 @@ if False: #bloqueia em rede_sqlite_cnpj.py
     gLock =  contextlib.suppress()
     gUwsgiLock = False
 
+def autenticar_usuario(username, password):
+    # Função para autenticar o usuário na API REST de autenticação
+    response = requests.get(API_URL, params={'username': username, 'password': password})
+    if response.status_code == 200 and response.json().get('message') == 'Ok':
+        return True
+    return False
+
+@app.route("/")
+def index():
+    if 'username' in session:
+        return redirect("/rede")
+    else:
+        return redirect("/login")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if autenticar_usuario(username, password):
+            session['username'] = username
+            return redirect("/rede")
+        else:
+            return "Usuário ou senha inválidos"
+    else:
+        return login_html
+
+@app.route("/logout")
+def logout():
+    session.pop('username', None)
+    return redirect("/login")
+
 # @app.route("/")
 # def raiz():
 #     return redirect("/rede/", code = 302)
+
 
 @app.route("/rede/")
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
@@ -164,7 +323,11 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
     config.par.cpfcnpjInicial=''
-    return render_template('rede_template.html', parametros=paramsInicial)
+    if 'username' in session:
+        return render_template('rede_template.html', parametros=paramsInicial)
+    else:
+        return redirect("/login")
+    
 #.def serve_html_pagina
 
 #@lru_cache #isto pode dar inconsistência com parametros via post??

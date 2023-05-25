@@ -1,0 +1,6 @@
+# .dockerignore
+
+*.db
+rede.db
+cnpj.db
+cnpj_links_ete.db
