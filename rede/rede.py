@@ -56,17 +56,105 @@ login_html = '''
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
+    <title>REDE</title>
+<style>
+    :root {
+        --primary-color: #044c8d;
+        --primary-color-dark: #005a92;
+        --secondary-color: #ffffff;
+        --secondary-color-light: #f5f5f5;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: var(--secondary-color-light);
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background-color: var(--secondary-color-light);
+        padding: 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    header img {
+        max-width: 250px;
+    }
+
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    form {
+        width: 300px;
+        padding: 20px;
+        background-color: var(--secondary-color);
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 14px;
+        color: #000;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    input[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        background-color: var(--primary-color-dark);
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .title {
+        text-align: center;
+        font-size: 40px;
+        margin-bottom: 20px;
+        color: var(--primary-color-dark);
+    }
+</style>
+
+    <link rel="icon" type="image/x-icon" href="/static/imagem/favicon-cge.ico">
 </head>
 <body>
-    <h1>Login</h1>
-    <form action="/login" method="POST">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required><br><br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
-        <input type="submit" value="Login">
-    </form>
+    <header>
+        <img src="/static/imagem/LOGO_CGE_COR_HORIZONTAL.png" alt="Logo">
+    </header>
+
+    <div class="container">
+        <form id="login-form">
+            <h2 class="title">REDECNPJ</h2>
+            <label for="username">Nome de usuário:</label>
+            <input type="text" id="username" name="username" required><br><br>
+            <label for="password">Senha:</label>
+            <input type="password" id="password" name="password" required><br><br>
+            <input type="submit" value="Entrar">
+        </form>
+    </div>
 </body>
 </html>
 '''
