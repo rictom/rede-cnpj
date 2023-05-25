@@ -58,6 +58,9 @@ login_html = '''
 <head>
     <title>REDE</title>
 <style>
+    /* Fonte */
+    @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap");
+
     :root {
         --primary-color: #044c8d;
         --primary-color-dark: #005a92;
@@ -65,11 +68,16 @@ login_html = '''
         --secondary-color-light: #f5f5f5;
     }
 
-    body {
-        font-family: Arial, sans-serif;
-        background-color: var(--secondary-color-light);
+    * {
         margin: 0;
         padding: 0;
+        box-sizing: border-box;
+        font-family: "Montserrat", sans-serif;
+        outline: none;
+    }
+
+    body {
+         background-color: var(--secondary-color-light);
     }
 
     header {
@@ -88,18 +96,23 @@ login_html = '''
     }
 
     .container {
+        height: 100vh;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        background-color: var(--secondary-color-light);
     }
 
     form {
-        width: 300px;
-        padding: 20px;
+        width: 375px;
+        height: auto;
         background-color: var(--secondary-color);
+        display: flex;
+        flex-direction: column;
+        padding: 30px;
         border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
     }
 
     label {
@@ -112,12 +125,14 @@ login_html = '''
 
     input[type="text"],
     input[type="password"] {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 20px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background-color: #f7f7f7;
+    font-size: 16px;
+    color: var(--primary-color-dark);
     }
 
     input[type="submit"] {
@@ -133,7 +148,7 @@ login_html = '''
     .title {
         text-align: center;
         font-size: 40px;
-        margin-bottom: 20px;
+        margin: 0 auto;
         color: var(--primary-color-dark);
     }
 </style>
@@ -147,11 +162,11 @@ login_html = '''
 
     <div class="container">
         <form id="login-form">
-            <h2 class="title">REDECNPJ</h2>
+            <h2 class="title">REDECNPJ</h2><br><br>
             <label for="username">Nome de usuário:</label>
-            <input type="text" id="username" name="username" required><br><br>
+            <input type="text" id="username" name="username" required>
             <label for="password">Senha:</label>
-            <input type="password" id="password" name="password" required><br><br>
+            <input type="password" id="password" name="password" required>
             <input type="submit" value="Entrar">
         </form>
     </div>
