@@ -161,7 +161,7 @@ login_html = '''
     </header>
 
     <div class="container">
-        <form id="login-form">
+       <form action="/login" method="POST" id="login-form">
             <h2 class="title">REDECNPJ</h2><br><br>
             <label for="username">Nome de usuário:</label>
             <input type="text" id="username" name="username" required>
