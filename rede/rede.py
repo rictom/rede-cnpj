@@ -8,6 +8,7 @@ https://github.com/rictom/rede-cnpj
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
 from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response, redirect, session
 import requests
+from markupsafe import Markup, escape
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
@@ -36,7 +37,7 @@ except:
 
 app = Flask("rede")
 app.secret_key = '+_5(hu=eva((beu_wbm5d_4s8g)*!)xmw&pfw^w4bw$2^r$h&s'  # Defina uma chave secreta para usar na sessão
-API_URL = 'http://10.11.82.76:3890/auth'  # URL da API de autenticação
+API_URL = 'http://redecnpj.cge.rj.gov.br/auth'  # URL da API de autenticação
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
 kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
@@ -163,12 +164,29 @@ login_html = '''
     <div class="container">
        <form action="/login" method="POST" id="login-form">
             <h2 class="title">REDECNPJ</h2><br><br>
+            <p class="error-message" style="color: red;"><!-- ERROR_MESSAGE --></p>
             <label for="username">Nome de usuário:</label>
-            <input type="text" id="username" name="username" required>
+            <input type="text" id="username" name="username" {% if username %}value="{{ username }}"{% endif %} {% if error_message %}data-error="true"{% endif %} required>
             <label for="password">Senha:</label>
             <input type="password" id="password" name="password" required>
             <input type="submit" value="Entrar">
         </form>
+        <script>
+     document.addEventListener("DOMContentLoaded", function() {
+        var usernameField = document.getElementById("username");
+        var isError = usernameField.getAttribute("data-error");
+
+        if (!isError) {
+            var storedUsername = usernameField.getAttribute("data-username");
+            if (storedUsername) {
+                usernameField.value = storedUsername;
+            }
+        } else {
+            usernameField.removeAttribute("data-error");
+        }
+    });
+</script>
+
     </div>
 </body>
 </html>
@@ -217,6 +235,7 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    username = None
     if request.method == "POST":
         username = request.form.get('username')
         password = request.form.get('password')
@@ -224,9 +243,14 @@ def login():
             session['username'] = username
             return redirect("/rede")
         else:
-            return "Usuário ou senha inválidos"
+            username = request.form.get('username')
+            error_message = "Usuário ou senha inválidos"
+            login_html_with_error = login_html.replace('<!-- ERROR_MESSAGE -->', escape(error_message))
+            login_html_with_error = login_html_with_error.replace('value="{{ username }}"', 'value="' + escape(username) + '"')
+            return login_html_with_error
     else:
         return login_html
+
 
 @app.route("/logout")
 def logout():

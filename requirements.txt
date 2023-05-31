@@ -17,3 +17,4 @@ aiohttp
 asgiref
 folium
 dask
+markupsafe
