@@ -11,7 +11,7 @@ Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 ## Versão em python (execução local):
 É preciso ter instalado no computador:
 - python <b>versão 3.9</b> ou posterior.<br> 
-- 50GB de espaço livre, para utilizar a base de CNPJs em sqlite.
+- 100GB de espaço livre, para utilizar a base de CNPJs em sqlite.
 
 Faça um clone do código deste projeto.
 Use o comando<br>
