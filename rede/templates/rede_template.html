@@ -56,6 +56,7 @@ var gparam = {};
 	
 	gparam.nodeSize = 20; //24
 	gparam.tamanhoFonte = 10;
+	gparam.tamCorteLabel = 20; //tamanho máximo do rotulo (para link)
 	gparam.corLigacaoLink = 'gray'; //'seagreen';
 	gparam.bMostraLigacao = true;
 	gparam.kligacoes = 0;
@@ -82,17 +83,21 @@ var gparam = {};
 	gparam.paginaBuscaGoogle = {};
 	gparam.camadaIdExpandido = {}; //id -> última camada por duplo clique
 	gparam.termoBuscaGoogle = '';
-	gparam.itensFlag = ['pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
-
+	//gparam.itensFlag = ['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
+	gparam.itensFlag = gparam.inicio.itensFlag; //['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
+	gparam.embaralhaRotulo = false;
+	gparam.abaFilha = null;
+	gparam.usuarioLocal = window.location.href.startsWith('http://127.0.0.1');
+	
 // variáveis globais
-var base = document.URL.split('/rede/')[0] + '/rede/';
+var base = document.URL.split('/rede/')[0] + '/rede/'; //= gparam.baseUrl
 //base = '/rede/',
 	baseImagem = '/static/imagem/',
 	gdebug = null,
 	markerSeta = null,
 	defs = null,
 	menu = null;
-
+let LF = String.fromCharCode(10);
 /*
 createMarker = function(id) {
 	return Viva.Graph.svg('marker')
@@ -140,12 +145,34 @@ defs.innerHTML = ' \
 	</filter> \
 	';
 defs.append(markerSeta);	
-	
+
+function labelsNo_LI(idno, tamCorte) {
+	idno = idno.substr(3);
+	if (idno.startsWith('https://')) {
+		idno = idno.substr('https://'.length);
+		if (idno.startsWith('www.')) {
+			idno = idno.substr(4);
+		}
+		idno = idno.split('/')[0];
+		if (idno.endsWith('.com.br')) {
+			idno = idno.split('.com.br')[0];
+		} else if (idno.endsWith('.com')) {
+			idno = idno.split('.com')[0];
+		}
+	}
+	if (idno.length>tamCorte) {
+		idno = idno.substr(0,tamCorte) + '...';
+		//descricao = idno.substr(-29);
+	}
+	return idno;
+}
+
 function labelsNo(node, tipoResumido) {
 	//antes se passava node.data.label, mas era redundante com id e descricao
 	var idno = node.data.id;
 	var descricao = node.data.descricao;
 	var nota = node.data.nota? node.data.nota: '';
+	let tamCorte = gparam.tamCorteLabel;
 	if (idno.startsWith('PF_')) {
 		idno = idno.substr(3);
 		idno = idno.split('-')[0];
@@ -154,12 +181,26 @@ function labelsNo(node, tipoResumido) {
 		idno = partes[0];
 		descricao = partes[1] + '/' + partes[2];
 	} else if (idno.startsWith('LI_') || idno.startsWith('AR_')) {
+		/*
 		idno = idno.substr(3);
-		if (idno.length>30) {
-			idno = idno.substr(0,29) + '...';
-			//descricao = idno.substr(-29);
+		if (idno.startsWith('https://')) {
+			idno = idno.substr('https://'.length);
+			if (idno.startsWith('www.')) {
+				idno = idno.substr(4);
+			}
+			idno = idno.split('/')[0];
+			if (idno.endsWith('.com.br')) {
+				idno = idno.split('.com.br')[0];
+			} else if (idno.endsWith('.com')) {
+				idno = idno.split('.com')[0];
+			}
 		}
-		if (nota.length>30) {
+		if (idno.length>tamCorte) {
+			idno = idno.substr(0,tamCorte) + '...';
+			//descricao = idno.substr(-29);
+		} */
+		idno = labelsNo_LI(idno, tamCorte);
+		if (nota.length>tamCorte) {
 			nota = '...';
 		}
 	} else if (idno.startsWith('ID_')) {
@@ -169,6 +210,17 @@ function labelsNo(node, tipoResumido) {
 		}
 	} else {
 		idno = idno.substr(3);
+		if (idno.includes('__') && !descricao) {
+			descricao=idno.substr(idno.indexOf('__')+2); 
+			idno = idno.split('__')[0];
+			if (descricao.length>tamCorte) {
+				descricao = descricao.substr(0,tamCorte) + '...';
+			}
+		}
+	}
+	if (gparam.embaralhaRotulo) {
+		descricao = embaralhaTexto(descricao);
+		idno = embaralhaTexto(idno);
 	}
 	if (!tipoResumido) {
 		return [idno, descricao, nota]
@@ -179,12 +231,11 @@ function labelsNo(node, tipoResumido) {
 	} else {
 		return ['', '', '']
 	}
-}//.function labelsNo
+} //.function labelsNo
 
 function textoFlag(node, bchaveEmNegrito) { 
 	var texto = '';
 	var textoAJuntar = '';
-	let LF = String.fromCharCode(10);
 	//let lista = ['pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
 	for (var item of gparam.itensFlag) {
 		if (node.data[item]) {
@@ -198,7 +249,7 @@ function textoFlag(node, bchaveEmNegrito) {
 		}
 	}
 	return texto;
-}//.function textoFlag(node)
+} //.function textoFlag(node)
 
 function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dados dos marcadores
 	let LF = String.fromCharCode(10);
@@ -219,7 +270,7 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao :  '') + LF;
 	} else if (node.id.startsWith('AR_')) {
 		texto = node.id.substr(3) + (node.data.descricao ? LF +  LF + node.data.descricao: '')
-		if (window.location.href.startsWith('http://127.0.0.1')) {
+		if (gparam.usuarioLocal) {
 			texto += LF +  LF + 'Clique duplo para abrir o documento.';
 			if ((node.id.indexOf('\\')==-1) && (node.id.indexOf('/')==-1)) {
 				texto += ' Para ser aberto, isso deve estar na pasta arquivos do projeto.';
@@ -251,17 +302,165 @@ function textoTooltip(node, todoTexto){ // se todoTexto=false, exibe apenas dado
 	}
 	texto = junta(texto, LF+LF, textoFlag(node));
 	return texto;
-}//.function textoTooltip
+} //.function textoTooltip
+
+function imagemLinkDeSite(idNovo) {
+	//aqui já se supõe que idNovo começa com LI_
+	var imagem= 'link.png';
+	var bTentaFavicon = true;
+	/*
+	if (idNovo.startsWith("LI_https://www.youtube.com/watch?v=")) {
+		//nodados.imagem = "https://img.youtube.com/vi/" + idNovo.substr("LI_https://www.youtube.com/watch?v=".length) + '/1.jpg';
+		imagem = imagemYoutube(idNovo.substr(3)); //youtube.png
+		//converter imagens de outro domínio dá erro de permissão nodados.imagem = converteImagem2Base64(nodados.imagem);
+		bTentaFavicon = false;
+	} else */
+	if (idNovo.startsWith("LI_https://www.youtube.com")) {
+		imagem = 'youtube.png';
+	} else if (idNovo.startsWith("LI_https://twitter.com/")) {
+		imagem = 'twitter.png';
+	} else if (idNovo.startsWith("LI_https://www.facebook.com/")) {
+		imagem = 'facebook.png';
+	} else if (idNovo.startsWith("LI_https://www.instagram.com/")) {
+		imagem = 'instagram.png';
+	} else if (idNovo.startsWith("LI_https://www.google.com/")) {
+		imagem = 'google.png';
+	} else if (idNovo.startsWith("LI_https://github.com/")) {
+		imagem = 'github.png';
+	} else if (idNovo.startsWith("LI_https://www.linkedin.com/")) {
+		imagem = 'linkedin.png';
+	} else if (idNovo.startsWith("LI_https://www.reddit.com/")) {
+		imagem = 'reddit.png';
+	} else if (idNovo.startsWith("LI_https://www.whatsapp.com/")) {
+		imagem = 'whatsapp.png';
+	} else if (idNovo.includes(".gov.br/") || idNovo.includes(".gov/") || idNovo.includes("jus.br/")) {
+			imagem = 'institution.png';
+	} else if (idNovo.includes(".wikipedia.org/")) {
+		imagem = 'wikipedia-w.png';
+	} else if (idNovo.includes(".amazon.com")) {
+		imagem = 'amazon.png';
+	} 
+	return imagem;
+} //function imagemLinkDeSite
+
+function checkImage(imageSrc, fgood, fbad) {
+	var img = new Image();
+	img.onload = fgood; 
+	img.onerror = fbad;
+	img.src = imageSrc;
+} //.function checkImage
+//    checkImage("foo.gif", function(){ console.log("good"); }, function(){ console.log("bad"); } );
+
+function imagemYoutube(urlvideo) {
+	//pega miniatura thumbnail do vídeo
+	var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+	var match = urlvideo.match(regExp);
+	if  (match&&match[7].length==11) {
+		return 'https://img.youtube.com/vi/' + match[7] + '/0.jpg';
+	} else {
+		return '';
+	}
+} //.function imagemYoutube
+
+function faviconNoId(noid, urlImage) { 
+	let no = graph.getNode(noid);
+	var imagemAnterior = no.data.imagem;
+	var node = graphics.getNodeUI(noid);
+	var urlAnterior;
+	try {
+		urlAnterior = node.getElementsByTagName('image')[0].getAttribute('xlink:href');
+	} catch (e) {};
+	
+	/*
+	bChecaUrl = true;
+	if (!bChecaUrl && !urlImage) {
+		if (!imagemAnterior.includes(baseImagem) && !imagemAnterior.startsWith('data:') && !imagemAnterior.startsWith('http')) {
+			return;
+		}
+	}*/
+	if (noid.startsWith("LI_https://www.youtube.com/watch?v=")) {
+		//nodados.imagem = "https://img.youtube.com/vi/" + idNovo.substr("LI_https://www.youtube.com/watch?v=".length) + '/1.jpg';
+		urlImage = imagemYoutube(noid.substr(3)); //youtube.png
+		//converter imagens de outro domínio dá erro de permissão nodados.imagem = converteImagem2Base64(nodados.imagem);
+	} else if (!urlImage && noid.startsWith('LI_')) {
+		var partes = noid.substr(3).split('/');
+		if (partes.length>2) {
+			urlImage = partes[0]+'/'+partes[1] + '/' + partes[2] + '/favicon.ico';	
+		}
+	} 
+	console.log('yyy');
+	console.log(urlImage);
+
+	if (!urlImage) { //não faz nada, não parece ser url
+		return;
+	}
+	
+	urlImage2 = urlImage;
+
+	//if (!urlImage.startsWith('http')) {
+	if (!urlImage.includes(baseImagem) && !urlImage.startsWith('data:') && !urlImage.startsWith('http')) {
+		urlImage2 = baseImagem + urlImage;
+	}
+	
+	if (urlImage2.startsWith(baseImagem)) { //se for imagem do servidor da redecnpj, não busca fora
+		no.data.imagem = urlImage;
+		node.getElementsByTagName('image')[0].setAttribute('xlink:href', urlImage2);	
+		return;
+	} 
+
+	checkImage(urlImage, 
+		function() {
+			no.data.imagem = urlImage;
+			let urlaux = urlImage;
+			if (!urlImage.includes(baseImagem) && !urlImage.startsWith('data:') && !urlImage.startsWith('http')) {
+				urlaux = baseImagem + urlImage;
+			}
+			node.getElementsByTagName('image')[0].setAttribute('xlink:href', urlaux);
+		},
+		function () {
+			node.getElementsByTagName('image')[0].setAttribute('xlink:href', baseImagem + 'link.png');
+		}
+	);
+} //.function faviconNoId
+
+function menu_faviconNosItens(imagemUrl) { 
+	//se imageUrl===null, abre prompt para perguntar imagem
+	//se !imageUrl ('' por exemplo), coloca favicon nos itens
+	//se imageUrl, como essa url como imagem
+	var imagemDefault;
+	let no = graph.getNode(gparam.idnoSelecionado);
+	var imagemDefault = no.data.imagem;	
+	if (imagemUrl===null) {
+		imagemUrl = prompt('Digite caminho da imagem para alterar os ícones dos itens selecionados. Para usar o favicon do site (caso o item for link), deixe o campo vazio.', imagemDefault);
+		if (imagemUrl===null) {
+			return;
+		}
+	}
+	for (let noid of gparam.idNosSelecionados) {
+		if (1 || noid.startsWith('LI_')) {
+			faviconNoId(noid, imagemUrl, true);
+		}
+	}	
+} //.menu_faviconNosItens
 
 function iconeF(idno) {
 	var tipo = idno.substr(0,3);
 	var imagem = 'icone-grafo-id.png';
-	if (tipo=='PF') {
+	if (tipo=='PF_') {
 		imagem = 'icone-grafo-desconhecido.png';
 	//} else if (tipo=='PJ_') {
 	//	imagem =
+	} else if (tipo=='EN_') {
+		imagem = 'icone-grafo-endereco.png';
+	} else if (tipo=='TE_') {
+		imagem = 'icone-grafo-telefone.png';
+	} else if (tipo=='EM_') {
+		imagem = 'icone-grafo-email.png';		
+	} else if (tipo=='UG_') {
+		imagem = 'icone-grafo-ug.png';	
 	} else if (tipo=='LI_') {
-		imagem = 'link.png';
+		//ttt imagem = 'link.png';
+		imagem = imagemLinkDeSite(idno); 
 	} else if (tipo=='AR_') {
 		imagem = 'external-link.png';
 	} else if (idno.startsWith('ID_')) {
@@ -288,15 +487,24 @@ function iconeF(idno) {
 		}
 	}
 	return imagem;
-}//function iconeF
+} //function iconeF
 
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	let ui = Viva.Graph.svg('g');
-	let urlImagem = node.data.imagem ? node.data.imagem: 'icone-grafo-id.png';
-
+	//let urlImagem = node.data.imagem ? node.data.imagem: 'icone-grafo-id.png';
+	var urlImagem = node.data.imagem ? node.data.imagem: iconeF(node.id);
+	/*
+	var urlImagem;
+	if (node.data.imagem) {
+		urlImagem = node.data.imagem
+	} else {
+		urlImagem = iconeF(node.id);
+		if (!node.id.startsWith('LI_') { 
+			node.data.imagem = urlImagem;
+		}
+	}*/
 	if (!urlImagem.includes(baseImagem) && !urlImagem.startsWith('data:') && !urlImagem.startsWith('http')) {
-	//if (!urlImagem.includes(baseImagem) ) {
 		urlImagem = baseImagem + urlImagem;
 	}
 	let img = Viva.Graph.svg('image');
@@ -305,6 +513,7 @@ graphics.node(function(node) {
 
 	img.attr('width', gparam.nodeSize)
 		.attr('height', gparam.nodeSize)
+		//.attr('onError','https://www.google.com/favicon.ico') 
 		.link(urlImagem); 
 
 	//if (!node.data.situacao_ativa) {
@@ -344,27 +553,27 @@ graphics.node(function(node) {
 	var [identificador, nome, nota] = labelsNo(node, gparam.kTipoRotulo); //node.data.label.split('\n');
 	//var nota = node.data.nota? node.data.nota: '';
 	//node.data.nota = nota;
-	
+	var svgText, textspan, textspan2, textspan3;
 	if (gparam.btextoEmbaixoIcone) { //textp embaixo do ícone
-		var svgText = Viva.Graph.svg('text')
+		svgText = Viva.Graph.svg('text')
 			.attr('pointer-events', 'none') //o texto não é mais clicável
 			.attr('y', gparam.tamanhoFonte*1.1 + gparam.nodeSize) 
 			.attr('x', gparam.nodeSize/2).attr('text-anchor','middle')
 			.attr('font-size',gparam.tamanhoFonte+'px'); 
-		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
-		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);		
-		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
+		textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', 0).text(identificador);
+		textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);		
+		textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize/2).attr('dy', gparam.tamanhoFonte*1.5)
 			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
 	} else { //texto à direita do ícone
-		var svgText = Viva.Graph.svg('text')
+		svgText = Viva.Graph.svg('text')
 			.attr('pointer-events', 'none')
 			.attr('y',  gparam.nodeSize*0.5+gparam.tamanhoFonte*0.5)
 			.attr('x', gparam.nodeSize).attr('text-anchor','left')  
 			.attr('font-size',gparam.tamanhoFonte+'px')
 			.attr('style','font-family:Comic Sans MS;') ; 	
-		var textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', 0).text(identificador);
-		var textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);	
-		var textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.5)
+		textspan = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', 0).text(identificador);
+		textspan2 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.1).text(nome);	
+		textspan3 = Viva.Graph.svg('tspan').attr('x', gparam.nodeSize*1.2).attr('dy', gparam.tamanhoFonte*1.5)
 			.attr('font-size',gparam.tamanhoFonte*1.5+'px').text(nota);
 	}
 
@@ -376,14 +585,19 @@ graphics.node(function(node) {
 	ui.append(img);
 	ui.append(rect);
 	ui.append(svgText);
-	
-	if (textoFlag(node)) { //redflag xxx
+		
+	let textoBandeira = textoFlag(node);
+	if (textoBandeira) { //redflag
+		var iconeFlag = 'flag_red.png';
+		if (textoBandeira.startsWith('situacao_fiscal') && (textoBandeira.indexOf(LF)==-1)) { //se tiver situação fiscal não ativa e não baixada, e for unico texto de "flag", coloca bandeira cinza.
+			iconeFlag = 'flag.png';
+		}
 		let redflag = Viva.Graph.svg('image');
-		redflag.attr('width', gparam.nodeSize)
-			.attr('height', gparam.nodeSize)
+		redflag.attr('width', gparam.nodeSize*0.6)
+			.attr('height', gparam.nodeSize*0.6)
 			.attr('x', gparam.nodeSize/2)
 			.attr('y', -gparam.nodeSize/2)
-			.link(baseImagem + 'flag_red.png'); 
+			.link(baseImagem + iconeFlag); 
 		ui.append(redflag);
 	}
 	
@@ -419,7 +633,8 @@ graphics.node(function(node) {
 				//
 			} else {
 				selecionaNoid(node.id, false);	
-				menu_incluir1Camada(node.id); 
+				//menu_incluir1Camada(node.id); 
+				menu_incluir1Camada(''); 
 			}
 		};
 		return;
@@ -436,7 +651,8 @@ graphics.node(function(node) {
 		if ((tempoToque<500) && (tempoToque > 0)) {
 			//double tab ondblclick
 			selecionaNoid(node.id, false);
-			menu_incluir1Camada(node.id); 
+			//menu_incluir1Camada(node.id); 
+			menu_incluir1Camada(''); 
 			event.preventDefault();
 		} else {
 			var touchLength = currentTime - gparam.inicioToque;
@@ -470,12 +686,13 @@ graphics.node(function(node) {
 }); //.graphics.node(function(node) 
 
 graphics.link(function(link){
+
 	var label = Viva.Graph.svg('text')
 		//.attr('title', String(link.data.label))
 		.attr('id','link_label_'+link.data.id)
 		.attr('font-size',gparam.tamanhoFonte+'px')
 		.attr('fill',link.data.cor)
-		.text(filtraTextoLigacao(String(link.data.label)));
+		.text(cortastr(filtraTextoLigacao(String(link.data.label)),25));
 	label.insertAdjacentHTML('beforeEnd','<title>' + String(link.data.label) + '</title>'); 
 	//gparam.idLigacoes[link.data.origem + '\n' + link.data.destino] = link.data.id;
 	graphics.getSvgRoot().childNodes[0].append(label);
@@ -516,8 +733,10 @@ graphics.link(function(link){
 		var elemento = document.getElementById('link_label_'+linkUI.attr('id'));
 		elemento.attr("x", (from.x + to.x) / 2).attr("y", (from.y + to.y) / 2)
 				.attr('visibility', gparam.bMostraLigacao? 'visible' : 'hidden');	
+
 		// se for grande, deixa o texto do link na horizontal, se for menor alinha com a ligacao.
-		if  (elemento.textContent.length <= 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
+		if  (true) { 
+		// if (elemento.textContent.length <= 2*20) { //20 caracteres, length é contado em dobro por causa do <title>
 			// calcula o angulo para exibir o rótulo inclinado
 			var angulo = 180.0/Math.PI* Math.atan2(toPos.y-fromPos.y,toPos.x - fromPos.x);
 			var baseline = '-1';
@@ -557,7 +776,20 @@ function filtraTextoLigacao(texto) {
 		}
 	}	
 	return palavras.join('; ');
-}//.filtraTextoLigacao
+} //.filtraTextoLigacao
+
+function embaralhaTexto(t) {
+	const shuffle = str => [...str].sort(()=>Math.random()-.5).join('');
+	var lista = [];
+	for (x of t.split(' ')) {
+		var xs = shuffle(x);
+		if (xs==x){
+			xs = shuffle(x);
+		}
+		lista.push(xs);
+	}
+	return lista.join(' ');
+} //.function embaralhaTexto
 
 function ajustaRetanguloAnimado(nodeid, bSeleciona) {
 	//ajusta posicao do retangulo para envolver o texto
@@ -603,7 +835,7 @@ function ajustaRetanguloAnimado(nodeid, bSeleciona) {
 		//var uirect = nodeUI.getElementsByTagName('rect')[1];
 		//nodeUI.removeChild(uirect);
 	}
-}//.function ajustaRetanguloAnimado
+} //.function ajustaRetanguloAnimado
 
 function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	// ativa retângulo em torno do ícone do nó.
@@ -658,9 +890,8 @@ function selecionaNoid(nodeid, shift_pressionado, selecionaRetangular) {
 	//ajusta menu contextual
 	//ajustaMenuContextual(nodeid);
 	return;
-}//.function selecionaNoid
+} //.function selecionaNoid
 
-//gparam.AreaSelecaoRetangular
 gparam.AreaSelecaoRetangular = {
 	Setup:function() {
 		/*seleção retangular */
@@ -792,7 +1023,7 @@ gparam.AreaSelecaoRetangular = {
 			selectionIndicator.style.height = selectedArea.height + 'px';
 		}	
 	}
-}//gparam.AreaSelecaoRetangular
+} //.gparam.AreaSelecaoRetangular
 
 /* Para usar a seleção retangular, criar a seguinte função depois de scale na função svgGraphics() em vivagraph.js
 		transformClientToGraphCoordinates :  function (position) {
@@ -869,7 +1100,7 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 		}
 	});
 	return selecionaSet(idNosLocalizados, primeiroNoid);
-}//.function localizaNo
+} //.function localizaNo
 
 function selecionaSet(sidNos, primeiroNoid) {
 	//seleciona um set de ids, se primeiroNoid for informado, centraliza nesse id
@@ -893,7 +1124,7 @@ function selecionaSet(sidNos, primeiroNoid) {
 	} else {
 		return 0;
 	}
-}//.function selecionaSet
+} //.function selecionaSet
 
 function menu_localiza(bFiltroNosSelecionados) {
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
@@ -916,7 +1147,7 @@ function menu_localiza(bFiltroNosSelecionados) {
 			ativaAtalhos(true);
 			menu_rendererAtivarParar(brenderer, false);
 		});
-}//.function menu_localiza
+} //.function menu_localiza
 
 function menu_localizaPorCampo(bFiltroNosSelecionados) {
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
@@ -933,7 +1164,8 @@ function menu_localizaPorCampo(bFiltroNosSelecionados) {
 				if (!valorDif) {
 					var [campo, valor] = comp.split('=');
 				}
-				valor = replaceAll(replaceAll(valor, '"', ''), "'", "");
+				//valor = replaceAll(replaceAll(valor, '"', ''), "'", "");
+				valor = valor.replaceAll( '"', '').replaceAll( "'", "");
 				if (data[campo]) {
 					if ( (Boolean(valor) && (data[campo]==valor)) ||
 						(Boolean(valorDif) && (data[campo]!=valorDif))) {
@@ -946,7 +1178,7 @@ function menu_localizaPorCampo(bFiltroNosSelecionados) {
 			}
 		});
 		return selecionaSet(idNosLocalizados, primeiroNoid);
-	}//.function localizaNoPorCampo
+	} //.function localizaNoPorCampo
 	ativaAtalhos(false);
 	var brenderer = menu_rendererAtivarParar(false, false);
 	var tmensagem = bFiltroNosSelecionados? 'Filtrar nos itens selecionados':'Localizar item na tela por campo'; 
@@ -966,7 +1198,7 @@ function menu_localizaPorCampo(bFiltroNosSelecionados) {
 			ativaAtalhos(true);
 			menu_rendererAtivarParar(brenderer, false);
 		});
-}//.function menu_localizaPorCampo
+} //.function menu_localizaPorCampo
 
 function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 	//bFiltroNosSelecionados, só procura em idNosSelecionados, senão procura em todos os itens
@@ -987,11 +1219,12 @@ function menu_localiza_adjacentes(bFiltroNosSelecionados) {
 			selecionaNoid(n, true, true); 
 		}
 		alertify.success('Localizou '+ idNosLocalizados.size + ' adjacentes');
+		gparam.camadaIdExpandido = {}; 
 		return idNosLocalizados.size;
 	} else {
 		return 0;
 	}
-}//.function menu_localiza_adjacentes
+} //.function menu_localiza_adjacentes
 
 function menu_localiza_componente() {
 	var brenderer = menu_rendererAtivarParar(false, false);
@@ -1028,7 +1261,176 @@ function menu_localiza_componente() {
 		return 0;
 	}
 
-}//.function menu_localiza_componente
+} //.function menu_localiza_componente
+
+function menu_botao_caminhos() {
+	if (gparam.idNosSelecionados.size<2) {
+		alertify.error('Para usar a rotina de caminhos, deve haver ao menos dois itens selecionados. Faça shift+click para selecionar mais itens.');
+		return false;
+	}
+	var camada = prompt('Digite a camada a procurar. A camada é a partir de cada item, por isso pode encontrar caminhos até o dobro de camada. O valor máximo é 5. Se não encontrar caminho com os itens no gráfico, procura mais dados no servidor.', 3);
+	if (camada===null) {
+		return false;
+	}
+	camada = parseInt(camada); 
+	if (!camada) {
+		return
+	}
+	if (camada>5) {
+		alert('Utilize camada abaixo de 5');
+		return false;
+	}
+	menu_caminhos(camada, '', false);
+} //. function menu_botao_caminhos
+
+function menu_caminhos(camadaIn, criterioCaminhos, bBuscarNoServidor) { 
+	var kitens_encontrados, resp;
+	var kitensIniciais = gparam.idNosSelecionados.size;
+	if (kitensIniciais<2) {
+		alertify.error('Para usar a rotina de caminhos, deve haver ao menos dois itens selecionados.');
+		return false;
+	} else if (kitensIniciais>10) {
+		resp = confirm('Fazer a busca de caminhos de muitos itens pode travar o navegador. Deseja prosseguir?');
+		if (!resp) {
+			return false;
+		}
+	} 
+	if (!bBuscarNoServidor) {
+		kitens_encontrados = menu_caminhos_na_tela(2*camadaIn, criterioCaminhos);
+		if (kitens_encontrados) {
+			if (kitens_encontrados<kitensIniciais) {
+				alertify.warning('Não encontrou caminhos para todos os itens no gráfico atual. Para buscar dados no servidor, pressione CTRL+SHIFT+Número');
+			} else {
+				alertify.success('Encontrou caminho entre os itens no gráfico atual. Esses elementos foram selecionados.');
+			}
+			return;
+		} else {
+			resp = confirm('Não encontrou caminho no gráfico atual. Deseja buscar dados no servidor?');
+			if (!resp) {
+				return;
+			}
+		}
+	}
+	if (criterioCaminhos){
+		criterioCaminhos = 'caminhos-' + criterioCaminhos;
+	} else {
+		criterioCaminhos = 'caminhos';
+	}
+	//camadaInsercao = (Math.floor(camadaIn/2)==camadaIn/2)? Math.floor(camadaIn/2) : Math.floor(camadaIn/2)+1;
+	menu_incluirCamada('', camadaIn, criterioCaminhos); //faz chamada ao servidor
+} //.function menu_caminhos
+
+function menu_caminhos_na_tela(camada, criterioCaminhos) { 
+	//ativaAtalhos(false);
+	var brenderer = menu_rendererAtivarParar(false, false);
+
+	//var camada = camadaIn*2; //+2;
+	var idNosLocalizados = new Set();
+	var camadasItem = {};
+
+	document.body.style.cursor = 'wait';
+	for (let noId of gparam.idNosSelecionados) {	
+		var dcamada = {0:[noId,]};
+		var itensCamadaAnterior = new Set([noId,]);
+		var itensVisitados=new Set([noId,]);
+		for (let cam=1; cam<=camada; cam++) {
+			var itensNaCamada=new Set();	
+			for (idr of dcamada[cam-1]) {
+				graph.forEachLinkedNode(idr, function(naux, link){
+					if ((naux.id!=idr) && (!itensVisitados.has(naux.id))) {
+						itensNaCamada.add(naux.id);
+					}
+					itensVisitados.add(naux.id);
+				})
+			}
+			//console.log([...itensNaCamada]);
+			dcamada[cam] = [...itensNaCamada];
+		}
+		camadasItem[noId] = JSON.parse(JSON.stringify(dcamada));
+	}
+	var bAtendeCriterio;
+	for (let no1 of gparam.idNosSelecionados) {	
+		for (let no2 of gparam.idNosSelecionados) {	
+			if (no1>=no2) continue;
+			for (let cam=1; cam<=camada; cam++) {
+				var scam = new Set(camadasItem[no1][cam]);
+				if (scam.has(no2)){
+					if (criterioCaminhos) {		
+						bAtendeCriterio = false;					
+						var nota1 = graph.getNode(no1).data.nota;
+						var nota2 = graph.getNode(no2).data.nota;
+						if (nota1 && nota2) {
+							if (criterioCaminhos=='intra') {
+								if (nota1==nota2) {
+									bAtendeCriterio = true;
+								}
+							} else if (criterioCaminhos=='extra') {
+								if (nota1!=nota2) {
+									bAtendeCriterio = true;
+								}						
+							}
+						}
+					} else {
+						bAtendeCriterio = true;
+					}
+					if (!bAtendeCriterio) continue;
+					//encontrou, então faz ordem inversa
+					idNosLocalizados.add(no2);
+					idNosLocalizados.add(no1);
+					for (let cam2=1; cam2<cam; cam2++) {
+						var scam1 = new Set(camadasItem[no1][cam-cam2])
+						var scam2 = new Set(camadasItem[no2][cam2]);
+						for (let idaux of scam2) { //intersecção
+							if (scam1.has(idaux)) {
+								idNosLocalizados.add(idaux);
+							}
+						}
+					}
+					break;
+				}
+			}
+		}
+	}
+	var kitensOrigemLocalizados=0;
+	for (idc of idNosLocalizados) {
+		if (gparam.idNosSelecionados.has(idc)) {
+			kitensOrigemLocalizados += 1;
+		}
+	}
+
+	for (idc of idNosLocalizados) {
+		selecionaNoid(idc, true, true); 
+	}
+
+	menu_rendererAtivarParar(brenderer, false);
+	document.body.style.cursor = 'default';
+	return kitensOrigemLocalizados; //idNosLocalizados.size;
+
+} //.function menu_caminhos_na_tela
+
+function menu_localiza_CaminhosEntreitensComNotas(criterioCaminhos) {
+	if (gparam.idNosSelecionados.size<=1) {
+		var cont = menu_localiza_itensComNotas(false);	
+		if (!cont) {
+			alertify.error('Para usar esta rotina, deve haver itens com notas.');
+			return;
+		}
+	}
+	if (criterioCaminhos) {
+		let dicItens = menu_incluirCamada_dicItemNota();
+		if (Object.keys(dicItens).length==0) { // (dicItens) { dicItens == true??
+			alert('Para usar esta opção de caminhos, os itens devem ter Anotações para identificar os grupos. Para adicionar uma anotação, clique com o botão da roda.');
+			return false;
+		}
+	}
+	var camada = prompt('Distância máxima aproximada entre os itens', 2);
+	if (camada===null) {
+		return;
+	}
+	camada = parseInt(camada);
+	//menu_caminhos_na_tela(camada, criterioCaminhos);
+	menu_caminhos(camada, criterioCaminhos, false) 
+} //.function menu_localiza_CaminhosEntreitensComNotas
 
 function menu_localiza_itensComMaisLigacoes() {
 	var dcontagem = {};
@@ -1038,7 +1440,7 @@ function menu_localiza_itensComMaisLigacoes() {
 		dcontagem[link.toId] = dcontagem[link.toId] ? dcontagem[link.toId]+1 : 1;
 	});
 	listaESeleciona(dcontagem, 'Itens com mais ligações');
-}//.function menu_localiza_itensComMaisLigacoes
+} //.function menu_localiza_itensComMaisLigacoes
 
 function listaESeleciona(dcontagem, texto) {
 	const listaIdContagem = Object.entries(dcontagem).sort(([,a],[,b]) => b-a);
@@ -1059,7 +1461,7 @@ function listaESeleciona(dcontagem, texto) {
 	if (!nids) return;
 	selecionaSet(new Set(listaIds.slice(0,nids))); //, listaIds[0]);
 	alertify.success('Os itens ' + listaIds.slice(0,nids) + ' foram selecionados');
-}//.listaESeleciona
+} //.function listaESeleciona
 
 function menu_localiza_itensLigadosAColoridos() {
 	var dcontagem = {};
@@ -1071,7 +1473,25 @@ function menu_localiza_itensLigadosAColoridos() {
 		dcontagem[link.toId] = dcontagem[link.toId] ? dcontagem[link.toId]+corFrom : corFrom;
 	});
 	listaESeleciona(dcontagem, 'Ligados a itens marcados');
-}//.function menu_localiza_itensLigadosAColoridos
+} //.function menu_localiza_itensLigadosAColoridos
+
+function menu_localiza_itensComNotas(bMensagem) { 
+	var setNos = new Set();
+	graph.forEachNode( function(node) { 
+		if (graph.getNode(node.id).data.nota) {
+			setNos.add(node.id);
+		}
+	});
+	var cont = selecionaSet(setNos);
+	if (!bMensagem) {
+		return cont;
+	}
+	if (cont) {
+		alertify.success('Foram encontrados ' + cont + ' itens com Notas');
+	} else {
+		alertify.error('Não foi encontrado item com Nota');
+	}
+} //.function menu_localiza_itensComNotas
 
 function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 	var estadoAnterior = gparam.bRenderAtivado;
@@ -1088,7 +1508,7 @@ function menu_rendererAtivarParar(bAtivar, bMostraMensagem) {
 	}
 	gparam.bRenderAtivado = bAtivar;
 	return estadoAnterior;
-}//.function menu_rendererAtivarParar
+} //.function menu_rendererAtivarParar
 
 function pausarLayout(milissegundos) {
 	if (!gparam.bRenderAtivado) {
@@ -1104,14 +1524,14 @@ function pausarLayout(milissegundos) {
 			};
 		}, milissegundos
 	);
-}//.function pausarLayout
+} //.function pausarLayout
 
 function reativarLayout() {
 	if (gparam.layout_suspenso) {
 		gparam.renderer.resume();
 		gparam.layout_suspenso = false;
 	}
-}//.function reativarLayout
+} //.function reativarLayout
 
 function removeIdNo(noId) { 
 	//remover o nó da lista de nós
@@ -1132,7 +1552,7 @@ function removeIdNo(noId) {
 		gparam.idnoSelecionado=null;
 	}
 	gparam.camadaIdExpandido = {};
-}//.function removeIdNo
+} //.function removeIdNo
 
 
 function menu_excluirNosSelecionados(bSemConfirmar) {
@@ -1159,7 +1579,7 @@ function menu_excluirNosSelecionados(bSemConfirmar) {
 			fExcluir
             , function(){ ;}
 	);
-}//.function menu_excluirNosSelecionados
+} //.function menu_excluirNosSelecionados
 
 function menu_excluirTudo() {
 	var setNos = new Set();
@@ -1175,7 +1595,7 @@ function menu_excluirTudo() {
 			}
             , function(){ ;}
 	);
-}//.function menu_excluirTudo
+} //.function menu_excluirTudo
 
 function excluirNoMantendoLinks() { 
 	if (gparam.idNosSelecionados.size!=3) {
@@ -1190,7 +1610,7 @@ function excluirNoMantendoLinks() {
 	removeIdNo(listaNos[1]);
 	selecionaSet(new Set([listaNos[0], listaNos[2]]));
 	menu_ligar_selecionados(false, '', true);
-}//.function excluirNoMantendoLinks
+} //.function excluirNoMantendoLinks
 
 function menu_inserirDesfazer() {
 	var idNosInseridos = gparam.listaIdNosInseridos.pop();
@@ -1202,7 +1622,7 @@ function menu_inserirDesfazer() {
 	var tmensagem = (tam==1 ? 'Foi removido um nó.' : ('Foram removidos ' + tam + ' nós.'))
 	alertify.success(tmensagem);
 	gparam.camadaIdExpandido = {}; //reseta idExpandidos
-}//.menu_inserirDesfazer
+} //.menu_inserirDesfazer
 
 function dadosEmHtmlPJ(d, noData) {
 	//for (var i of Object.entries(gparam.json)) {
@@ -1230,7 +1650,7 @@ function dadosEmHtmlPJ(d, noData) {
 	ht += "<b>Email:</b> "+d['correio_eletronico'] +"<br>";
 
 	ht += "<b>CNAE:</b> "+d['cnae_fiscal'] +"<br>";
-	ht += "<b>CNAE Secundária:</b> "+cortastr(d['cnae_secundaria'], 250) +"<br>"; //xxx2
+	ht += "<b>CNAE Secundária:</b> "+cortastr(d['cnae_secundaria'], 250) +"<br>"; 
 	if (noData.nota) {
 		ht += "<br><b>Nota:</b> "+ noData.nota + "<br>";
 	}
@@ -1243,13 +1663,13 @@ function dadosEmHtmlPJ(d, noData) {
 		d[k] = '';
 	}
 	return ht;
-}//.dadosEmHtmlPJ
+} //.dadosEmHtmlPJ
 
 function cortastr(s, tam) {
 	if (!s) {
 		return '';
 	} else if (s.length>tam) {
-		return s.substr(0, tam) + ' (...)';
+		return s.substr(0, tam) + '...'; //' (...)';
 	} else {
 		return s;
 	}
@@ -1267,29 +1687,36 @@ function mensagemErroHttp(response) {
 } //.mensagemErroHttp
 
 function menu_dados(bNovaJanela, idNo) {
-	var idin = gparam.idnoSelecionado;
-	if (idNo) { 
-		idin = idNo; 
+	var idin = idNo? idNo : gparam.idnoSelecionado;
+
+	if (bNovaJanela) {
+		if (idNo) {
+			window.open(base+'consulta_cnpj/?cnpj='+idNo.substr(3));
+		} else {
+			var listaIds = [...gparam.idNosSelecionados].filter(function(id) {return id.startsWith('PJ_');}).slice(0,100).join('; ');
+			window.open(base+'consulta_cnpj/?cnpj='+listaIds);
+		}
+		return;
 	}
+
 	if (!idin) return;
+	/*
 	if (bNovaJanela && idin.startsWith('PJ_')) {
 		window.open(base+'consulta_cnpj/?cnpj='+idin.substr(3));
 		return;
-	}
-	/*
-	if (!window.location.href.startsWith('http://127.0.0.1') && bNovaJanela && idin.startsWith('PJ_')) {
-		window.open('https://www.ocnpj.com.br/consulta/?cnpj='+idin.substr(3));
-		return;
 	}*/
+
 	function mostraResultado(idin, ht) {
 		if (bNovaJanela) { 
 				//var win = window.open('/rede/dados_janela/'+gparam.idnoSelecionado, gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
 				var win = window.open('', idin,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
 				win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + ht + "</body></html>";
 		} else {
-			alertify.alert("Dados de "+idin, ht, function(){});
+			ativaAtalhos(false);
+			alertify.alert("Dados de "+idin, ht, function(){ativaAtalhos(true);});
 		}	
-	}
+	} //.function mostraResultado
+	
 	let node = graph.getNode(idin);
 	var noData = node.data;
 	var ht = '';
@@ -1306,6 +1733,16 @@ function menu_dados(bNovaJanela, idNo) {
 			if (tf) {
 				ht += "<br>" + tf + "<br>";
 			}
+		} else if (idin.startsWith('LI_')) { //if ([ 'LI_', 'ID_'].includes(gparam.idnoSelecionado.substr(0,3))) { 
+			ht += "<b>ID: </b> " + idin + "<br>";
+			if (noData.descricao) { 
+				ht += "<b>Descrição: </b> "+ noData.descricao + "<br>";
+			}
+			if (noData.nota) {
+				ht += "<b>Nota: </b> "+ noData.nota + "<br>";
+			}		
+			mostraResultado(idin, ht);
+			return;
 		} else {
 			for (const [key, value] of Object.entries(noData)) {
 				if (!['camada', 'situacao_ativa', 'posicao', 'pinado'].includes(key)) {
@@ -1322,13 +1759,19 @@ function menu_dados(bNovaJanela, idNo) {
 		}
 	}
 
-	var url = base + 'dadosjson/' + idin ;
+	//var url = base + 'dadosjson/' + idin;
+	var url = base + 'dadosjson/'; 
+	//link pode ter caractere, como barra, que bagunça o app.route do flask, por isso os dados vão pelo body. outra opção, ignorar pedido de dadosjson de LI_
 	/*
-	if (bNovaJanela) {
-		url = base + 'dadosjson_aba/' + idin ;
-	}*/
-	// talvez isto é redundante para PF, pois os dados de pep, etc, já terão sido carregados.
-	fetch(url, {method: 'post', cache: "no-store"}) //, mode: 'cors',})
+	if ([ 'LI_', 'ID_'].includes(idin.substr(0,3))) { 
+		//url += idin.substr(0,3); //encodeURIComponent(idin); 
+		url += encodeURIComponent(idin.replaceAll('/',' ').replaceAll('?', ' '));
+	} else {
+		url += idin; //o idin aqui é um enfeite, porque via post o parâmetro vai ser lido pelo body
+	} */
+	url += encodeURIComponent(idin.replaceAll('/',' ').replaceAll('?', ' '));
+	// talvez isto é redundante para PF, pois os dados de pep, etc, já terão sido carregados. Só tem sentido se existisse atualizasse online de algum dado
+	fetch(url, {method: 'post', body:JSON.stringify({'idin':idin}), headers: {"Content-type": "application/json"}, cache: "no-store"}) //, mode: 'cors',})
 	  .then(
 		function(response) {
 		  if (response.status !== 200) {
@@ -1343,9 +1786,6 @@ function menu_dados(bNovaJanela, idNo) {
 			if (Object.keys(data).length) {
 				if (idin.startsWith('PJ_')) {
 					ht = dadosEmHtmlPJ(data, noData);
-					if (!gparam.mobile) {
-						ht += '<a href="/rede/consulta_cnpj/?cnpj=' + idin.substring(3) + '" title="No gráfico, pressione SHIFT+D para ver dados de CNPJ em uma nova aba. Os sócios serão listados." target="_blank">Abrir em outra aba</a><br><br>';
-					}
 				} // else {
 					//ht += noData;
 				htadicional = ''
@@ -1353,17 +1793,21 @@ function menu_dados(bNovaJanela, idNo) {
 					if (['id'].includes(key)) {
 						continue;
 					}
-					if ((idin.startsWith('PF_')) && (gparam.itensFlag.includes(key))) { //xxx
+					if ((idin.startsWith('PF_')) && (gparam.itensFlag.includes(key))) { 
 						continue;
 					}
 					if (value) {
-						htadicional += "<b>" + key + ": </b> "+ value+ "<br>";
+						htadicional += "<b>" + key.toUpperCase() + ": </b> "+ value+ "<br>";
 					}
 				}
 				if (htadicional) {
-					ht +=  "<b>--------------</b> "+ "<br>" + htadicional;
+					//ht +=  "<b>--------------</b> "+ "<br>" + htadicional;
+					ht +=  "<br>" + htadicional;
 				}
 				//}
+				if (!gparam.mobile && idin.startsWith('PJ_')) {
+					ht += '<a href="/rede/consulta_cnpj/?cnpj=' + idin.substring(3) + '" title="No gráfico, pressione SHIFT+D para ver dados de CNPJ em uma nova aba. Os sócios serão listados." target="_blank">Abrir em outra aba</a><br><br>';
+				}
 			} 
 			mostraResultado(idin, ht);
 		  });
@@ -1373,23 +1817,7 @@ function menu_dados(bNovaJanela, idNo) {
 		console.log('Fetch Error :-S', err);
 		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 	  });
-}//.function menu_dados
-
-function menu_ocnpj() {
-	var ids = '';
-	for (let n of gparam.idNosSelecionados) {
-		if (n.startsWith('PJ_')) {
-			ids += n.substr(3) + ';';
-		}
-	}
-	if (ids.length<200) {
-		window.open('https://www.ocnpj.com.br/consulta/?cnpj='+encodeURIComponent(ids));
-	} else {
-		urlocnpj = 'https://www.ocnpj.com.br/consulta/';
-		//urlocnpj = 'http://127.0.0.1:5001/consulta/';
-		openWindowWithPost({'cnpj':ids}, urlocnpj) 
-	}
-}//.function menu_ocnpj
+} //.function menu_dados
 
 function menu_listaSelecao(bNovaJanela) {
 	if (!gparam.idNosSelecionados) { 
@@ -1416,10 +1844,11 @@ function menu_listaSelecao(bNovaJanela) {
 			var win = window.open('', gparam.idnoSelecionado,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
 			win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>Itens Selecionados</title></head><body  >" + ht + "</body></html>";
 		} else {
-			alertify.alert("Itens selecionados: \n" + ht, function(){});
+			ativaAtalhos(false); //para permitir ctrl+c
+			alertify.alert("Itens selecionados: \n" + ht, function(){ativaAtalhos(true);});
 		}
 	} 
-}//.function menu_lista_selecao
+} //.function menu_lista_selecao
 
 
 function menu_importarJsonArquivo(evt, tipo) {
@@ -1485,7 +1914,7 @@ function menu_importarJsonArquivo(evt, tipo) {
 		})(f);
 		reader.readAsText(f);
 	}
-}//.function menu_importarJsonArquivo
+} //.function menu_importarJsonArquivo
 
 function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acaoAlternativa ) {
 	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
@@ -1541,24 +1970,58 @@ function menu_exportaJSONServidorParaBaseLocal(bSoSelecionados, comentario, acao
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
 	}
-}//.function menu_exportaJSONServidorParaBaseLocal
+} //.function menu_exportaJSONServidorParaBaseLocal
 
-
-function menu_novaAbaComDadosJson(bSoSelecionados, setNos, bSemPosicao) {
-	//abre nova aba exportando dados para o servidor
-	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
-	//se setNos especificado, usa esses itens para exportar
-	//se setNos = null, usa todos os itens do gráfico se bSoSelecionados=false ou só selecionados se bSoSelecionados=true
-	var jsonDados;
-	if (setNos) {
-		jsonDados = getRedeNosLigacoes(null, setNos, bSemPosicao);
-	} else {
-		jsonDados = getRedeNosLigacoes(bSoSelecionados, null, bSemPosicao);
+function menu_copiaItensParaOutraAba(bNovaJanela, bFocusNoDestino) { 
+	//cria nova aba (ou não) para copiar itens selecionados. Se não criar nova aba, copia para a última aba selecionada
+	//quando cria uma aba nova (filha), o focus necessariamente fica na aba filha. O parâmetro bFocusNoDestino só funciona quando a aba filha já existe
+	var jsonDados = getRedeNosLigacoes(true, null, true);
+	if (!bNovaJanela) {
+		if (!gparam.abaFilha || !gparam.abaFilha.inserirJson || gparam.abaFilha.closed ) {
+			if (!confirm('Não encontrou uma Aba "Filha" aberta. Deseja abrir uma nova aba com os itens selecionados?')) {
+				return;
+			}
+			bNovaJanela = true;
+		}
 	}
-	openWindowWithPost(jsonDados, 'selecao_de_itens'); 
-}//.function menu_novaAbaComDadosJson
+	if (bNovaJanela) {
+		gparam.abaFilha = window.open(base); 
+	}
+	var tempo = bNovaJanela ? 500 : 10;
+	//gparam.abaFilha.inserirJson(jsonDados, 'itens copiados'); //neste momento a função ainda não foi criada... precisa de um delay
+	setTimeout(function() {
+				copiarItemSelecionadosParaAbaFilha(bNovaJanela, bFocusNoDestino)
+			}, tempo
+	);
+} //.function menu_copiaItensParaOutraAba
 
-function exportaArquivoServidor(arquivo) { //ttt
+function copiarItemSelecionadosParaAbaFilha(bNovaJanela, bFocusNoDestino) { 
+	//ativado por duplo click no botão drag 
+	//copia itens selecionados para nova janela aberta por SHIFT+A
+	if (!gparam.abaFilha || gparam.abaFilha.closed || !gparam.abaFilha.inserirJson  ) { //esta checagem é redundante??
+		alertify.error('Não há outra janela aberta recentemente. Use SHIFT+DUPLO CLICK no botão COPY ou a tecla SHIFT+A para criar uma nova ABA VAZIA ou a tecla A para criar nova aba com os itens selecionados.');
+		return;
+	}
+	var jsonDados = getRedeNosLigacoes(true, null, true); //pega itens selecionados
+	try {
+		gparam.abaFilha.inserirJson(jsonDados, 'itens copiados da Aba "Mãe"', true); 
+		if (bNovaJanela) {
+			gparam.abaFilha.alertify.warning('Pressionando o botão COPY na Aba "Mãe" copiará outros itens para esta Aba "Filha".');
+		}
+		alertify.success('Os itens selecionados foram copiados para a outra aba.');
+		if (bFocusNoDestino) {
+			gparam.abaFilha.focus();
+		}
+	} catch (error) {
+		alertify.error('Erro. Nâo copiou itens para outra aba.');
+		if (bNovaJanela) {
+			gparam.abaFilha.close();
+			gparam.abaFilha = null;		
+		}
+	}
+} //.function copiarItemSelecionadosParaAbaFilha
+
+function exportaArquivoServidor(arquivo) { 
 	//https://stackoverflow.com/questions/5587973/javascript-upload-file
 	let formData = new FormData();
 	formData.append("arquivo", arquivo);
@@ -1589,43 +2052,31 @@ function exportaArquivoServidor(arquivo) { //ttt
 			console.log('Fetch Error :-S', err);
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
-}//.function exportaArquivoServidor
+} //.function exportaArquivoServidor
 
-function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServidor, setNos, nomeNovaAba) {
+//function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServidor, setNos, nomeNovaAba) {
+function menu_exportaJSONServidor(bSoSelecionados) {
 	//abre nova aba exportando dados para o servidor
 	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
 	//se setNos especificado, usa esses itens para exportar
 	//se setNos = null, usa todos os itens do gráfico se bSoSelecionados=false ou só selecionados se bSoSelecionados=true
 	
-	//nos casos de idArquivoServidor = 'temporario', utilizar
-	//menu_novaAbaComDadosJson(bSoSelecionados, setNos) , que evita criar um arquivo no servidor.
-	if (idArquivoServidor=='temporario') {
-		menu_novaAbaComDadosJson(bSoSelecionados, setNos);
-		return;
-	}
 	var jsonDados;
 	var novaJanela;
-	if (setNos) {
-		jsonDados = getRedeNosLigacoes(null, setNos);
-	} else {
-		jsonDados = getRedeNosLigacoes(bSoSelecionados);
-	}
+	jsonDados = getRedeNosLigacoes(bSoSelecionados);
 	if (jsonDados.no.length==0) {
 		alertify.error('Não há itens para exportar.');
 		return;
 	}
-	if (bMostraAlerta) {
-		if (!idArquivoServidor) {
-			idArquivoServidor =  prompt('Digite um comentário para os dados inseridos na base local:', 'rede');
-		}
-	}
+
+	idArquivoServidor =  prompt('Digite um começo para o nome do arquivo a ser carregado no servidor. Serão adicionados caracteres aleatórios para dificultar o acesso a outros usuários. Qualquer pessoa com o nome + caracteres aleatórios poderá abrir ou apagar o arquivo.', 'rede');
 	if (!idArquivoServidor) {
 		return;
 	}
 	var url = base + 'arquivos_json_upload/' + encodeURIComponent(idArquivoServidor);
 
-	fazFetch(url, jsonDados, nomeNovaAba); 
-	function fazFetch(url, idArquivoServidor) {
+	fazFetch(url, jsonDados); 
+	function fazFetch(url, jsonDados) {
 		document.body.style.cursor = 'wait';
 		fetch(url, {method: 'post', body:JSON.stringify(jsonDados), headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
@@ -1639,14 +2090,9 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 				//console.log(data);
 				document.body.style.cursor = 'default';
 				if (data.nomeArquivoServidor) {
-					if (bMostraAlerta) {
-						alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.');
-					};
+
+					alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.\nAtenção: QUALQUER PESSOA COM O LINK poderá ABRIR ou APAGAR o arquivo no servidor.');
 					var novaJanela=window.open(base + "grafico_no_servidor/" + data.nomeArquivoServidor);
-					if (nomeNovaAba) {
-						//novaJanela.document.title = nomeAbaNova; //isto causa erro
-						setTimeout(function(){ novaJanela.document.title = nomeNovaAba; }, 3000); //se o gráfico for muito grande, o tempo pode não ser suficiente
-					}
 				} else {
 					alertify.error('Aconteceu um erro. ' + data.mensagem);
 				}
@@ -1660,13 +2106,14 @@ function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServi
 		  });
 	}
 	//return novaJanela; novaJanela só retorna null
-}//.function menu_exportaJSONServidor
+} //.function menu_exportaJSONServidor
 
 function openWindowWithPost(data, url) {
 	//https://stackoverflow.com/questions/5684303/javascript-window-open-pass-values-using-post
     var form = document.createElement("form");
     form.target = "_blank";
     form.method = "POST";
+	form.rel = 'opener'; //evitar erro de window.opener is null quando clica no mapa para pedir dados
     //form.action = base + 'selecao_de_itens/' ; 
 	form.action = url.startsWith('http') ? url : base + url;
     form.style.display = "none";
@@ -1678,22 +2125,44 @@ function openWindowWithPost(data, url) {
     document.body.appendChild(form);
     form.submit();
     document.body.removeChild(form);
-} //openWindowWithPost
+} //.function openWindowWithPost
 
-function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
+function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma, bApaga) {
+	var resp = null;
+	var metodo = 'post';
 	if (!idArquivoServidor) {
-		idArquivoServidor =  prompt('Digite o nome do arquivo no JSON no servidor:');
+		if (bApaga) {
+			idArquivoServidor =  prompt('Digite o nome do arquivo no JSON no servidor que será carregado e depois APAGADO:');
+		} else {
+			idArquivoServidor =  prompt('Digite o nome do arquivo no JSON no servidor:');
+		}
 	}
 	if (!idArquivoServidor) {
 		return;
 	}
-	var url = base + 'arquivos_json/' + idArquivoServidor;
+	var url = '';
+	if (idArquivoServidor.startsWith(base+'grafico_no_servidor/')) {
+		idArquivoServidor = idArquivoServidor.substr(base.length+'grafico_no_servidor/'.length);
+	} 
+	url = base + 'arquivos_json/' + idArquivoServidor;
+
+	if (bApaga) {
+		if (!bNaoConfirma) {
+			resp = confirm('O arquivo ' + idArquivoServidor + ' será lido do Servidor e depois APAGADO?\nDeseja prosseguir?? NÃO SERÁ POSSÍVEL REVERTER!!!!.');
+		}
+		if (!resp) {
+			return;
+		}
+		//parametros['apagar']='sim';
+		metodo = 'delete';
+	}
 	//se idArquivoServidor=temporario, o arquivo será apagado do servidor após de ser servido
 	fazFetch(url, idArquivoServidor); 
 	function fazFetch(url, idArquivoServidor) {
 		document.body.style.cursor = 'wait';
 		//fetch(url, {method: 'get'}) // mode: 'cors',
-		fetch(url, {method: 'post', headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+		//fetch(url, {method: 'post', headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+		fetch(url, {method: metodo, body:JSON.stringify({}), headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
 			  if (response.status !== 200) {
@@ -1706,6 +2175,9 @@ function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 				//console.log(data);
 				document.body.style.cursor = 'default';
 				inserirJson(data, ' Arquivo do Servidor: ' + idArquivoServidor, bNaoConfirma);
+				if (bApaga) {
+					alertify.warning('O arquivo ' + idArquivoServidor + ' foi removido do servidor');
+				}
 			  });
 			}
 		  )
@@ -1715,30 +2187,232 @@ function menu_importaJSONServidor(idArquivoServidor, bNaoConfirma) {
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
 	}
-}//.function menu_importaJSONServidor
+} //.function menu_importaJSONServidor
 
-function inserirJson(jsonIn, texto, bNaoConfirma) {
+function menu_salvaJSONNavegador(nomeIn) { //xx5
+	var jsonDados;
+	var ultimoNome = ''
+	jsonDados = getRedeNosLigacoes();
+	if (jsonDados.no.length==0) {
+		alertify.error('Não há itens para exportar.');
+		return false;
+	}
+	var arquivosLocais = JSON.parse(localStorage.getItem('jsons'));
+	
+	if (nomeIn) {
+		idArquivo = nomeIn;
+	} else {
+		var tmensagem = 'Digite um nome para salvar no navegador.';
+		if (arquivosLocais) {
+			tmensagem += 'Os seguintes já estão na memória: \n';
+			for (let nome of Object.keys(arquivosLocais))  {
+				tmensagem += nome + '\n';
+				ultimoNome = nome;
+			}
+		}
+		if (!ultimoNome) {
+			ultimoNome = 'rede_local';
+		}	
+		idArquivo =  prompt(tmensagem, ultimoNome);
+		if (!idArquivo) {
+			return false;
+		} else if (Object.keys(arquivosLocais).includes(idArquivo)) {
+			var resp = confirm('O nome ' + idArquivo + ' já está sendo usado. Deseja reescrever?');
+			if (!resp) {
+				return false;
+			}
+		}	
+	}
+		
+	if (!arquivosLocais) {
+		arquivosLocais = {};
+		arquivosLocais[idArquivo] = JSON.parse(JSON.stringify(jsonDados));
+	} else {
+		arquivosLocais[idArquivo] = JSON.parse(JSON.stringify(jsonDados));
+	}
+	localStorage.setItem('jsons', JSON.stringify(arquivosLocais));
+	return true;
+} //.function menu_salvaJSONNavegador
+
+function menu_carregaJSONNavegador(nomeIn) {
+	var jsonDados;
+	var arquivosLocais = JSON.parse(localStorage.getItem('jsons'));
+	if (!arquivosLocais || (Object.keys(arquivosLocais).length==0)) {
+		//arquivosLocais = {};
+		alert('Nâo há arquivos tipo JSON salvos no navegador!');
+		return;
+	}
+	var ultimoNome = '';
+	var tmensagem = 'Digite um nome para carregar. Os seguintes grupos estão na memória: \n';
+	
+	if (nomeIn) {
+		idArquivo = nomeIn;
+	} else {
+		for (let nome of Object.keys(arquivosLocais))  {
+			tmensagem += nome + '\n';
+			ultimoNome = nome;
+		}
+		idArquivo =  prompt(tmensagem, ultimoNome);
+		if (!idArquivo) {
+			return;
+		}
+	}
+
+	var data = arquivosLocais[idArquivo];
+	if (!data) {
+		alertify.error('Não localizou '+ idArquivo + ' no navegador.');
+		return;
+	}
+	inserirJson(data, ' Carregou no navegador: ' + idArquivo + '. ', true);
+} //.function carregaJSONNavegador
+
+function menu_botaoAbre(bshift) { //xxx
+	menu_carregaJSONNavegador(bshift ? '': 'salvo_pelo_botao');
+} //.function menu_botaoAbre
+
+function menu_botaoSalva(bshift) { //xxx
+	var r = menu_salvaJSONNavegador(bshift? '': 'salvo_pelo_botao');
+	if (r) {
+		alertify.success('Os itens foram salvos no navegador.');
+	}
+} //.function menu_botaoSalva
+
+function menu_apagaJSONNavegador() {
+	var tmensagem = 'Digite nome para apagar no navegador. Os seguintes conjuntos estão na memória: \n';
+	var arquivosLocais = JSON.parse(localStorage.getItem('jsons'));
+	var ultimoNome = ''
+	if (!arquivosLocais || ( Object.keys(arquivosLocais).length==0)) {
+		alert('Não há arquivos locais no navegador');
+		return;
+	}
+	for (let nome of Object.keys(arquivosLocais))  {
+		tmensagem += nome + '\n';
+		ultimoNome = nome;
+	}
+	tmensagem += '\nOu Use * para apagar todos os arquivos locais.\nNão será possível reverter o apagamento.';
+	idArquivo =  prompt(tmensagem, ultimoNome);
+	if (!idArquivo) {
+		return;
+	}
+	if (idArquivo=='*') {
+		arquivosLocais = {};
+	} else {
+		delete arquivosLocais[idArquivo];
+	}
+	localStorage.setItem('jsons', JSON.stringify(arquivosLocais));
+} //.function menu_apagaJSONNavegador
+
+function menu_copiaClip() { //xx5
+	var jsonDados;
+	jsonDados = getRedeNosLigacoes(true);
+	if (jsonDados.no.length==0) {
+		alertify.error('Não há itens para copiar.');
+		return false;
+	}
+	
+	localStorage.setItem('clipboard', JSON.stringify(jsonDados));
+	alertify.success('Copiou itens para a área de transferência.');
+	return true;
+} //.function menu_copiaClip
+
+function menu_colaClip() {
+	var jsonDados;
+	try {
+	 jsonDados = JSON.parse(localStorage.getItem('clipboard'));
+	} catch (e) {
+		alertify.error('Não há itens na área de transferência.');
+		return false;	
+	}
+	if (jsonDados.no.length==0) {
+		alertify.error('Não há itens para colar.');
+		return false;
+	}
+
+	inserirJson(jsonDados, ' Colou itens da área de transferência. ', true);
+} //.function menu_colaClip
+
+
+function pegaAnguloLigacaoDoItemSelecionado1(brandom) { 
+	//calcula o angulo do noSelecionado com o anterior, apenas se o noSelecionado tiver uma ligação, e utiliza o angulo para posicionar o novo nó.
+	//brandom = true, retorna randomico se haver mais de uma ligação para noSelecionado.
+	var linksDoNo = graph.getLinks(gparam.idnoSelecionado);
+	var angulo = brandom ? 2.0*Math.PI*Math.random() : -Math.PI;
+	if (linksDoNo &&  (linksDoNo.length==1)){
+		let linkNo = linksDoNo[0];
+		var posicaoItem;
+		var posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+		if (linkNo.fromId == gparam.idnoSelecionado) {
+			posicaoItem = gparam.layout.getNodePosition(linkNo.toId );
+		} else {
+			posicaoItem = gparam.layout.getNodePosition(linkNo.fromId );
+		}
+		angulo = Math.atan2(posicaoItem.y - posicaoReferencia.y, posicaoItem.x - posicaoReferencia.x) + Math.PI;
+	}
+	return angulo;
+} //.function pegaAnguloLigacaoDoItemSelecionado1
+
+function pegaAnguloLigacaoDoItemSelecionado(brandom) { 
+	//calcula o angulo do noSelecionado com o anterior, se o noSelecionado tiver uma ligação. Se tiver mais de uma ligação e menos de 15, calcula média (faz sentido?), e utiliza o angulo para posicionar o novo nó.
+	//brandom = true, retorna randomico se haver nenhuma ou muitas ligações ligação para noSelecionado.
+	var angulo = brandom ? 2.0*Math.PI*Math.random() : 0.5*Math.PI;
+	if (!gparam.idnoSelecionado) {
+		return angulo;
+	}
+	var somaX = 0, somaY=0; //para calcular média dos nós ligados ao selecionado.
+	var linksDoNo = graph.getLinks(gparam.idnoSelecionado);
+	if (!linksDoNo || (linksDoNo.length>50)) { //se houver muitos itens ligados, não faz sentido calcular média dos angulos
+		return angulo;
+	}
+	var posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+	for (linkNo of linksDoNo) {
+	//if (linksDoNo &&  (linksDoNo.length==1)){
+		//let linkNo = linksDoNo[0];
+		var posicaoItem;
+		//var posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+		if (linkNo.fromId == gparam.idnoSelecionado) {
+			posicaoItem = gparam.layout.getNodePosition(linkNo.toId);
+		} else {
+			posicaoItem = gparam.layout.getNodePosition(linkNo.fromId);
+		}
+		somaX += posicaoItem.x;
+		somaY += posicaoItem.y;
+	}
+	//calcula angulo do itemSelecionado com a média dos ligados a esse item
+	return Math.atan2(posicaoReferencia.y - somaY/Math.max(linksDoNo.length, 1), posicaoReferencia.x - somaX/Math.max(linksDoNo.length, 1));
+} //.function pegaAnguloLigacaoDoItemSelecionado
+
+function inserirJson(jsonIn, texto, bNaoConfirma, bSelecionaCaminho) {
 	var no = jsonIn.no;
 	var ligacao = jsonIn.ligacao;
 	gparam.json = JSON.parse(JSON.stringify(jsonIn));
 	var kn=0, kl=0;
 	var idNosInseridos = new Set();
 	var idNosCamadaZero = new Set();
-	var kNosAInserir = 0;
+	//var fatorTamanhoNovaLigacao = 1.0; //nova ligação sem animação fica desagradável. Quando houver poucos itens, deixa a ligação menor para ter animação
 
-	var sNosInserir = new Set();
+	var sNosAInserir = new Set();
 	for (let noaux of Object.values(no)) { //verifica quantos nós serão inseridos
 		if (!graph.hasNode(noaux.id)) { 
-			sNosInserir.add(noaux.id);
+			sNosAInserir.add(noaux.id);
 		}
 	}	
-	kNosAInserir = sNosInserir.size;
+	var kNosAInserir = sNosAInserir.size;
+	
 	if (!bNaoConfirma) {
 		if (kNosAInserir > gparam.confirmaAntesDeInserirNNos) {
-			let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?\nApós inserir, pressione CTRL+Z para desfazer.';
+			let mensagem = 'Deseja inserir ' + kNosAInserir + ' itens?\n Depois será possível excluir os itens usando CTRL+Z para desfazer.';
 			if (kNosAInserir>1000) mensagem += '\nObs: Com muitos itens a execução ficará muito lenta ou o browser poderá travar. ';  //\nApós carregar o gráfico, utilize a rotina no menu "Visualização>Quebrar o gráfico em partes"';
 			var resp = confirm(mensagem);
 			if (!resp) {
+				// isso pode demorar muito e travar tudo. 
+				if (gparam.usuarioLocal) {
+					resp = confirm('Deseja exportar os dados dos itens não exibidos para o Excel? Obs: O processamento pode demorar. Seja paciente...');
+					if (resp) {
+						menu_exportaArquivo(null, 'xlsx', jsonIn); 
+						console.log(JSON.stringify(jsonIn).length); 
+					}
+				}
+				gparam.camadaIdExpandido = {}; //se cancelar inclusão de itens, zera contador (evitar erro em endereço, telefone e email não inserido, que não aceita inserir camada 2)
 				return;
 			}
 			gparam.confirmaAntesDeInserirNNos = kNosAInserir;
@@ -1746,35 +2420,74 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 	}
 	if (kNosAInserir>100) { 
 		suspendeZoom(Math.sqrt(kNosAInserir)*200); 
+		fatorTamanhoNovaLigacao = 1.0;
+	} 
+
+	//var angulo = 2.0*Math.PI*Math.random();
+	//var passoAngulo = 2.0*Math.PI/Math.max(kNosAInserir, 1);
+	var abertura;
+	if (kNosAInserir<=1) {
+		abertura = 0;
+	} else if (kNosAInserir<8) { 
+		abertura = 0.5*Math.PI; //os nos novos vão ficar em um intervalo de 90 graus
+	} else if (kNosAInserir<20) {
+		abertura = 1.0*Math.PI;
+	} else {
+		abertura = 1.5*Math.PI;
 	}
+	var angulo = pegaAnguloLigacaoDoItemSelecionado(true) - abertura/2.0;
+	var passoAngulo = abertura/Math.max(kNosAInserir-1, 1);
+	
+	var posicaoReferencia = {'x':0, 'y':0};
+	if (gparam.idnoSelecionado) { //insere novos em torno do nó selecionado.
+		posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
+	} else {
+		//passoAngulo = 2*Math.PI/Math.max(kNosAInserir-1, 1);
+		passoAngulo = 2*Math.PI/Math.max(kNosAInserir, 1);
+		angulo = Math.PI/2;
+	}
+	
 	for (let noaux of Object.values(no)) {
 		if (!graph.hasNode(noaux.id)) { 
 			if (!noaux.nota) {
 				noaux.nota = ''; //em algumas funções supõe que nota é string
 			}
 			graph.addNode(noaux.id, JSON.parse(JSON.stringify(noaux)));
+			
 			if (noaux.posicao) { 
 				if ((noaux.posicao.x) && (noaux.posicao.y)) {
 				gparam.layout.setNodePosition(noaux.id, noaux.posicao.x, noaux.posicao.y);
 				//refreshPosicoes = true;
 				}
-			} else if (gparam.idnoSelecionado) { //insere novos em torno do nó selecionado.
-				let posicaoReferencia = gparam.layout.getNodePosition(gparam.idnoSelecionado);
-				gparam.layout.setNodePosition(noaux.id, posicaoReferencia.x + Math.random()*gparam.springLength-gparam.springLength/2, posicaoReferencia.y + Math.random()*gparam.springLength-gparam.springLength/2);
+				gparam.layout.pinNode(noaux, noaux.pinado); 
+			//} else if (posicaoReferencia) { //insere novos em torno do nó selecionado.
+			} else { //insere novos em torno do nó selecionado.
+				//gparam.layout.setNodePosition(noaux.id, posicaoReferencia.x + Math.random()*gparam.springLength-gparam.springLength/2, posicaoReferencia.y + Math.random()*gparam.springLength-gparam.springLength/2);
+				//var angulo=Math.PI*(Math.random()-0.5) + Math.atan2(posicaoReferencia.y, posicaoReferencia.y); //teste, colocar itens novos em relação ao centro do gráfico (algum problema)
+				//gparam.layout.setNodePosition(noaux.id, posicaoReferencia.x + Math.cos(angulo)*gparam.springLength*fatorTamanhoNovaLigacao, posicaoReferencia.y + Math.sin(angulo)*gparam.springLength*fatorTamanhoNovaLigacao);
+				var fatorE = 1.0;
+				if ([ 'EN_','TE_', 'EM_'].includes(noaux.id.substr(0,3))) { //coloca endereços mais longe para melhorar visualização
+					fatorE = 2.0;
+				}
+				//fatorE = fatorE * fatorTamanhoNovaLigacao;
+				gparam.layout.setNodePosition(noaux.id, 
+					posicaoReferencia.x + Math.cos(angulo)*gparam.springLength*fatorE, posicaoReferencia.y + Math.sin(angulo)*gparam.springLength*fatorE);
+				angulo += passoAngulo;
 			}
-			gparam.layout.pinNode(noaux, noaux.pinado); 
 			kn += 1;
 			idNosInseridos.add(noaux.id);
-			if (!noaux.camada) {
+			//if (!noaux.camada) {
+			if ((noaux.camada===0) ||(noaux.camada==='0')) {
 				idNosCamadaZero.add(noaux.id);
 			}
-		} else { //nó já existe TODO: verificar se precisa atualizar .data 
+		} else { //nó já existe. TODO: verificar se precisa atualizar .data 
 		
 		}
 	}
 	if (idNosInseridos.size) {
 		gparam.listaIdNosInseridos.push(idNosInseridos);
 	}
+	
 	for (let ligaux of Object.values(ligacao)) {
 		var nosExistem = ((graph.hasNode(ligaux.origem)) && (graph.hasNode(ligaux.destino)));
 		if (!nosExistem) {
@@ -1810,7 +2523,7 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			if (labelLigacaoNovo != labelLigacao) {
 				ligExistente.data.label = labelLigacaoNovo;
 				var ligacaoElementoAux = document.getElementById('link_label_'+ligExistente.data.id); //ttt
-				ligacaoElementoAux.text(filtraTextoLigacao(ligExistente.data.label)); //.attr('title',filtraTextoLigacao(ligExistente.data.label)); 
+				ligacaoElementoAux.text(cortastr(filtraTextoLigacao(ligExistente.data.label), 25)); //.attr('title',filtraTextoLigacao(ligExistente.data.label)); 
 				// && (filtraTextoLigacao(labelLigacao).length > 2*20) 
 				if (ligacaoElementoAux.hasAttribute('transform')) { //remove rotação (se o texto for longo, não será rotacionado)
 					ligacaoElementoAux.removeAttribute('transform');
@@ -1849,15 +2562,28 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 		}
 	} 
 	var textoMensagem = texto;
-	if (kn)	textoMensagem += ' Foram inseridos ' + kn + ' itens';
+	if (kn)	textoMensagem += (kn>1) ? ' Inseridos ' + kn + ' itens' : ' Inserido 1 item';
 	if (kl) {
 		if (kn) {
-			textoMensagem += ' e ' + kl + ' ligações.';
+			textoMensagem += (kn>1) ? ' e ' + kl + ' ligações.' : ' e 1 ligação.';
 		} else {
-			textoMensagem += ' Foram inseridas ' + kl + ' ligações.'
+			textoMensagem +=  (kn>1) ? ' Inseridas ' + kl + ' ligações.' : ' Inserida 1 ligação.';
 		}
 	}
-	if ((!kn) && (!kl)) textoMensagem += ' Não encontrou novos itens';
+	if ((!kn) && (!kl)) { //sem itens novos
+		if (bSelecionaCaminho) { //sem itens novos, mas seleciona o caminho já existente no gráfico
+			selecionaNoid(null, false); //desseleciona tudo
+			// console.log(JSON.stringify(no)); 
+			for (let nox of Object.values(no)) {
+				if (graph.hasNode(nox.id)) { 
+					selecionaNoid(nox.id, true);
+				}
+			}
+			textoMensagem += ' Não adicionou novos itens, mas os itens do caminho foram selecionados.';
+		} else {
+			textoMensagem += ' Não adicionou novos itens.';
+		}
+	}
 	exibe_mensagem_sucesso_erro(textoMensagem, jsonIn.mensagem); 
 	if (kn  && !gparam.bRenderAtivado) { //ativa leiaute por 1 segundo para exibir novos itens
 		gparam.renderer.resume();
@@ -1869,40 +2595,76 @@ function inserirJson(jsonIn, texto, bNaoConfirma) {
 			}, 500
 		);	
 	}
-}//.function inserirJson
+	return true; 
+} //.function inserirJson
 
 function exibe_mensagem_sucesso_erro(textoMensagem, mensagem) {
+	if (mensagem) {
+		alertify.error(mensagem);
+	}	
 	if (textoMensagem) {
 		alertify.success(textoMensagem)
 	}
-	if (mensagem) {
-		alertify.error(mensagem);
-	}
+} //.function exibe_mensagem
 
-}//.function exibe_mensagem
+function menu_incluirCamada_dicItemNota() { //cria um dicionário por nota com lista de itens com essa nota. usado para enviar para o servidor para a rotina de caminhos por nota (extra, intra grupos)
+	var dicNotaArray = {};
+	for (let idx of gparam.idNosSelecionados) {
+		var nota = graph.getNode(idx).data.nota;
+		if (nota) {
+			if (dicNotaArray[nota]) {
+				arrayaux = dicNotaArray[nota];
+				arrayaux.push(idx);
+				dicNotaArray[nota] = JSON.parse(JSON.stringify(arrayaux));
+			} else {
+				dicNotaArray[nota] = [idx,];
+			}
+		}
+	}
+	return dicNotaArray;
+} //.menu_incluirCamada_dicItemNota
 
 function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
-	//if idin='', manda dados dos nós selecionados
-	var url = "";
+	//if idin=='', manda dados dos nós selecionados
+	var url = '';
 	var bAbriuAbaLink = false;
-	idin = idin.replace(/\//g, '').trim();
+	var bodyj = '';
+	var sidSelecionadosInicial = new Set([...gparam.idNosSelecionados]);
+	
+	//idin = idin.replace(/\//g, '').trim(); //isto causa bug se o nome tiver barra, por exemplo, S/C em caso de empresa no exterior
+	idin = idin.trim();
 	if ((!idin) && (!gparam.idnoSelecionado)) return; 
 	
 	if (idin) {
-		if (idin.substr(0,3)=='CH_') {
-			menu_links_google(true);
-			return;
-		}
+		sidSelecionadosInicial = new Set([idin,]);
 	} else {
-		for (const idaux of gparam.idNosSelecionados) { 
-			if (([ 'LI_', 'AR_'].includes(idaux.substr(0,3))) || ((idaux.substr(0,3)=='ID_') && !gparam.inicio.bBaseLocal))  {
-				menu_abrirNovaAba(idaux);
-				bAbriuAbaLink = true;
-			}	
-		}
+		sidSelecionadosInicial = new Set([...gparam.idNosSelecionados]);
 	}
+
+	var sitensQueNaoEstaoNaBase = new Set();
+	for (const idaux of sidSelecionadosInicial) { // gparam.idNosSelecionados) { 
+		if (idaux.substr(0,3)=='CH_') {
+			menu_links_google(true);
+			sitensQueNaoEstaoNaBase.add(idaux);
+		} else if (([ 'LI_', 'AR_'].includes(idaux.substr(0,3))) || ((idaux.substr(0,3)=='ID_') && !gparam.inicio.bBaseLocal))  {
+			menu_abrirNovaAba(idaux);
+			bAbriuAbaLink = true;
+			sitensQueNaoEstaoNaBase.add(idaux);
+		}	
+	}
+	
+	if (!tipo) {
+		tipo = 'cnpj';
+	}
+
 	if ((gparam.idNosSelecionados.size ==1) && gparam.idnoSelecionado && ([ 'EN_','TE_', 'EM_'].includes(gparam.idnoSelecionado.substr(0,3))) && (camada>1)) {
 		alertify.warning('A rotina só expande endereço, telefone ou email em camada 1. Para expandir os itens relacionados, selecione-os primeiro com a tecla J (menu Filtrar/Localizar>Adjacentes)');
+		return;
+	}
+	if (sidSelecionadosInicial.size==sitensQueNaoEstaoNaBase.size) {
+		return; //todos os itens selecionados são chave, link, arquivo ou id_
+	} else {
+		//aqui poderia criar outro set removendo os tipo chave, link, etc de gparam.idNosSelecionados.
 	}
 	if (tipo=='links') {
 		dialogoParametrosLink();
@@ -1912,17 +2674,44 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 				return;
 			}
 			camada = Math.min(camada, 10);
-		url = base + 'grafojson/cnpj/' + camada + '/';
-		fazFetch(url, idin);
+			if (tipo.startsWith('caminhos')) {
+				if (gparam.idNosSelecionados.size<2) {
+					alert('Para usar a opção caminhos, selecione ao menos dois itens do gráfico. Utilize Shift+Click para adicionar itens à seleção');
+					return;
+				}
+				url = base + 'grafojson/' + tipo + '/' + camada + '/';
+				if (tipo=='caminhos') {
+					bodyj = JSON.stringify([[...gparam.idNosSelecionados]]);
+				} else {
+					bodyj = JSON.stringify(menu_incluirCamada_dicItemNota());
+				}
+			} else {
+				tipo = 'cnpj';
+				url = base + 'grafojson/' + tipo + '/' + camada + '/';
+				bodyj = ''
+			}
+			fazFetch(url, idin, bodyj);
 	}
 	return;
-	function fazFetch(url, idin) {
+
+	function fazFetch(url, idin, bodyjsonIn) { 
 		document.body.style.cursor = 'wait';
-		//fetch(url, {method: 'get'}) // mode: 'cors',
-		idin = ([ 'LI_', 'AR_'].includes(idin.substr(0,3)))? 'LI' : idin;
-		let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]); //TODO: remover os LI_ da requisição para o servidor
-		//url += idin ? idin : gparam.idnoSelecionado;
-		url += idin ? idin : (([ 'LI_', 'AR_'].includes(gparam.idnoSelecionado.substr(0,3))) ? 'LI' : gparam.idnoSelecionado); //aqui colocando LI porque o flask exige um identificador... de fato os parâmetros estão indo via bodyjson 
+		var bodyjson; qitens=1;
+		//?? idin = ([ 'LI_', 'AR_'].includes(idin.substr(0,3)))? 'LI' : idin;
+		//let bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]); //TODO: remover os LI_ da requisição para o servidor
+		//bodyjson = bodyjsonIn? bodyjsonIn : bodyjson;
+		if (bodyjsonIn) {
+			bodyjson = bodyjsonIn;
+		} else {
+			bodyjson = idin ?  JSON.stringify([idin,]) :  JSON.stringify([...gparam.idNosSelecionados]); //TODO: remover os LI_ da requisição para o servidor
+			qitens = idin ? 1 : gparam.idNosSelecionados.size;
+		}
+		 //2023-04-19 idin na url é enfeite, porque os parâmetros são passados no body. Problema é quando idin tem algum caractere como / que atrapalha a url
+		url += encodeURIComponent((idin ? idin : gparam.idnoSelecionado).replaceAll('/', '').replaceAll('?', ' '));
+		// replace barra remove erro em PE com barra, por exemplo PE_ S/C (encodeURIComponente não resolve problema do /), 
+		if (qitens>1) {
+			url += ' ('+ qitens + ' itens)'; //para ajudar a analisar o log
+		} 
 		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
 			function(response) {
@@ -1932,22 +2721,25 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 			  }
 			  // Examine the text in the response
 			  response.json().then(function(data) {
-				//console.log(data);
 				document.body.style.cursor = 'default';
 				if (data.no.length) {
-					var textoInserir = data.mensagem ? idin + '. ': junta(idin, ' em ', 'camada ' + camada +'. ');
-					inserirJson(data, textoInserir, bNaoConfirma); // sem delay		
+					var textoInserir =  '';
+					if (!data.mensagem) {
+						if (camada>1) {
+							textoInserir = ((tipo=='cnpj') ? 'Camada ' : (tipo + ' em camada ' ) ) + camada +'. ';
+						}
+					}
+					inserirJson(data, textoInserir, bNaoConfirma, tipo=='caminhos'); // sem delay
 					
 				} else if (bAbriuAbaLink) {
 					;
 				} else {
 					if (isNumeric(idin.replace(/[\.\-\//]/g, '').trim()) || idin.includes('*')) { 
 						//mensagem quando se digita cpf/cnpj
-						alertify.error('Não encontrou ' + idin + ' na base.');
+						alertify.error('Não encontrou ' + idin + ' na base. ' + data.mensagem);
 					} 
 					else {
-						//alertify.error('Não encontrou ' + idin + ' na base. Utilize o caractere curinga, por exemplo, ' + idin + '*');
-						alertify.error('Não encontrou ' + idin + ' na base.');
+						alertify.error('Não encontrou o item ou novos itens que satisfaçam os parâmetros da consulta. ' + data.mensagem);
 					}
 				}
 			  });
@@ -1965,43 +2757,52 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 		/* Now instead of making a prompt Dialog , use a Confrm Dialog */
 		var dlgLinkOriginal = document.getElementById('dlgLink');
 		var dlgLink = document.getElementById('dlgLink').cloneNode(true); //clone para não mexer no original, soluciona problema de instabilidade (parava de funcionar depois de misturar tipos de consulta, cnpj e link)
+		//dlgLink.setAttribute('id', 'dlgLink_clone'); //não resolve problema em mobile
+		dlgLink.id = 'dlgLink_clone';
 		dlgLinkOriginal.parentNode.appendChild(dlgLink); 
-		dlgLink.outerHTML = ''; //isso funciona no firefox mas no chrome dá erro no chrome sem a linha de cima
-
+		dlgLink.outerHTML = ''; //isso funciona no firefox, mas no chrome dá erro sem a linha de cima
 		ativaAtalhos(false);
-		alertify.confirm(dlgLink).set('onok', function(closeevent, value) { 
-			var listaInput = dlgLink.getElementsByTagName('input');
-			var valorMinimo = parseFloat(listaInput.dlgLink_valorMinimo.value).toString();
-			var valorMaximo = parseFloat(listaInput.dlgLink_valorMaximo.value).toString();
-			var numeroItens = parseInt(listaInput.dlgLink_numeroItens.value).toString();
-			var camada = parseInt(listaInput.dlgLink_camadas.value).toString();
-			//copia parametros para formulário original
-			var listaInputOriginal = dlgLinkOriginal.getElementsByTagName('input');
-			listaInputOriginal.dlgLink_valorMinimo.value = listaInput.dlgLink_valorMinimo.value;
-			listaInputOriginal.dlgLink_valorMaximo.value = listaInput.dlgLink_valorMaximo.value;
-			listaInputOriginal.dlgLink_numeroItens.value = listaInput.dlgLink_numeroItens.value;
-			listaInputOriginal.dlgLink_camadas.value = listaInput.dlgLink_camadas.value;
-			/* Insert your code to work with the two values */ 	
-			// await new Promise(r => setTimeout(r, 1000)); //delay de 1 segundo
-			valorMinimo = (valorMinimo!='NaN')?valorMinimo:'0';			
-			valorMaximo = (valorMaximo!='NaN')?valorMaximo:'0';
-			numeroItens = (numeroItens!='NaN')?numeroItens:'0';
-			camada = (camada!='NaN')?camada:'0';
-			if (camada>10) {
-				alertify.error('O número de camadas é limitado em 10.');
-			}
-			camada = Math.min(camada, 10);
-			ativaAtalhos(true);
-			url = base + 'grafojson/links/'  + camada +  '/' + numeroItens + '/' + valorMinimo + '/' + valorMaximo  + '/' ;
-			fazFetch(url, idin);
-			ativaAtalhos(true); 
-		}, function() { 
-			ativaAtalhos(true); }
-		).set('oncancel', function() { ativaAtalhos(true);  })
-		.set('title',"Inserir Ligacoes");
-		document.getElementById('dlgLink_camadas').value = camada; //estranho, mas tem que por isso pra ajustar o campo com o valor
+		//alert(dlgLink.id);
+		//alertify.confirm(dlgLink).set('onok', function(closeevent, value) { 
+		alertify.confirm(dlgLink).set({
+			onok:function() { 
+				var listaInput = dlgLink.getElementsByTagName('input'); //isto dá erro no android
+				var valorMinimo = parseFloat(listaInput.dlgLink_valorMinimo.value).toString();
+				var valorMaximo = parseFloat(listaInput.dlgLink_valorMaximo.value).toString();
+				var numeroItens = parseInt(listaInput.dlgLink_numeroItens.value).toString();
+				var camada = parseInt(listaInput.dlgLink_camadas.value).toString();
+				
+				//copia parametros para formulário original
+				var listaInputOriginal = dlgLinkOriginal.getElementsByTagName('input');
+				listaInputOriginal.dlgLink_valorMinimo.value = listaInput.dlgLink_valorMinimo.value;
+				listaInputOriginal.dlgLink_valorMaximo.value = listaInput.dlgLink_valorMaximo.value;
+				listaInputOriginal.dlgLink_numeroItens.value = listaInput.dlgLink_numeroItens.value;
+				listaInputOriginal.dlgLink_camadas.value = listaInput.dlgLink_camadas.value;
+				/* Insert your code to work with the two values */ 	
+				// await new Promise(r => setTimeout(r, 1000)); //delay de 1 segundo
+				valorMinimo = (valorMinimo!='NaN')?valorMinimo:'0';			
+				valorMaximo = (valorMaximo!='NaN')?valorMaximo:'0';
+				numeroItens = (numeroItens!='NaN')?numeroItens:'0';
+				camada = (camada!='NaN')?camada:'0';
+				if (camada>10) {
+					alertify.error('O número de camadas é limitado em 10.');
+				}
+				camada = Math.min(camada, 10);
+				ativaAtalhos(true);
+				url = base + 'grafojson/links/'  + camada +  '/' + numeroItens + '/' + valorMinimo + '/' + valorMaximo  + '/' ;
+				fazFetch(url, idin);
+				ativaAtalhos(true); 
+				dlgLink.remove(); //ttt
+			}, 
+		onclose:function() { 
+			ativaAtalhos(true); }, 
+		oncancel:function() { ativaAtalhos(true);  }}
+	).set('title',"Inserir Ligacoes");
+	
+	document.getElementById('dlgLink_camadas').value = camada; //estranho, mas tem que por isso pra ajustar o campo com o valor
 	}
-}//.function menu_incluirCamada
+	
+} //.function menu_incluirCamada
 
 function menu_incluir1Camada(idin) {
 	//para tratar 1 camada, se clicar repetidamente o mesmo item, vai aumentando as camadas.
@@ -2016,7 +2817,7 @@ function menu_incluir1Camada(idin) {
 	menu_incluirCamada(idin, camada);
 	gparam.camadaIdExpandido = {}; //reseta, expansão gradativa só de 1 item por vez.
 	gparam.camadaIdExpandido[idref]=camada;
-}//.function menu_incluir1Camada
+} //.function menu_incluir1Camada
 
 function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 	if (teclaCtrl) {
@@ -2040,13 +2841,14 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 			itensDefault = document.getElementById('input_cnpj').value;
 		}  catch (e){itensDefault = gparam.inserirDefault; };
 	}
-	var textoPrompt = 'Digite CNPJ, CNPJs separados por PONTO E VÍRGULA (;) ou <b>ESPAÇO</b>, radical do CNPJ, Razão Social, Nome Fantasia ou Nome de Sócio. ';
+	var textoPrompt = 'Para visualizar o gráfico de relacionamentos, digite CNPJ, CNPJs separados por PONTO E VÍRGULA (;) ou ESPAÇO, radical do CNPJ, Razão Social, Nome Fantasia ou Nome de Sócio. ';
 	if (!gparam.mobile) {
-		textoPrompt += ' Para realizar busca por sequência exata, utilize * (curinga de palavra) ou ? ( 1 caractere). Por ex: FULANO DE *; *DE TAL; EMPRESA* BRASILEIRA; ';
-		textoPrompt += ' Utilize @ e um número para obter mais registros, por exemplo, FULANO@20. Para exibir Matriz e 10 filiais, digite  o Radical do CNPJ seguido de @10. <b>Deixe o campo vazio e pressione OK para visualizar um CNPJ aleatório.</b>';
-		textoPrompt +=  ' <b>ATENÇÃO: A busca por nome está mais flexível. Agora o padrão é a busca por parte nos nomes, não é mais necessário nomes completos.</b>'
+		textoPrompt += ' Para realizar busca por sequência exata, utilize * (curinga de palavra). Por ex: FULANO DE *; *DE TAL; EMPRESA* BRASILEIRA; ';
+		textoPrompt += ' Utilize @ e um número para obter mais registros, por exemplo, FULANO@20. Para exibir Matriz e 10 filiais, digite  o Radical do CNPJ seguido de @10. Para visualizar um CNPJ aleatório, pressione OK com o campo vazio.';
+		// textoPrompt +=  ' <b>ATENÇÃO:</b> A busca por nome está mais flexível. Agora o padrão é a busca por parte nos nomes, não é mais necessário nomes completos.'
 	}
-	alertify.prompt( 'Rede - Inserir elemento', textoPrompt , itensDefault
+	
+	alertify.prompt( 'RedeCNPJ - Digite CNPJ/CPF/Nome', textoPrompt , itensDefault
                , function(evt, cnpjs) {   //quando se pressiona cancel, esta rotina não é chamada. Usando vazio para retornar um cnpj de teste
 					gparam.inserirDefault = cnpjs;
 					try {
@@ -2061,10 +2863,10 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 					}					
 					if (1) { //(cn) { 
 						if (!cn || (cn=='T')) {
-							cn='TESTE';
+							cn='#TESTE#';
 						}
 						if (isNumeric(cnaux) && (cnaux.length==11)) { 
-							alertify.warning('A busca por CPF é feita por apenas 6 digitos e pode apresentar resultados incorretos. A tabela de dados públicos não tem todos os dígitos de CPF.');
+							alertify.warning('A busca por CPF é feita por apenas 6 digitos e pode apresentar resultados incorretos. A tabela de dados abertos não tem todos os dígitos de CPF.');
 						}
 						if (!gparam.mobile) {
 							alertify.warning('Pressione as teclas 1 a 9 para inserir a camada correspondente ao número.'); //alerta temporario
@@ -2075,7 +2877,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 					ativaAtalhos(true);
 				}, function() { ativaAtalhos(true);}
 	);
-}//.function menu_inserir
+} //.function menu_inserir
 
 function menu_links_google(bAbrePalavrasChaves) {
 	//manda termos de busca para o servidor, que fará uma chamada ao google e retornará uma lista de nós e de ligações.
@@ -2083,7 +2885,8 @@ function menu_links_google(bAbrePalavrasChaves) {
 		alertify.error('A opção de busca de palavras chave não está habilitada. Baixe o projeto no github e rode localmente.');
 		return;
 	}
-	var termosId = gparam.idnoSelecionado? replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ') : '';
+	//var termosId = gparam.idnoSelecionado? replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ') : '';
+	var termosId = gparam.idnoSelecionado? graph.getNode(gparam.idnoSelecionado).data.descricao.replaceAll('&', ' ') : '';
 	var url='';
 	var termos = '';
 	var kpalavras = 0;
@@ -2149,32 +2952,32 @@ function menu_links_google(bAbrePalavrasChaves) {
 				}
 				// Examine the text in the response
 				response.json().then(function(data) {
-				document.body.style.cursor = 'default';
-				if (data.no.length) {
-					inserirJson(data, 'busca no google por '+termos, true);
-					if (idSelecionadoAnterior && (pagina.toString()=='1')) {
-						setTimeout(function() {
-							var resp = true;
-							if (termos!=termosId)  { //se os termos forem diferentes da descrição do cpf/cnpj, pergunta se quer ligar
-								var resp = confirm('Liga ao item que estava selecionado?');
-							}
-							if (resp) {
-								gparam.idNosSelecionados.add(idSelecionadoAnterior);
-								menu_ligar_selecionados(true,'',true); 
-							}					 
-							if (data.mensagem) {
-								alertify.success(data.mensagem);
-							}
-						 }, 1000);
+					document.body.style.cursor = 'default';
+					if (data.no.length) {
+						inserirJson(data, 'busca no google por '+termos, true);
+						if (idSelecionadoAnterior && (pagina.toString()=='1')) {
+							setTimeout(function() {
+								var resp = true;
+								if (termos!=termosId)  { //se os termos forem diferentes da descrição do cpf/cnpj, pergunta se quer ligar
+									var resp = confirm('Liga ao item que estava selecionado?');
+								}
+								if (resp) {
+									gparam.idNosSelecionados.add(idSelecionadoAnterior);
+									menu_ligar_selecionados(true,'',true); 
+								}					 
+								if (data.mensagem) {
+									alertify.success(data.mensagem);
+								}
+							 }, 1000);
+						}
+					} else {
+						if (data.mensagem) {
+							alertify.error(data.mensagem);
+						}
+						else {
+							alertify.warning('Não encontrou informações'); 
+						}
 					}
-				} else {
-					if (data.mensagem) {
-						alertify.error(data.mensagem);
-					}
-					else {
-						alertify.warning('Não encontrou informações'); 
-					}
-				}
 				});
 			}
 		    )
@@ -2184,9 +2987,20 @@ function menu_links_google(bAbrePalavrasChaves) {
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		});
 	}
-}//.function menu_links_google
+} //.function menu_links_google
 
-function menu_buscaEmSite(siteUrl, perguntaParametroAdicionalGoogle){
+function menu_abreBuscasEmSites() {
+	menu_buscaEmSite('https://www.reclameaqui.com.br/busca/?q=', null, true);
+	menu_buscaEmSite('http://portaldatransparencia.gov.br/busca?termo=');
+	menu_buscaEmSite('https://www.jusbrasil.com.br/busca?q=');	
+	menu_buscaEmSite('https://www.escavador.com/busca?q=');	
+	menu_buscaEmSite('https://duckduckgo.com/?q=');	
+	menu_buscaEmSite('https://www.bing.com/search?q=');
+	menu_GoogleMaps(false);
+	menu_buscaEmSite('https://www.google.com/search?q=', 'N');
+} //.function menu_abreBuscasEmSites
+
+function menu_buscaEmSite(siteUrl, perguntaParametroAdicionalGoogle, bsemaspas){
 	//perguntaParametroAdicionalGoogle=null, padrão; se =='S' pergunta parametro adicional para google, se =='N' adiciona gparam.termoBuscaGoogle
 	if (perguntaParametroAdicionalGoogle=='S') {
 		let resp = prompt('Insira termo a ser adicionado nas próximas buscas do Google pela tecla G:\nObservação: Houve uma alteração na tecla de atalho, para exibir links do google, utilize a tecla H. ', gparam.termoBuscaGoogle);
@@ -2194,33 +3008,39 @@ function menu_buscaEmSite(siteUrl, perguntaParametroAdicionalGoogle){
 		gparam.termoBuscaGoogle = resp;
 	}
 	var parametroAdicional = '';
-	var parametro = replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ');
+	//var parametro = replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ');
+	var parametro = graph.getNode(gparam.idnoSelecionado).data.descricao.replaceAll('&', ' ');
 	if (perguntaParametroAdicionalGoogle) {
 		parametroAdicional = perguntaParametroAdicionalGoogle ? '+' + gparam.termoBuscaGoogle: '';
 	}
 	if (!parametro) {
 		parametro = graph.getNode(gparam.idnoSelecionado).data.id.substr(3);
 	}
-	var strUrl = siteUrl + '"' + parametro + '"' + parametroAdicional;		
+	if (bsemaspas) {
+		var strUrl = siteUrl + parametro.replaceAll(' ','+') + parametroAdicional;		
+	} else {
+		var strUrl = siteUrl + '"' + parametro + '"' + parametroAdicional;
+	}
 	window.open(strUrl).focus();
 } //.function menu_buscaEmSite
 
-function menu_GoogleMaps() {
+function menu_GoogleMaps(bMostraMensagem) {
 	var data = graph.getNode(gparam.idnoSelecionado).data;
 	if (data.logradouro) {
 		var strUrl = 'https://www.google.com.br/maps/place/' + data.logradouro + ',' + data.municipio + '/' + data.uf;
 		var novaJanela=window.open(strUrl);
 		novaJanela.focus();
-	} else {
+	} else if (bMostraMensagem) {
 		alertify.error('Não há endereço cadastrado.');
 	}
-}//.function menu_GoogleMaps
+} //.function menu_GoogleMaps
 
 function menu_abrirNovaAba(idno, bNosSelecionados) {
 	var novaJanela=null;
 	if ((!idno)&&(!bNosSelecionados)) {
 		novaJanela = window.open(base); // + '?pula_mensagem=sim');
 		novaJanela.focus(); 
+		gparam.abaFilha = novaJanela;
 		return;
 	}
 
@@ -2232,20 +3052,21 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 			novaJanela = window.open(base + 'grafico/' + String(camada) + '/' + gparam.idnoSelecionado) ;
 			if (novaJanela) {
 				novaJanela.focus();
+				gparam.abaFilha = novaJanela;
 			}
 		} else {	
-			menu_novaAbaComDadosJson(true, null, true);
+			menu_copiaItensParaOutraAba(true, true);
 		}
 		return;
 	} 
 	if (idno.startsWith('LI_')) {
-		novaJanela=window.open(idno.substr(3));
+		novaJanela = window.open(idno.substr(3));
 		novaJanela.focus();
 		return;
 	} else if (idno.startsWith('AR_')) {
 		var url = base + 'abrir_arquivo' ; //+ idno.substr(3);
 		//novaJanela=window.open(strUrl);
-		if (!window.location.href.startsWith('http://127.0.0.1')) {
+		if (!gparam.usuarioLocal) {
 			if (idno.includes('/') || idno.includes('\\') ) {
 				alert('Essa rotina somente abre arquivos se a execução do projeto for local.');
 				return;
@@ -2276,24 +3097,23 @@ function menu_abrirNovaAba(idno, bNosSelecionados) {
 		return;
 	};
 	
-}//.function menu_abrirNovaAba
+} //.function menu_abrirNovaAba
 
 function menu_nomeAba() {
-	var nome = prompt('Digite o nome para esta aba');
+	var nome = prompt('Digite o nome para esta aba', document.title);
 	if (nome) {
 		document.title = nome;
 	}
-}//.menu_nomeAba
+} //.function menu_nomeAba
 
 function menu_selecionarTudo() {
 	graph.forEachNode(
 		function(node) {
-			//var nodeUI = graphics.getNodeUI(node.id);
 			selecionaNoid(node.id, true, true);
 		}	
 	);
 	alertify.success('Foram selecionados ' + graph.getNodesCount() + ' itens.');
-}//.function menu_selecionarTudo
+} //.function menu_selecionarTudo
 
 function menu_selecionarInverte() {
 	//inverte a seleção
@@ -2308,7 +3128,7 @@ function menu_selecionarInverte() {
 		}	
 	);
 	alertify.success('Foram selecionados ' + gparam.idNosSelecionados.size+ ' itens.');
-}//.function menu_selecionarInverte
+} //.function menu_selecionarInverte
 
 function menu_pinarNo(bfixar){
 	var layout = gparam.layout;
@@ -2324,7 +3144,7 @@ function menu_pinarNo(bfixar){
 	}
 //	var no = graph.getNode(gparam.idnoSelecionado);
 //	layout.pinNode(no, !layout.isNodePinned(no));
-}//.function menu_pinarNo
+} //.function menu_pinarNo
 
 function menu_pinarDesfazerTudo(){ 
 	var layout = gparam.layout;
@@ -2334,7 +3154,7 @@ function menu_pinarDesfazerTudo(){
 		}	
 	);
 	alertify.success('Todos os nós foram desafixados.');
-}//.function menu_pinarDesfazerTudo
+} //.function menu_pinarDesfazerTudo
 
 function menu_pinarUmNoEmCadaGrupo(bfixar){ 
 	var listaGrupos = separaGrupos(0); //lista de sets 
@@ -2347,7 +3167,7 @@ function menu_pinarUmNoEmCadaGrupo(bfixar){
 	}
 	selecionaSet(sfixados);
 	alertify.success('Cada grupo teve um nó fixado.');
-}//.function menu_pinarUmNoEmCadaGrupo
+} //.function menu_pinarUmNoEmCadaGrupo
 
 function pinarNoTemp(idNo, milissegundos) {
 	var layout = gparam.layout;
@@ -2365,12 +3185,12 @@ function pinarNoTemp(idNo, milissegundos) {
 			layout.pinNode(no, false); 
 		}, milissegundos
 	); 
-}//.function pinarNoTemp
+} //.function pinarNoTemp
 
 function suspendeZoom(milissegundos) {
 	//gparam.scale = graphics.scale;
 	//desabilita scale temporariamente (se tiver muitos nós, mexer na escala pode travar o browser
-	gparam.mensagem_alerta_zoom_desativado = 'O zoom foi temporariamente desativado. Aguarde alguns segundos.';
+	gparam.mensagem_alerta_zoom_desativado = 'Aguarde para fazer ZOOM.';
 	graphics.scale = function(a,b) { 
 		//alertify.error('O zoom foi temporariamente desativado. Aguarde alguns segundos.');
 		if (gparam.mensagem_alerta_zoom_desativado) { alertify.error(gparam.mensagem_alerta_zoom_desativado); };
@@ -2382,7 +3202,7 @@ function suspendeZoom(milissegundos) {
 			graphics.scale = gparam.fScale;
 		}, milissegundos
 	); 
-} //function suspendeZoom
+} //.function suspendeZoom
 
 function menu_rotulosCompletos(bTipo) { 
 	if (bTipo===null) {
@@ -2399,7 +3219,23 @@ function menu_rotulosCompletos(bTipo) {
 		ui.getElementsByTagName('tspan')[1].text(nome);
 		ui.getElementsByTagName('tspan')[2].text(nota);
 	});
-}//.function menu_rotulosCompletos
+} //.function menu_rotulosCompletos
+
+
+function menu_embaralhaTexto() {
+	gparam.embaralhaRotulo = !gparam.embaralhaRotulo; 
+	graph.forEachNode( function(node) {
+		var ui=graphics.getNodeUI(node.id); 
+		var [identificador, nome, nota] = labelsNo(node, gparam.kTipoRotulo);
+		ui.getElementsByTagName('tspan')[0].text(identificador);
+		ui.getElementsByTagName('tspan')[1].text(nome);
+		ui.getElementsByTagName('tspan')[2].text(nota);
+	});
+	if (gparam.embaralhaRotulo) { 
+		alertify.success('Os novos itens terão a descrição embaralhada');
+	} 
+} //.function menu_embaralhaTexto
+
 
 function menu_ligacoesExibe(bTipo) { 
 	if (bTipo===null) {
@@ -2412,7 +3248,7 @@ function menu_ligacoesExibe(bTipo) {
 	//zoom in e out para dar um refresh na tela
 	gparam.renderer.zoomIn();
 	gparam.renderer.zoomOut();
-}//.function menu_ligacoesExibe
+} //.function menu_ligacoesExibe
 
 function menu_rotulosPosicao(bTipo) { 
 	if (bTipo===null) {
@@ -2422,7 +3258,7 @@ function menu_rotulosPosicao(bTipo) {
 	} else {
 		gparam.btextoEmbaixoIcone=false;
 	}
-}//.function menu_rotulosPosicao
+} //.function menu_rotulosPosicao
 
 function menu_colorir(corEscolhida) {
 	function colorir(n, cor) {
@@ -2450,7 +3286,7 @@ function menu_colorir(corEscolhida) {
 		colorir(n, cor);
 	}			
 	alertify.success(tsucesso);
-}//.function menu_colorir
+} //.function menu_colorir
 
 function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 	// se bEstrela, liga o primeiro selecionado com todos os outros
@@ -2464,7 +3300,7 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 	//ligação já existe, então edita, apaga a ligação e cria nova.
 	if ((gparam.idNosSelecionados.size==2) && !nomeLigacao) {
 		var id1 = [...gparam.idNosSelecionados][0], 
-			id2=  [...gparam.idNosSelecionados][1];
+			id2 = [...gparam.idNosSelecionados][1];
 		var labelLigacao = '';	
 		var ligExistente = graph.hasLink(id1, id2);
 		if (ligExistente) {
@@ -2536,7 +3372,7 @@ function menu_ligar_selecionados(bEstrela, nomeLigacao, bSemMensagem) {
 	var noLigacoes = {'no':[], 'ligacao':ligacoes, 'mensagem':''};
 	inserirJson(noLigacoes,' Ligações. ');
 	return true;
-}//.function menu_ligar_selecionados
+} //.function menu_ligar_selecionados
 
 function menu_desligar_selecionados(bRemoverTodasLigacoes) {
 	//se bRemoverTodasLigacoes=false, só remove se a ligação for entre DOIS itens selecionados
@@ -2588,11 +3424,11 @@ function menu_desligar_selecionados(bRemoverTodasLigacoes) {
 			graph.removeLink(link);
 		} catch (e){; };		
 	}
-}//menu_desligar_selecionados
+} //menu_desligar_selecionados
 
 function sv(texto) {
 	return texto? texto:'';
-}
+} //.function sv
 
 function junta(a, separador, b) {
 	if (a && b) {
@@ -2603,7 +3439,7 @@ function junta(a, separador, b) {
 		return ''+b;
 	}	
 	return ''
-}
+} //.function junta
 
 function removeGalhos(bExibeMensagem) {
 	var quantidadeLigacoes;	
@@ -2661,8 +3497,9 @@ function menu_quebraGraficoEmPartes(){
 		resp = confirm('Deseja criar uma nova aba com ' + sconj.size + ' elementos?'); 
 		if (resp) {
 			k += 1;
-			//menu_exportaJSONServidor(null, null, 'temporario', sconj, document.title + '-' + k);
-			menu_novaAbaComDadosJson(false, sconj, true);
+			var jsonDados = getRedeNosLigacoes(false, sconj, true);
+			openWindowWithPost({'json':jsonDados}, ''); //menu_copiaItensParaOutraAba não funciona neste caso, porque há uma demora para abrir a nova aba
+	
 		} else {
 			resp = confirm('Deseja abrir outras abas?');
 			if (!resp) {
@@ -2671,7 +3508,7 @@ function menu_quebraGraficoEmPartes(){
 		}
 	}
 	alertify.success('Foram inseridas ' + k + ' novas abas');
-}//function menu_quebraGraficoEmPartes
+} //.function menu_quebraGraficoEmPartes
 
 function separaGrupos(tamanhoGrupo) {
 	//pega os nos do gráfico e separa em grupos até tamanhoGrupo, mantendo os itens conectados juntos
@@ -2752,7 +3589,7 @@ function separaGrupos(tamanhoGrupo) {
 		conjuntos.push(JSON.parse(JSON.stringify(caux)));
 	}
 	return conjuntos; //[ lista1, lista2,..]
-} //separaGrupos
+} //.function separaGrupos
 
 function menu_selecionaGruposColoridos(bCoresDistintas){ 
 	//seleciona os grupos com ao menos dois itens coloridos. Se bCoresDistintas=true, duas cores devem ser distintas (entradas e alvos)
@@ -2789,7 +3626,7 @@ function menu_selecionaGruposColoridos(bCoresDistintas){
 			alertify.error('Não há grupos com mais de um item colorido');
 		}
 	}	
-}//function menu_selecionaGruposColoridos
+} //.function menu_selecionaGruposColoridos
 
 function removeIsolados(bExibeMensagem) {
 	var quantidadeLigacoes;	
@@ -2825,7 +3662,7 @@ function removeIsolados(bExibeMensagem) {
 	}
 } //.function removeIsolados
 
-function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados) {
+function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados, bNaoLigar, bLigarEntre) {
 	/*
 	var no = {'id': idNovo,
 			   'descricao': descricaoNovo,
@@ -2841,51 +3678,92 @@ function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados) {
 	nodados.id = idNovo;
 	nodados.descricao = descricaoNovo;
 	nodados.nota = nota;
-	nodados.camada = nodados.camada ? nodados.camada : 0;
+	/* não está colocando mais itens novos como camada=0
+	if (nodados.camada) {
+		nodados.camada = nodados.camada; // ? nodados.camada : 0; //coloca camada 0 só se for isolado inicialmente
+	} */
 	//nodados.situacao_ativa = nodados.situacao_ativa ? nodados.situacao_ativa : true;
 	nodados.imagem = nodados.imagem ? nodados.imagem : iconeF(idNovo);
-	nodados.cor = nodados.cor ? nodados.cor : 'yellow';
-	
+	//nodados.cor = nodados.cor ? nodados.cor : 'yellow';
+	nodados.cor = nodados.cor ? nodados.cor : 'white';
+	//console.log(JSON.stringify(nodados)); 
 	graph.addNode(idNovo, JSON.parse(JSON.stringify(nodados)));
+	
+	if (idNovo.startsWith('LI_')) { //isto pode dar inconsistência com imagem em base64??
+		setTimeout(function(){
+		   //menu_faviconNosItens(false);
+		   faviconNoId(idNovo, '');
+		},1000);
+	}
+	
 	if (gparam.idnoSelecionado) {
 		var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
-		position.x = position.x + Math.random()*gparam.springLength-gparam.springLength/2;
-		position.y = position.y + Math.random()*gparam.springLength-gparam.springLength/2;
-		gparam.layout.setNodePosition(idNovo, position.x, position.y);
-	}
+		//let angulo=Math.PI*2*Math.random();
+		//gparam.layout.setNodePosition(idNovo, position.x + Math.random()*gparam.springLength-gparam.springLength/2, position.y + Math.random()*gparam.springLength-gparam.springLength/2);
+		//gparam.layout.setNodePosition(idNovo, position.x, position.y + gparam.springLength);
+		var angulo = pegaAnguloLigacaoDoItemSelecionado(false);
+		gparam.layout.setNodePosition(idNovo, position.x + Math.cos(angulo)*gparam.springLength, position.y + Math.sin(angulo)*gparam.springLength);
+	};
+	menu_rendererAtivarParar(true, false);
 	selecionaNoid(idNovo, true, true);
-	//trocar ordem da seleção para as setas ficarem saindo do novo item
+	//trocar ordem da seleção para as setas ficarem saindo do novo item somente quando tiver mais de dois itens
 	let ids = [...gparam.idNosSelecionados];
-	ids.unshift(idNovo);
+	//console.log('idnoselecionados');
+	//console.log(gparam.idNosSelecionados);
+	if (bLigarEntre) {
+		ids.splice(1, 0, idNovo); 
+		if (ids.length==2) {
+			let links = graph.getLinks(ids[0]);
+			if (links && links.length==1) {
+				ids.push(links[0].toId);
+			} 
+			/*
+			for (linkNo of links) {
+				
+			} */
+		}
+		//menu_desligar_selecionados(true); 
+	} else if (ids.length>2) {
+		ids.pop(idNovo);
+		ids.unshift(idNovo);
+	}
 	gparam.idNosSelecionados = new Set(ids);
 	gparam.idnoSelecionado = idNovo; 
 	gparam.listaIdNosInseridos.push(new Set([idNovo]));
 	if (gparam.idNosSelecionados.size==1) {
 		return;
 	}
-	if (!menu_ligar_selecionados(true, nomeLigacao)) {
+	//if (!menu_ligar_selecionados(true, nomeLigacao)) { 
+	if (bLigarEntre) {
+		menu_ligar_selecionados(false, nomeLigacao, true);
+	} else if (!bNaoLigar && !menu_ligar_selecionados(true, nomeLigacao, true)) {
 		gparam.renderer.moveTo(position.x, position.y);
 		gparam.layout.pinNode(graph.getNode(idNovo),true);
 		menu_rendererAtivarParar(true, false);
 	}
 	selecionaNoid(idNovo, false, false);
-}//.function criarNovoNo
+} //.function criarNovoNo
 
-function menu_ligar_novo(idNovo, descricaoNovo) {
+function menu_ligar_novo(idNovo, descricaoNovo, bNaoLigar, bLigarEntre) {
 	//cria novo item (não PJ) e liga com nós selecionados.
 	idNovo = idNovo ? idNovo: ''; //idNovo = idNovo ?? ''
 	descricaoNovo = descricaoNovo ? descricaoNovo: '';
 	var dlgItemOriginal = document.getElementById('dlgItem');
 	var dlgItem = document.getElementById('dlgItem').cloneNode(true); //clone para não mexer no original, soluciona problema de instabilidade (parava de funcionar depois de misturar tipos de consulta, cnpj e link)
 	var camposTexto = dlgItem.getElementsByClassName('ajs-input');
+	var dados = {};
 	camposTexto[0].value= idNovo;
-	camposTexto[1].value= descricaoNovo;
+	camposTexto[1].value= descricaoNovo; 
 	camposTexto[2].value= '';
 	camposTexto[3].value= '';
 	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
 	dlgItem.outerHTML = ''; //receita de bolo. sem isso  a linha de cima dava erro no chrome
 	ativaAtalhos(false);
-	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
+	alertify.confirm(dlgItem)
+	//não funciona .set('defaultFocusOff', true)
+	//não funciona .set('focus', camposTexto[0])
+	.set('onfocus', function() { camposTexto[0].focus(); } )
+	.set('onok', function(closeevent, value) { 
 		ativaAtalhos(true); 
 		var camposTexto = dlgItem.getElementsByClassName('ajs-input');
 		//idNovo = camposTexto[0].value.toUpperCase().trim();
@@ -2897,7 +3775,7 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 			alert('O Identificador não pode ser nulo. Tente novamente.');
 			return;
 		}
-		if (idNovo.startsWith('https://') || idNovo.startsWith('http://')) {
+		if (idNovo.toLowerCase().startsWith('https://') || idNovo.toLowerCase().startsWith('http://')) {
 			idNovo = 'LI_' + idNovo;
 		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) { //aspas quando se copia o caminho completo pelo menu contextual no windows. não sei como fica em outros sistemas
 			idNovo = 'AR_' + idNovo.slice(1,-1);
@@ -2909,9 +3787,15 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 			idNovo = idNovo.toUpperCase();
 		}
 		idNovo = tipoPresumido(idNovo);
-		if (graph.hasNode(idNovo)) {
-			alert('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
-			return;
+		while (graph.hasNode(idNovo)) {
+			/*if (graph.hasNode(idNovo)) {
+				alert('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
+				return;
+			}*/
+			idNovo = prompt('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nAltere o novo identificador:', idNovo);
+			if (idNovo===null) {
+				return;
+			}
 		}
 		/*
 		if (idNovo.startsWith('PJ_')) {
@@ -2920,12 +3804,17 @@ function menu_ligar_novo(idNovo, descricaoNovo) {
 			return;
 		}*/
 		descricaoNovo = idNovo.startsWith('PF_')?idNovo.substr(15):descricaoNovo;
-		criarNovoNo(idNovo, descricaoNovo, tnota, tligacao, {});
+		if (tligacao) {
+			bNaoLigar = false;
+		} 
+		//dados.camada = bNaoLigar? 0 : 1; //ttt
+		criarNovoNo(idNovo, descricaoNovo, tnota, tligacao, dados, bNaoLigar, bLigarEntre);
 	}, function() { 
 		ativaAtalhos(true); }
 	).set('oncancel', function() { ativaAtalhos(true);  })
 	.set('title',"Novo Item");
-}//.function menu_ligar_novo
+
+} //.function menu_ligar_novo
 
 function menu_editar_no(noid) {
 	//edita dados item, se o usuário alterar o id, cria novo item.
@@ -2945,7 +3834,6 @@ function menu_editar_no(noid) {
 	camposTexto[0].value= noid;
 	camposTexto[1].value= node.data.descricao;
 	camposTexto[2].value= node.data.nota;
-	camposTexto[2].value= '';
 	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
 	dlgItem.outerHTML = ''; //receita de bolo para usar o alertify.confirm. sem isso  a linha de cima dava erro no chrome
 	ativaAtalhos(false);
@@ -2985,17 +3873,17 @@ function menu_editar_no(noid) {
 		ativaAtalhos(true); }
 	).set('oncancel', function() { ativaAtalhos(true);  })
 	.set('title',"Editar Item");
-}//.function menu_editar_no
+} //.function menu_editar_no
 
 function soDigitos(id) {
-//usar com cautela, só deixar digitos para verificar cpf/cnpj pode dar resultado incorreto, p. ex: XX12345678901 seria considerado cpf
+//usar com cautela, só deixar digitos para verificar cpf/cnpj pode dar resultado incorreto, p. ex: yy12345678901 seria considerado cpf
 	return id.replace(/\D+/g, '');
-}//.function soDigitos
+} //.function soDigitos
 
 function isNumeric(texto) {
   var er = /^[0-9]+$/;
   return (er.test(texto.trim()));
-}//.function isNumeric
+} //.function isNumeric
 
 function tipoPresumido(id) {
 	// supõe se tiver undercores na terceira posicao, já começa com tipo EN_, PF_ , PJ_, etc
@@ -3014,7 +3902,7 @@ function tipoPresumido(id) {
 	} else {
 		return 'ID_' + id.trim();
 	}
-}//.function tipoPresumido
+} //.function tipoPresumido
 
 function alterarItens(dadosNos) {//altera dados do item a partir de lista de dados de nos, corrige elemento visível (nota, cor ou imagem) 
 	for (let no of dadosNos) {
@@ -3046,7 +3934,7 @@ function alterarItens(dadosNos) {//altera dados do item a partir de lista de dad
 			}
 		}		
 	}
-}//.function alterarItens
+} //.function alterarItens
 
 function entrada_hierarquico_pyjs(entrada) {
 	var entradaTabs = [];
@@ -3090,15 +3978,6 @@ function entrada_hierarquico_pyjs(entrada) {
 		if (!entradaTabs.length) {
 			entradaTabs.push('_>'); //tabela hierarquica
 		} else if (linha.trim()) {
-			/*
-			if (identadorTabs) {
-				//linha = replaceAll(linha, '\t', '    ');
-				var recuo = linha.length - linha.trimStart().length;
-				var linhax = '\t'.repeat(recuo);
-			} else {
-				var recuo = Math.floor((linha.length - linha.trimStart().length)/kidentadores); //supõe PEP, quatro espaços de tabulação
-				var linhax = '\t'.repeat(recuo);
-			} */
 			var recuo = Math.floor((linha.length - linha.trimStart().length)/kidentadores); //supõe PEP, quatro espaços de tabulação
 			var linhax = '\t'.repeat(recuo);
 
@@ -3118,7 +3997,7 @@ function entrada_hierarquico_pyjs(entrada) {
 		kl += 1;
 	}
 	return  entradaTabs.join('\n');	
-}
+} //.function entrada_hierarquico_pyjs
 
 function inserir_lista(entrada, bNaoConfirma) {
 	//inserir três tipos de lista, dependendo se a primeira célula tiver um ou dois underscores ou sem underscore.
@@ -3340,7 +4219,6 @@ function inserir_lista(entrada, bNaoConfirma) {
 							linhaHierarquica[k] = itensLinha[k];
 						} else { 
 							console.log('Algo errado - hierarquica');
-							
 						}
 					} else {
 						alertify.error('Algo errado...');
@@ -3351,14 +4229,11 @@ function inserir_lista(entrada, bNaoConfirma) {
 								linhaHierarquica[m] = '';
 						}
 					}
-
-
 				}
 			} else {
 				console.log('erro...');
 			}
 		} 
-
 	}
 	
 	if (!lista.length) {
@@ -3486,7 +4361,7 @@ function inserir_lista(entrada, bNaoConfirma) {
 			listaSaida.push(JSON.parse(JSON.stringify(linhaSaida)));
 		}
 		return listaSaida;
-	}//.function ajustarArvore
+	} //.function ajustarArvore
 
 	function fazFetchCnpjs(cnpjsids, nos, ligacoes) {
 		//var idin = [...cnpjsids].join(';');		
@@ -3494,6 +4369,9 @@ function inserir_lista(entrada, bNaoConfirma) {
 		document.body.style.cursor = 'wait';
 		let bodyjson = JSON.stringify(idinlista);
 		var url =  base + 'grafojson/cnpj/0/' + idinlista[0];
+		if (idinlista.length>1) {
+			url += ' (' + idinlista.length + ' itens)';
+		}
 		//fetch(url, {method: 'get'}) // mode: 'cors',pos
 		fetch(url, {method: 'post', body:  bodyjson, headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
 		  .then(
@@ -3524,8 +4402,8 @@ function inserir_lista(entrada, bNaoConfirma) {
 			console.log('Fetch Error :-S', err);
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
-	}//.function fazFetchCnpjs
-}//.function inserir_lista
+	} //.function fazFetchCnpjs
+} //.function inserir_lista
 
 function menu_editarNota(noid){
 	var ui=graphics.getNodeUI(noid); 
@@ -3533,14 +4411,21 @@ function menu_editarNota(noid){
 	nota = nota? nota: '';
 	ativaAtalhos(false);
 	var brenderer = menu_rendererAtivarParar(false, false);
-	alertify.prompt( 'Editar Nota', 'Digite texto de anotação:', nota
+	var tprompt = 'Digite texto de anotação.';
+	if (gparam.idNosSelecionados.size>1) {
+		tprompt += ' Há ' + gparam.idNosSelecionados.size + ' itens selecionados. O mesmo texto de Nota será aplicado em todos. Não será possível reverter as alterações.'
+	}
+	alertify.prompt( 'Editar Nota', tprompt, nota
 	   , function(evt, texto) { 
-			if (texto) { 
-				ui.getElementsByTagName('tspan')[2].text(texto);
-				graph.getNode(noid).data.nota = texto;
-				try {
-					ui.children[0].textContent = textoTooltip(graph.getNode(noid), true);
-				} catch (e){; };
+			if (!(texto===null)) { 
+				for (let nid of gparam.idNosSelecionados) {
+					ui=graphics.getNodeUI(nid); 
+					ui.getElementsByTagName('tspan')[2].text(texto);
+					graph.getNode(nid).data.nota = texto;
+					try {
+						ui.children[0].textContent = textoTooltip(graph.getNode(nid), true);
+					} catch (e){; };
+				}
 			}
 			menu_rendererAtivarParar(brenderer, false);
 			ativaAtalhos(true);
@@ -3548,12 +4433,15 @@ function menu_editarNota(noid){
 			ativaAtalhos(true);
 			menu_rendererAtivarParar(brenderer, false);
 	});
-}//.function menu_editarNota
+} //.function menu_editarNota
 
-function menu_alterarIcone(bparam) { 
-	var menuIconeOptions = document.getElementById('menu_selecao_icone_options');
-	if (bparam) { 
+function menu_alterarIcone(nomeIcone) { 
+	var menuIconeOptions, nomeIcone;
+	if (!nomeIcone) {
+		var menuIconeOptions = document.getElementById('menu_selecao_icone_options');
 		var nomeIcone = menuIconeOptions.value;
+	}
+	if (nomeIcone) { 
 		for (let noid of gparam.idNosSelecionados) {
 			let no = graph.getNode(noid);
 			no.data.imagem = nomeIcone;
@@ -3563,8 +4451,10 @@ function menu_alterarIcone(bparam) {
 			} catch (e){; };
 		}		
 	} 
-	menuIconeOptions.value=0; 
-}//.function menu_alterarIcone
+	if (menuIconeOptions) {
+		menuIconeOptions.value=0; 
+	}
+} //.function menu_alterarIcone
 
 function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto sem precisar mandar para o servidor.
 	var textToSaveAsBlob = new Blob([textToSave], mime); //{type:"text/plain"});
@@ -3578,19 +4468,24 @@ function saveTextAsFile(textToSave, nomeArquivo, mime) {   //salva arquivo texto
 	downloadLink.style.display = "none";
 	document.body.appendChild(downloadLink);
 	downloadLink.click();
-}//.function saveTextAsFile
+} //.function saveTextAsFile
 
 function menu_exportaExcel(bSoSelecionados) {
 	menu_exportaArquivo(bSoSelecionados, 'xlsx');
-}//.function menu_exportaExcel(bSoSelecionados)
+} //.function menu_exportaExcel(bSoSelecionados)
 
 function menu_exportai2(bSoSelecionados) {
 	menu_exportaArquivo(bSoSelecionados, 'anx');
-}//.function menu_exportai2
+} //.function menu_exportai2
 
-function menu_exportaArquivo(bSoSelecionados, tipo) {
+function menu_exportaArquivo(bSoSelecionados, tipo, jsonIn) {
+	//jsonIn - se informado, ignora o parametro bSoSelecionados
 	var jsonDados, url;
-	jsonDados = getRedeNosLigacoes(bSoSelecionados);
+	if (jsonIn){ 
+		jsonDados = jsonIn;
+	} else {
+		jsonDados = getRedeNosLigacoes(bSoSelecionados);
+	}
 	if (jsonDados['no'].length==0) {
 		alertify.error('Não há itens para exportar.');
 		return;
@@ -3608,13 +4503,13 @@ function menu_exportaArquivo(bSoSelecionados, tipo) {
 		//url = 'dadosemarquivo/osm';
 		url = 'mapa'
 	} else if (tipo=='json') {
-		url = 'selecao_de_itens';
+		url = ''; //'selecao_de_itens';
 	} else {
 		return;
 	}
 	openWindowWithPost(jsonDados, url);
 	//iframeAuxiliar.exportaSoSelecionados = bSoSelecionados;
-}//.function menu_exportaArquivo
+} //.function menu_exportaArquivo
 
 
 function getRedeNosLigacoes(bSoSelecionados, setNos, bSemPosicao) {	
@@ -3689,9 +4584,9 @@ function getRedeNosLigacoes(bSoSelecionados, setNos, bSemPosicao) {
 		}
 	}); 
 	return {'no':nosAux, 'ligacao':ligacoesAux};
-}//.function getRedeNosLigacoes
+} //.function getRedeNosLigacoes
 
-function menu_exportaJsonArquivo(bSoSelecionados) {
+function menu_salvaJsonArquivo(bSoSelecionados) {
 	var redeItens = getRedeNosLigacoes(bSoSelecionados);
 	if (redeItens.no.length==0) { 
 		alertify.error('Não há itens para exportar');
@@ -3700,8 +4595,9 @@ function menu_exportaJsonArquivo(bSoSelecionados) {
 		var datahora = new Date(data1.getTime() - (data1.getTimezoneOffset() * 60000)).toISOString().replaceAll(':','.');
 		saveTextAsFile(JSON.stringify(redeItens), 'rede_cnpj-'+datahora+'.json', {type:"application/json"});
 	}
-}//.function menu_exportaJsonArquivo
+} //.function menu_salvaJsonArquivo
 
+/*
 function replaceAll(texto, textoAProcurar, textoASubstituir) { // pode ser substituido por string.replaceAll, que já existe no javascript
 	//return texto.split(textoAProcurar).join(textoASubstituir);
 	if (texto) {
@@ -3709,11 +4605,32 @@ function replaceAll(texto, textoAProcurar, textoASubstituir) { // pode ser subst
 	} else {
 		return '';
 	}
-}//.function replaceAll
+} //.function replaceAll
+*/
+
+function converteImagens2Base64(listaImagens) {
+	var dicionarioBase64 = {};
+	var c = document.createElement('canvas');
+	for (let nomeImagem of listaImagens) {
+		var img = new Image();
+		img.src = baseImagem + nomeImagem;
+		img_home.appendChild(img);
+		if (1) {
+			c.height = img.naturalHeight;
+			c.width = img.naturalWidth;
+			var ctx = c.getContext('2d');
+			ctx.drawImage(img, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
+			var base64String = c.toDataURL();
+			dicionarioBase64[nomeImagem] = base64String;
+		}
+	}
+	return dicionarioBase64;
+} //.function converteImagens2Base64() 
 
 function getXMLdeSVG() {
 	var svg_xml = (new XMLSerializer).serializeToString(document.getElementsByTagName('svg')[0]); 
-	svg_xml = replaceAll(svg_xml,'xmlns:xlink="http://www.w3.org/1999/xlink"',''); //esse link é acrescentado em campo de texto, causando erro no svg
+	//svg_xml = replaceAll(svg_xml,'xmlns:xlink="http://www.w3.org/1999/xlink"',''); //esse link é acrescentado em campo de texto, causando erro no svg
+	svg_xml = svg_xml.replaceAll('xmlns:xlink="http://www.w3.org/1999/xlink"',''); //esse link é acrescentado em campo de texto, causando erro no svg
 	svg_xml = svg_xml.replace('<svg ', '<svg xmlns:xlink="http://www.w3.org/1999/xlink" '); //define namespace para link
 	/*
 	var listaImagens= [
@@ -3741,42 +4658,25 @@ function getXMLdeSVG() {
 		}
 	}
 	var listaImagens = [...sImagens];
-	function converteImagens2Base64() {
-		var dicionarioBase64 = {};
-		var c = document.createElement('canvas');
-		for (let nomeImagem of listaImagens) {
-			var img = new Image();
-			img.src = baseImagem + nomeImagem;
-			img_home.appendChild(img);
-			if (1) {
-				c.height = img.naturalHeight;
-				c.width = img.naturalWidth;
-				var ctx = c.getContext('2d');
-				ctx.drawImage(img, 0, 0, c.width, c.height, 0, 0, c.width, c.height);
-				var base64String = c.toDataURL();
-				dicionarioBase64[nomeImagem] = base64String;
-			}
-		}
-		return dicionarioBase64;
-	} //.function converteImagens2Base64() 
 	//ver http://d3export.housegordon.org/ exemplo para exportação svg		
-	var dicionario = converteImagens2Base64();
+	var dicionario = converteImagens2Base64(listaImagens);
 	for (let key of listaImagens) {
 		var baseStr=dicionario[key];
 		var strProcurar = 'xlink:href="' + baseImagem + key + '"';
 		var strSubstituicao = 'xlink:href="'+baseStr + '"';
-		svg_xml = replaceAll(svg_xml, strProcurar, strSubstituicao);
+		//svg_xml = replaceAll(svg_xml, strProcurar, strSubstituicao);
+		svg_xml = svg_xml.replaceAll(strProcurar, strSubstituicao);
 	}
 	return svg_xml;
-}//.function getXMLdeSVG()
+} //.function getXMLdeSVG()
 
 function menu_exportaSVG() {
 	var mime={type:"image/svg"};
 	alertify.success("SVG (Scalable Vector Graphics)");
 	var data1 = new Date(); // toIsoString não corrige timezone
 	var datahora = new Date(data1.getTime() - (data1.getTimezoneOffset() * 60000)).toISOString().replaceAll(':','.');	
-	saveTextAsFile(getXMLdeSVG(), 'rede_cnpj-'+datahora+'.svg', mime);
-}//.function menu_exportaSVG
+	saveTextAsFile(getXMLdeSVG(), 'rede_cnpj-'+datahora+'.svg', mime); 
+} //.function menu_exportaSVG
 
 function menu_zoomin(teclaShift, teclaCtrl) {
 	menuOnClick(); //firefox no android, não está fechando o menu
@@ -3797,7 +4697,7 @@ function menu_zoomin(teclaShift, teclaCtrl) {
 			break;
 		}
 	}
-}//.function menu_zoomin
+} //.function menu_zoomin
 
 function menu_zoomout(teclaShift, teclaCtrl) {
 	menuOnClick(); //firefox no android, não está fechando o menu
@@ -3811,7 +4711,7 @@ function menu_zoomout(teclaShift, teclaCtrl) {
 	for(var k=0; k<vezes; k++) {
 		var escala = gparam.renderer.zoomOut();
 	}
-}//.function menu_zoomout
+} //.function menu_zoomout
 
 function menu_input_cnpj(elemento) {
     if(event.key === 'Enter') {
@@ -3822,7 +4722,7 @@ function menu_input_cnpj(elemento) {
 		}
 		menu_incluirCamada(elemento.value, 1);
 	}
-}//.function menu_input_cnpj
+} //.function menu_input_cnpj
 
 //teclas Up, down, left e right servem somente para navegar árvore hierárquica
 function menu_teclaUp(bSemMensagem) { //segue direção da seta
@@ -3845,7 +4745,7 @@ function menu_teclaUp(bSemMensagem) { //segue direção da seta
 	} else if (!bSemMensagem) {
 			alertify.error('Não encontrou item anterior');
 	}
-}
+} //.function menu_teclaUp
 
 function menu_teclaRight(bSemMensagem) { //segue direção contrária da seta?
 	var proximoNo = null;
@@ -3875,7 +4775,7 @@ function menu_teclaRight(bSemMensagem) { //segue direção contrária da seta?
 	} else if (!bSemMensagem) {
 		alertify.error('Não encontrou item.');
 	}
-}//function menu_teclaRight
+} //.function menu_teclaRight
 
 function menu_teclaLeft(bSemMensagem) { //segue direção da seta
 	var proximoNo = null;
@@ -3897,7 +4797,7 @@ function menu_teclaLeft(bSemMensagem) { //segue direção da seta
 	} else if (!bSemMensagem) {
 		alertify.error('Não encontrou item.');
 	}
-}//menu_teclaLeft
+} //.function menu_teclaLeft
 
 function menu_teclaDown(bSemMensagem) { //segue direção da seta, se chega no final do ramo, volta e entra no ramo pela esquerda
 	if (gparam.idNosSelecionados.size>1) {
@@ -3954,7 +4854,7 @@ function menu_teclaDown(bSemMensagem) { //segue direção da seta, se chega no f
 		}	
 		noid =  gparam.idnoSelecionado;
 	}
-}//function menu_teclaDown
+} //.function menu_teclaDown
 
 function menu_configurar_nodeSize() {
 	var parametro = prompt('Digite o tamanho do ícone.', gparam.nodeSize);
@@ -3983,7 +4883,7 @@ function menu_configurar_nodeSize() {
 			ui.getElementsByTagName('rect')[1].attr('width', gparam.nodeSize).attr('height', gparam.nodeSize);		
 		}
 	}); 
-}//.function menu_configurar_nodeSize
+} //.function menu_configurar_nodeSize
 
 function menu_configurar_springLength(zoomInOut) {
 	var tamanho = gparam.layout.simulator.springLength();
@@ -4001,7 +4901,7 @@ function menu_configurar_springLength(zoomInOut) {
 		}
 	}
 	menu_rendererAtivarParar(true, false); //para atualizar tela
-}//.function menu_configurar_springLength
+} //.function menu_configurar_springLength
 
 function balanca() {
 //deslocamento para o renderizador atualizar tela, não adianta se renderer estiver parado.
@@ -4010,60 +4910,64 @@ function balanca() {
 	}
 	var position = gparam.layout.getNodePosition(gparam.idnoSelecionado);
 	gparam.layout.setNodePosition(noaux.id, position.x+10, position.y+10);
-}//.function balanca
+} //.function balanca
 
 function menu_configurar_springCoeff() {
 	var parametro = prompt('Digite o coeficiente da "mola" da ligação (valor padrão 0.0002)', gparam.layout.simulator.springCoeff());
 	if (parametro) {
 		gparam.layout.simulator.springCoeff(parametro);
 	}
-}//.function menu_configurar_springCoeff
+} //.function menu_configurar_springCoeff
 
 function menu_configurar_gravity() {
 	var parametro = prompt('Digite o valor da gravidade (valor padrão -1.2)', gparam.layout.simulator.gravity());
 	if (parametro) {
 		gparam.layout.simulator.gravity(parametro);
 	}
-}//.function menu_configurar_gravity
+} //.function menu_configurar_gravity
 
 function menu_configurar_dragCoeff() {
 	var parametro = prompt('Digite o coeficiente de arrasto (valor padrão 0.02)', gparam.layout.simulator.dragCoeff());
 	if (parametro) {
 		gparam.layout.simulator.dragCoeff(parametro);
 	}
-}//.function menu_configurar_dragCoeff
+} //.function menu_configurar_dragCoeff
 
 function menu_configurar_theta() {
 	var parametro = prompt('Digite do coeficiente theta (valor padrão 0.8)', gparam.layout.simulator.theta());
 	if (parametro) {
 		gparam.layout.simulator.theta(parametro);
 	}
-}//.function menu_configurar_theta(
+} //.function menu_configurar_theta(
 
 //menu contextual
 function showMenu(x, y){
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
     menu.classList.add('show-menu');
-}//.function showMenu
+} //.function showMenu
 
 function hideMenu(){
 	//menu.classList.contains('show-menu') //para verificar
     menu.classList.remove('show-menu');
-}//.function hideMenu
+} //.function hideMenu
 
 function onContextMenu(e){
+	//	Para evitar ativar menu contextual com alertify.prompt
+	if (document.onkeydown == null) { //teste, quando ativaAtalhos(false), seta-se document.onkeydown=null. Então se onkeydown==null, supõe que os teclados de atalho estão desativados e desativa o menu contextual da rede
+		return;
+	}
 	e.preventDefault();
 	showMenu(e.pageX, e.pageY);
     document.addEventListener(gparam.eventclick, menuOnClick, false);
-}//.function onContextMenu
+} //.function onContextMenu
 
 function menuOnClick(e){
 	//devido a inconsistência no firefox e chrome no android, foi colocado menuOnClick(); antes de todos os comandos do menu
-    hideMenu();
-    document.removeEventListener(gparam.eventclick, menuOnClick);
+	hideMenu();
+	document.removeEventListener(gparam.eventclick, menuOnClick);
 	//window.scrollTo(0,0); //ttt
-}//.function menuOnClick
+} //.function menuOnClick
 
 function menu_botao(event) {
 	event.preventDefault();
@@ -4078,7 +4982,7 @@ function menu_botao(event) {
 	},1000);
 	event.preventDefault();
 	return false;
-}//.function menu_botao
+} //.function menu_botao
 //.menu contextual
 
 //resposta a evento drop no div do menu, para abrir opção de inserção. Por exemplo, arrastar do word ou excel uma lista de cnpjs.
@@ -4086,14 +4990,13 @@ function dragover_handler(ev) {
 	ev.preventDefault();
 	// Define o dropEffect para ser do tipo move
 	ev.dataTransfer.dropEffect = "copy"
-}//.function dragover_handler
+} //.function dragover_handler
 
 function drop_handler(ev) {
 	ev.preventDefault();
 	// Pega o id do alvo e adiciona o elemento que foi movido para o DOM do alvo
 	var tipos = ev.dataTransfer.types;
-	console.log(tipos);
-	var shiftKey = ev.shiftKey; //ttt
+	//console.log(tipos);
 	//window.focus(); //não funciona, o focus with no aplicativo de origem da dragagem
 	if (tipos.includes("rede_json")) { //recebe botão DRAG de outra aba da rede
 		var nosLigacoes = ev.dataTransfer.getData("rede_json"); 
@@ -4101,14 +5004,20 @@ function drop_handler(ev) {
 	} else if (tipos.includes("text/x-moz-url")) { //drop link url - funciona no firefox, mas no chrome não aparece esse flavor
 		//var data = ev.dataTransfer.getData("text");
 		var lista = ev.dataTransfer.getData("text/x-moz-url").split('\n'); //url separado do titulo por linha
-		menu_ligar_novo('LI_' + lista[0], lista[1]);
+		//menu_ligar_novo('LI_' + lista[0], lista[1]); 
+		//código para tirar duplicação da descrição, mas complica demais.
+		var tdescricao = lista[1];
+		if (labelsNo_LI('LI_' + lista[0], gparam.tamCorteLabel).toUpperCase()==lista[1].toUpperCase()) { //se id ficar igual a descrição (nome da página), ignora descricao
+			tdescricao = '';
+		}
+		menu_ligar_novo('LI_' + lista[0], tdescricao);
 	} else if (tipos.includes( "text/uri-list")) { //drop link url- no chrome
 		var item = ev.dataTransfer.getData("text/uri-list"); //aqui só tem url, não tem título da página como no firefox
 		menu_ligar_novo('LI_' + item, '');
 	} else if (tipos.includes("text/plain")) {
 		var data = ev.dataTransfer.getData("text");
-		if (shiftKey) {
-		   //ttt
+		if (ev.shiftKey) {
+		   
 		} else {
 			inserir_lista(data);
 		}
@@ -4119,7 +5028,7 @@ function drop_handler(ev) {
 		console.log(tipos);
 		return;
 	}
-}//.function drop_handler
+} //.function drop_handler
 
 function ajustaRegiaoDrop() {
 	//var dropzoneId = "drop_area"; //"div_botoes"; //só esta região vai aceitar drop
@@ -4151,20 +5060,36 @@ function ajustaRegiaoDrop() {
 			e.dataTransfer.dropEffect = "none";
 		}
 	});
-}//.function ajustaRegiaoDrop
+} //.function ajustaRegiaoDrop
 
 function drag_handler(ev) {
-	//console.log('drag');
-	//ev.dataTransfer.setData("rede_json", JSON.stringify(getRedeNosLigacoes(true))); 
 	ev.dataTransfer.setData("rede_json", JSON.stringify(getRedeNosLigacoes(true, null, true))); //terceiro parametro true=bsemposicao
 	var texto = [...gparam.idNosSelecionados].join('\n');
 	ev.dataTransfer.setData("text/plain", texto);
+	
+	var linksArray = [];
+	for (let item of gparam.idNosSelecionados) {
+		if (item.startsWith('LI_')) { 
+			linksArray.push(item.substr(3));
+		}
+	}
+	if (linksArray.length>0) {
+		ev.dataTransfer.setData("text/x-moz-url", linksArray.join('\n'));
+		ev.dataTransfer.setData("text/uri-list", linksArray.join('\n'));	
+	} else {
+		ev.dataTransfer.setData("text/uri-list", base + 'grafico/1/'+ texto.replaceAll('\n', ';')); //arrastando para uma outra aba que não seja da redecnpj, abre o gráfico dos itens selecionados
+	}
+	return;
+	/*
 	if (gparam.idnoSelecionado.startsWith('LI_')) { 
 		texto = gparam.idnoSelecionado.substr(3);
 		ev.dataTransfer.setData("text/x-moz-url", texto);
 		ev.dataTransfer.setData("text/uri-list", texto);
-	}
-}//.function drag_handler
+	} else {
+		ev.dataTransfer.setData("text/uri-list", base + 'grafico/1/'+ texto.replaceAll('\n', ';')); //arrastando para uma outra aba que não seja da redecnpj, abre o gráfico dos itens selecionados
+	} 
+	*/
+} //.function drag_handler
 
 function ativaAtalhos(bcaptura) {
 	// é preciso desativar antes de usar o alertify.prompt
@@ -4176,7 +5101,7 @@ function ativaAtalhos(bcaptura) {
 	} else {
 		document.onkeydown = null;
 	}
-}//.function ativaAtalhos
+} //.function ativaAtalhos
 
 function evento_teclasDown(e) {
 	function testa(keyIn, pressShift, pressCtrl) {
@@ -4190,21 +5115,29 @@ function evento_teclasDown(e) {
 		} 
 		return true;
 	}
-	
 	if ((e.code.startsWith('Digit') && (e.code.length==6)) || (e.code.startsWith('Numpad') && (e.code.length==7) && (e.getModifierState('NumLock')))){
 		var ns = e.code.substr(-1);
 		var tipo = 'cnpj';
-		if (e.shiftKey) {
+		if (e.shiftKey && !e.ctrlKey) {
 			tipo = 'links';
+		//} else if (!e.shiftKey && e.ctrlKey) {
+		} else if (e.ctrlKey) {
+				tipo = 'caminhos';	
 		}
 		if (('0' <= ns) && (ns <='9')) {
 			if (ns=='0') {
-				menu_incluirCamada('', 10, tipo);
+				ns='10';
+				//observação: javascript não aceita SHIFT+TeclaKeypd como atalho, também não aceita CTRL+SHIFT+0
+				//menu_incluirCamada('', 10, tipo);
+			} 
+			var camadaInsercao = parseInt(ns);
+			if ((camadaInsercao==1)&&(tipo=='cnpj')) {
+				menu_incluir1Camada('');
 			} else {
-				if ((parseInt(ns)==1)&&(tipo=='cnpj')) {
-					menu_incluir1Camada('');
+				if (tipo=='caminhos') {
+					menu_caminhos(camadaInsercao, '', e.shiftKey);
 				} else {
-					menu_incluirCamada('', parseInt(ns), tipo);
+					menu_incluirCamada('', camadaInsercao, tipo);
 				}
 			}
 			e.preventDefault();
@@ -4212,8 +5145,6 @@ function evento_teclasDown(e) {
 		}
 	} else if (testa('KeyZ', false, true)) { 
 		menu_inserirDesfazer();
-	} else if (testa('KeyF', false, false)) { 
-		menu_localiza();
 	} else if (testa('KeyJ', false, false)) { 
 		menu_localiza_adjacentes();
 	} else if (testa('KeyJ', true, false)) { 
@@ -4229,13 +5160,16 @@ function evento_teclasDown(e) {
 		catch(err){
 			menu_inserir();
 		};
-		//menu_inserir(); //xxx
 	} else if (testa('KeyU', false, false)) { 
-		menu_ligar_novo();
+		menu_ligar_novo('', '', true); //novo item sem ligação com selecionados
+	} else if (testa('KeyU', true, false)) { 
+		menu_ligar_novo('', '', false); //novo item com ligacao com selecionados
+	} else if (testa('KeyU', false, true)) { 
+		menu_ligar_novo('', '', false, true); //novo item com ligacao entre selecionados
 	} else if (testa('KeyD', false, false)) { 
 		menu_dados(false, gparam.idNoOnHover);
 	} else if (testa('KeyD', true, false)) { 
-		menu_dados(true, gparam.idNoOnHover);
+		menu_dados(true, null);
 	} else if (testa('KeyD', false, true)) { 
 		menu_listaSelecao(true);
 	} else if (testa('KeyA', false, false)) { 
@@ -4249,11 +5183,13 @@ function evento_teclasDown(e) {
 	} else if (testa('KeyQ', false, false)) {
 		menu_quebraGraficoEmPartes();
 	} else if (testa('KeyE', false, false)) { 
-		menu_editar_no();
+		menu_editar_no();	} 
+	else if (testa('KeyB', false, false)) { 
+		menu_abreBuscasEmSites();
 	} else if (testa('KeyG', false, false)) { 
 		menu_buscaEmSite('https://www.google.com/search?q=', 'N');
 	} else if (testa('KeyG', true, false)) { 
-		menu_GoogleMaps();;
+		menu_GoogleMaps(true);;
 	} else if (testa('KeyG', false, true)) { 
 		menu_buscaEmSite('https://www.google.com/search?q=', 'S');
 		//menu_links_google(false);
@@ -4266,7 +5202,7 @@ function evento_teclasDown(e) {
 	} else if (testa('KeyN', true, false)) { 
 		menu_ligacoesExibe(null);
 	} else if (testa('KeyF', false, false)) { 
-		menu_localiza();
+		menu_localiza(false);
 	} else if (testa('KeyF', true, false)) { 
 		menu_localiza(true);
 	} else if (testa('KeyF', false, true)) { 
@@ -4295,6 +5231,10 @@ function evento_teclasDown(e) {
 		menu_colorir();
 	} else if (testa('KeyC', true, false)) { 
 		menu_colorir('transparent');
+	} else if (testa('KeyC', false, true)) { 
+		menu_copiaClip();
+	} else if (testa('KeyV', false, true)) { 
+		menu_colaClip();
 	} else if (testa('Space', false, false)) { 
 		menu_rendererAtivarParar(!gparam.bRenderAtivado, true);
 	} else if (testa('ArrowLeft', false, false)) { 
@@ -4306,12 +5246,12 @@ function evento_teclasDown(e) {
 	} else if (testa('ArrowDown', false, false)) { 
 		menu_teclaDown(false);	
 	} else if (testa('KeyO', false, false)) { 
-		menu_exportaJSONServidorParaBaseLocal(true, '', 'operacao' );
+		menu_exportaJSONServidorParaBaseLocal(true, '', 'operacao' );	
 	} else {
 		return;
 	} 
 	e.preventDefault();
-}//.function evento_teclasDown
+} //.function evento_teclasDown
 
 alertifyfake = {
 	'prompt':function(titulo, texto, valor, func1, func2) {
@@ -4337,6 +5277,7 @@ alertifyfake = {
 		//texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '; ')
 		texto = texto.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/<br>/g, '\n')
 		setTimeout(function(){ alert(titulo + '\n\n' + texto);}, 500);	
+		func();
 	},
 	'success':function(texto) {
 		menuOnClick();
@@ -4350,7 +5291,7 @@ alertifyfake = {
 		menuOnClick();
 		setTimeout(function(){ alert('ERRO!!! ' + texto); }, 500);
 	}
-}//.alertifyfake
+} //.alertifyfake
 
 function ajustaAmbiente_adicionarListaIconesAoMenu() {
 	//var menuIcone = document.getElementById('menu_selecao_icone');
@@ -4369,7 +5310,7 @@ function ajustaAmbiente_adicionarListaIconesAoMenu() {
 		itemOption.value = item;
 		menuIconeOptions.appendChild(itemOption);
 	}
-}//.function ajustaAmbiente_adicionarListaIconesAoMenu
+} //.function ajustaAmbiente_adicionarListaIconesAoMenu
 
 function ajustaAmbiente() {
 	menu = document.querySelector('.menu');
@@ -4381,7 +5322,7 @@ function ajustaAmbiente() {
 		//gparam.mobile = true;
 		gparam.inserirDefault = ''; //'TESTE'; //como é dificil digitar no mobile, coloca um valor padrão
 		alertify.prompt = alertifyfake.prompt;
-		alertify.confirm = alertifyfake.confirm;
+		//alertify.confirm = alertifyfake.confirm; //confirm é usado para informar parametros em dlgLink, por isso não pode sobrepor
 		alertify.alert = alertifyfake.alert; 
 		alertify.warning = alertifyfake.warning;
 		if (/Android/i.test(navigator.userAgent)) { //android
@@ -4406,7 +5347,8 @@ function ajustaAmbiente() {
 			document.getElementById('input_cnpj').value = gparam.inserirDefault;
 		} catch (e) {;};		
 	}
-}//.function ajustaAmbiente
+
+} //.function ajustaAmbiente
 
 function main() {
 	ajustaAmbiente();
@@ -4424,10 +5366,7 @@ function main() {
 		});
 	gparam.renderer.run();
 	gparam.geom = Viva.Graph.geom();
-	if (gparam.mobile) {
-		//menu_zoomin(false, false);
-		//menu_zoomin(false, false);
-	} else {
+	if (!gparam.mobile) {
 		//Ajusta região para drag and drop de arquivo ou do excel
 		ajustaRegiaoDrop();
 		gparam.AreaSelecaoRetangular.Setup();
@@ -4448,20 +5387,21 @@ function main() {
 				var horaAbrePopup = localStorage.getItem( 'horaAbrePopup' );
 				if (!horaAbrePopup || !(horaAbrePopup>new Date())) {
 					if (gparam.mobile) {
-						alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, abra um issue na página do projeto no github. Tente em um computador com o Firefox, Chrome ou Edge.');
+						alert('Esta página pode não funcionar corretamente no celular ou tablet... Se der erro, abra um issue na página do projeto no github. Tente em um computador com o Firefox, Chrome ou Edge.\n\n' + gparam.inicio.mensagem);
+					} else {
+						alert(gparam.inicio.mensagem);
 					}
-					alert(gparam.inicio.mensagem);
 					var expira = new Date();
-					localStorage.setItem( 'horaAbrePopup', expira.setHours(expira.getHours() + 4)); //exibe de novo em 4 horas
+					localStorage.setItem( 'horaAbrePopup', expira.setHours(expira.getHours() + 20)); //exibe de novo em 20 horas
 				}
 			}
 		// }
-		if (gparam.inicio.bMenuInserirInicial) {
+		if (gparam.inicio.bMenuInserirInicial && !window.opener) { //se for aberta por outra aba, não abre opção de inserir
 			menu_inserir();
 		}
 	}
-
-}//.main()
+	
+} //.main()
 
 </script>
 
@@ -4504,69 +5444,120 @@ function main() {
     display: flex;
     justify-content: left;
 }
+
 {% if parametros.mobile %}
-	.botaosuperior {
-		margin-right:10px; 
-		margin-bottom:10px; 
-		border-radius:5px; 
-		font-size:30px;
-	} 
 	.menu {
 		width:300px;
 	}
-	.menu-btn {
-		font-size:20px;
-	}
-	.menu-text {
-		margin-left:20px;
-	}
+	{% if parametros.chrome %}
+		.botaosuperior {
+			margin-right:10px; 
+			margin-bottom:10px; 
+			border-radius:5px; 
+			/* font-size:30px; */
+			width: fit-content;
+		} 
+		.menu-btn {
+			font-size:12px;
+		}
+		.menu-text {
+			margin-left:50px;
+			font-size:10px;
+		} 
+		.alertify-notifier .ajs-message.ajs-success{
+			  color: black;
+			  font-size: 8px;
+		}
+	{% else %}
+		.botaosuperior {
+				margin-right:10px; 
+				margin-bottom:10px; 
+				border-radius:5px; 
+				font-size:30px;
+				width: fit-content;
+			} 
+		.menu-btn {
+			font-size:14px;
+		}
+		.menu-text {
+			margin-left:50px;
+			font-size:14px;
+		} 	
+		.alertify-notifier .ajs-message.ajs-success{
+			  color: black;
+			  font-size: 14px;
+		}
+	{% endif %}
+	
 	.menu .menu { /* submenu não ficar à direita */
 	  position: fixed;
 	  top: 4px;
 	  left: 4px;
 	}
-
+	
 {% endif %}
+
 </style>
 </head>
+
 <body id='corpo' onload='main()' style='overflow:hidden; '>
 <!-- overflow:hidden para não aparecer barra de rolagem -->
 <!--div id="block_container"-->
 	<div id='div_botoes'>
-		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Abre opções'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
+		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Abre Menu com opções'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
+		<button class='botaosuperior' id='btn_menu' type="button" onclick="window.open(base+'grafico_no_servidor/rede_cnpj_diagrama.json');" title='Abre diagrama clicável com orientações e vídeos de uso da ferramenta.'>
+			{% if parametros.mobile %}
+				<img src="/static/imagem/favicon.ico" alt="MapRoad"/>
+			{% else %}
+				<img src="/static/imagem/favicon.ico" alt="MapRoad" class='botaosuperior' width="12" height="12"/> 
+			{% endif %}
+		</button>
+		
+		{% if not parametros.mobile %}
+			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github.&#10;&#10;{{ parametros.mensagem }}'>
+				<b>RedeCNPJ</b>
+			</button>
+			<a href=mailto:redecnpj.com.br@gmail.com?subject=RedeCNPJ title='Envie comentários e sugestões para o email redecnpj.com.br@gmail.com. Para problemas técnicos, abra uma issue na página do projeto no Github.'><i class="fa fa-envelope" aria-hidden="true"></i></a>
+		{% endif %}
 		{% if parametros.bBaseReceita %}
-			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github.&#10;Todos os dados exibidos são públicos, provenientes da página de dados públicos da Secretaria da Receita Federal, do Portal da Transparência da CGU, do TCESP e TSE.&#10;O autor não se responsibiliza pela utilização desses dados, pelo mau uso das informações ou incorreções.'>
-				{% if parametros.mobile %}<img src="/static/imagem/favicon.ico" alt="Rede" />{% else %}<b>Rede-CNPJ no Gibhub</b>{% endif %}</button>
 			{% if not parametros.mobile %}
-				<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica-cnpj')" title='Clique para abrir a página de dados públicos de CNPJ da Receita Federal do Brasil'><b>Dados Públicos RFB</b></button>
+				<button class='botaosuperior' id='btn_srf' type="button" onclick="window.open('https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj')" title='Clique para abrir a página de dados abertos de CNPJ da Receita Federal do Brasil'><b>Dados Abertos</b></button>
 			{% endif %}
 		{% endif %}
-		{% if not parametros.mobile %}
+		{% if not parametros.mobile %}	
 			<button id='div_referencia' title="{{ parametros.referenciaBD }}" disabled><b>Referência</b></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>
 		{% endif %}
-		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>
-		<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'><i class="fa fa-search-plus"></i></button>
-		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
+		{% if not parametros.mobile %}
+			<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
+		{% endif %}
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i></button>
 
 		{% if not parametros.mobile %}
 			<input type="text" id="input_cnpj" name="input_cnpj" size="18" value='' onkeydown='menu_input_cnpj(this)' 
 				onfocusin="ativaAtalhos(false)" onfocusout="ativaAtalhos(true);" onClick="this.select();"
-				title='Digite {% if parametros.bBaseReceita %} CNPJ, Razão Social ou CPF  {% endif %}e pressiona Enter, ou clique no Botão ao lado para adicionar mais Camadas'
-			>
+				title='Digite {% if parametros.bBaseReceita %} CNPJ, Razão Social, Nome Fantasia, CPF de sócio ou Nome de sócio {% endif %}e pressione Enter. Os nomes podem ter acentuação ou estar com letras minúsculas, pois o texto é convertido em maiúsculas sem acentuação. CNPJS e CPFs podem ter pontos, traços ou barras. Para buscar por Unidade Gestora, coloque UG_NNNNNN, onde NNNNNN é o código da UG. A busca por endereço, por telefone ou por email ainda não foi implementada.'>
 		{% endif %}
 		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
-		<button class='botaosuperior' type="button" onclick="javascript:menu_incluir1Camada('');" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(event.shiftKey);" title='Exibir Dados do Item (D). SHIFT+Click ou SHIFT+D abre os dados de CNPJ em nova aba.'><i class="fa fa-newspaper"></i></button>
 
-		{% if not parametros.mobile %}	
-			<button class='botaosuperior' type="button" onclick="javascript:menu_ocnpj()" title='Exibir Dados dos CNPJs selecionados no site oCNPJ.com.br. oCNPJ.com.br utiliza a mesma base do Rede CNPJ. Foi otimizado para exibir apenas os dados de empresas. Permite listar dados de vários CNPJs em uma mesma tela.'><b>oCNPJ</b></button>		
-			<button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste para esta tela uma coluna de CNPJs, um arquivo tipo json ou o botão DRAG de outra aba" disabled>DROP<!--i class="fa fa-hand-holding-water"></i--></button>
-			<button id="drag_area"  ondragstart="drag_handler(event);" draggable="true" title="Arraste este botão para outra Aba de Rede para copiar os itens selecionados">DRAG<!-- drag_area--> <!--i class="fa fa-hand-holding-water"></i--></button>
-			<button class='botaosuperior' type="button" onclick="javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" ><i class="fa fa-file-excel"></i></button>
+		{% if not parametros.mobile %}
+			<button class='botaosuperior' type="button" onclick="javascript:menu_incluir1Camada('');" title='Expande Vínculos Societários em Camada 1 (Tecla 1)'><i class="fa fa-layer-group"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_botao_caminhos('');" title='Procura caminhos entre itens selecionados no gráfico'>
+				<img src="/static/imagem/code-fork.png" alt="caminhos" class='botaosuperior' width="12" height="12"/>
+			</button>
+
+			<button class='botaosuperior' type="button" onclick="javascript:menu_botaoAbre(event.shiftKey)" title="Adiciona última visualização salva no navegador com o botão ao lado. Pressionando SHIFT pode se escolher o nome do conjunto." ><i class="fa fa-folder-open"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_botaoSalva(event.shiftKey)" title="Salva a visualização atual no navegador. Pressionando SHIFT pode se definir nome do conjunto." ><i class="fa fa-save"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_exportaExcel(false)" title="Salva arquivo Excel com dados dos itens da tela" ><i class="fa fa-file-excel"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_exportaArquivo(false, 'osm');" title='Abre endereços de cnpjs com OpenStreetMap'><i class="fa fa-globe"></i></button>
+
+			<!--button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste para esta tela uma coluna de CNPJs, um arquivo tipo json ou o botão DRAG de outra aba" disabled>DROP</button> -->
+			<button class='botaosuperior' onclick="javascript:menu_colaClip();"  title="(CTRL+V) COLA itens da Área de Transferência da RedeCNPJ de outra aba"><i class="fa fa-paste"></i></button>
+			<button id="drag_area"  ondragstart="drag_handler(event);" draggable="true" onclick="javascript:menu_copiaClip();" ondblclick="javascript:menu_copiaItensParaOutraAba(event.shiftKey, true);" title="COPY: CLICK SIMPLES para copiar para a Área de Transferência da RedeCNPJ (CTRL+C), para ser colada em outra aba. Dê CLICK DUPLO para COPIAR os itens selecionados para NOVA ABA já aberta por SHIFT+DUPLO CLICK, tecla A ou SHIFT+A; SHIFT+DUPLO CLICK copia os itens para uma NOVA ABA; DRAG: Arraste este botão para outra Aba de Rede para copiar os itens selecionados."><b>COPY/DRAG</b><!-- drag_area--> <!--i class="fa fa-hand-holding-water"></i--></button>
 		{% endif %}
-		<button class='botaosuperior' type="button" onclick="javascript:menu_exportaArquivo(false, 'osm');" title='Abre endereços de cnpjs com OpenStreetMap'><i class="fa fa-globe"></i></button>
 	</div>
 
 <div id="principal" style="width: 100%; height: 100%; position: absolute; " charset="utf-8" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  > 
@@ -4626,55 +5617,13 @@ function main() {
 	</button>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn"><i class="fa fa-link"></i><span class="menu-text">Ligar</span></button>
-	<menu class="menu">
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo();" title="Liga itens selecionados para um Item a ser criado."> 
-		<span class="menu-text">Para Novo Item (U)...</span> 
-		</button>
-		</li>      
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(true);" title="Liga o primeiro aos demais itens selecionados"> 
-		<span class="menu-text">Em Estrela (L)</span> 
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(false);" title="Liga os itens selecionados em fila indiana"> 
-		<span class="menu-text">Em Fila (K)</span> 
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(false);" title="Remove ligações entre os itens selecionados"> 
-		<span class="menu-text">Remover Entre (SHIFT+L)</span> 
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(true);" title="Remove todas as ligações dos itens selecionados"> 
-		<span class="menu-text">Remover Ligações</span> 
-		</button>
-		</li>
-	</menu>
-	</li>
-	<li class="menu-item submenu">
 	<button type="button" class="menu-btn"><i class="fa fa-eye"></i><span class="menu-text">Visualização</span></button>
 	<menu class="menu">
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(null, true)" title="Abre itens selecionados em nova aba"> 
-		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_quebraGraficoEmPartes()" title="Divide o gráfico em partes menores exibindo em outras abas."> 
-		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Quebrar o gráfico em abas (Q)</span> </button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaArquivo(false, 'osm');" title="Abre OpenStreetMap. Se houver muitos itens, será apontado somente os municípios dos cnpjs."> 
-		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Abre OpenStreetMap</span> </button>
-		</li>
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn"><i class="fa fa-thumbtack"></i><span class="menu-text">Fixar</span></button>
 		<menu class="menu">		
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo(null);" title="Fixa/Desfixa nó na posição do mapa, não sendo afetado pelo arrastamento de outros nós"> 
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_pinarNo(null);" title="Fixa/Desfixa nó na posição do gráfico, não sendo afetado pelo arrastamento de outros nós"> 
 			<i class="fa fa-thumbtack"></i> <span class="menu-text">Nós Selecionados (P)</span> 
 			</button>
 			</li>
@@ -4724,6 +5673,11 @@ function main() {
 			</button>
 			</li>
 			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_embaralhaTexto();" title='Embaralha texto dos novos itens do gráfico, para dificultar identificação por nome'> 
+			<i class="fa fa-tag"></i><span class="menu-text">Embaralha texto</span> 
+			</button>
+			</li>
+			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligacoesExibe(null);"> 
 			<i class="fa fa-tag"></i><span class="menu-text">Exibe/Oculta de Ligação (SHIFT+N)</span> 
 			</button>
@@ -4731,13 +5685,35 @@ function main() {
 		</menu>
 		</li>
 		<li class="menu-item">
-			<button type="button" class="menu-btn" onchange="javascript:menu_alterarIcone('icone');">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_copiaItensParaOutraAba(event.shiftKey, true);";" title="Copia itens selecionados para nova aba filha."> 
+		<i class="fa fa-copy"></i> <span class="menu-text">Copia Itens para Aba Filha</span> </button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaArquivo(false, 'osm');" title="Abre OpenStreetMap. Se houver muitos itens, será apontado somente os municípios dos cnpjs."> 
+		<i class="fa fa-globe"></i> <span class="menu-text">Abre Mapa</span> </button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abrirNovaAba(null, true)" title="Abre itens selecionados em nova aba"> 
+		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Gráfico em nova aba (A)</span> </button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_quebraGraficoEmPartes()" title="Divide o gráfico em partes menores exibindo em outras abas."> 
+		<i class="fa fa-external-link-alt"></i> <span class="menu-text">Quebrar o gráfico em abas (Q)</span> </button>
+		</li>
+		<li class="menu-item">
+			<button type="button" class="menu-btn" onchange="menuOnClick(); javascript:menu_alterarIcone();">
 			<i class="fa fa-tags"></i><span class="menu-text">Alterar Ícone &nbsp;&nbsp;</span>
 			<select id="menu_selecao_icone_options" class="dropdown" style='max-width:100px'>
                 <option value="0">Selecione</option>
 			</select>
 			</button>
 		</li>
+		<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_faviconNosItens(null);">
+			<i class="fa fa-tags"></i><span class="menu-text">Alterar Ícone para Imagem/Favicon</span>
+			</button>
+		</li>
+		
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_colorir();"> 
 		<i class="fa fa-fill-drip"></i><span class="menu-text">Colorir (C)</span>
@@ -4751,15 +5727,15 @@ function main() {
 
 		<li class="menu-item">
 		<button id='botaoDadosBasicos' type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(false)" title="Exibe dados em popup">
-		<i class="fa fa-newspaper"></i> <span class="menu-text">Dados (D)</span> </button>
+		<i class="fa fa-newspaper"></i><span class="menu-text">Dados (D)</span> </button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(true)" title="Exibe Dados em nova Janela do navegador">
-		<i class="fa fa-folder-open"></i><span class="menu-text">Dados em Janela (Shift+D)</span></button>
+		<i class="fa fa-newspaper"></i><span class="menu-text">Dados em Janela (Shift+D)</span></button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_dados(true)" title="Exibe Dados em nova Janela do navegador">
-		<i class="fa fa-folder-open"></i><span class="menu-text">Lista dados da seleção (Ctrl+D)</span></button>
+		<i class="fa fa-newspaper"></i><span class="menu-text">Lista dados da seleção (Ctrl+D)</span></button>
 		</li>
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_nomeAba()" title="Altera nome da Aba">
@@ -4789,6 +5765,46 @@ function main() {
 		<button type="button" class="menu-btn" title="Abre aba com busca em sites"> <i class="fa fa-users"></i> <span class="menu-text">Busca em sites</span> </button>
 		<menu class="menu">
 			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_abreBuscasEmSites();" title="Abre abas com busca no google, bing e outros sites deste menu"> 
+			<i class="fa fa-search"></i><span class="menu-text">Abre Buscas em Abas (B)</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.escavador.com/busca?q=');"> 
+			<i class="fa fa-balance-scale"></i><span class="menu-text">Escavador</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.jusbrasil.com.br/busca?q=');"> 
+			<i class="fa fa-balance-scale"></i><span class="menu-text">Jusbrasil</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://portaldatransparencia.gov.br/busca?termo=');"> 
+			<i class="fa fa-search"></i><span class="menu-text">Portal Transparência</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.reclameaqui.com.br/busca/?q=', null, true);"> 
+			<i class="fa fa-search"></i><span class="menu-text">Reclame Aqui</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.bing.com/search?q=');"> 
+			<i class="fa fa-search"></i><span class="menu-text">Bing</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://duckduckgo.com/?q=');"> 
+			<i class="fa fa-search"></i><span class="menu-text">DuckDuckGo</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.linkedin.com/search/results/all/?keywords=');"> 
+			<i class="fa fa-search"></i><span class="menu-text">Linkedin</span> 
+			</button>
+			</li>
+			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.google.com/search?q=', 'N');" title='Abre uma aba do Google com busca pelo item'> 
 			<i class="fab fa-google"></i><span class="menu-text">Google (G)</span> 
 			</button>
@@ -4799,7 +5815,7 @@ function main() {
 			</button>
 			</li>
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps();" title='Abre o Google Maps no endereço do CNPJ'> 
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_GoogleMaps(true);" title='Abre o Google Maps no endereço do CNPJ'> 
 			<i class="fab fa-google"></i><span class="menu-text">Google Maps (SHIFT+G)</span> 
 			</button>
 			</li>
@@ -4813,18 +5829,35 @@ function main() {
 			<i class="fab fa-google"></i><span class="menu-text">Google e Palavras Chave (SHIFT+H)</span> 
 			</button>
 			</li>
-			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('https://www.escavador.com/busca?q=');"> 
-			<i class="fa fa-balance-scale"></i><span class="menu-text">Escavador</span> 
-			</button>
-			</li>
-			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_buscaEmSite('http://portaldatransparencia.gov.br/busca?termo=');"> 
-			<i class="fa fa-search"></i><span class="menu-text">Portal Transparência</span> 
-			</button>
-			</li>
 		</menu>
 		</li>
+		
+		<li class="menu-item submenu">
+			<button type="button" class="menu-btn" title="Opções com texto de Notas"> <i class="fa fa-search"></i> <span class="menu-text">Notas/Caminhos</span> </button>
+			<menu class="menu">
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_itensComNotas(true);" title="Selecione itens com anotações."> 
+			<i class="fa fa-sticky-note"></i><span class="menu-text">Seleciona itens com Nota</span> 
+			</button>
+			</li>	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_CaminhosEntreitensComNotas('');" title="Seleciona caminhos entre os itens com qualquer texto de Nota."> 
+			<i class="fa fa-search"></i><span class="menu-text">Caminhos entre Itens</span> 
+			</button>
+			</li>	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_CaminhosEntreitensComNotas('intra');" title="Seleciona caminhos entre os itens com textos iguais de Nota."> 
+			<i class="fa fa-search"></i><span class="menu-text">Caminhos entre Notas Iguais</span> 
+			</button>
+			</li>	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza_CaminhosEntreitensComNotas('extra');" title="Selecione caminhos entre os itens com textos diferentes de Nota."> 
+			<i class="fa fa-search"></i><span class="menu-text">Caminhos entre Notas Diferentes</span> 
+			</button>
+			</li>	
+		</menu>
+		</li>		
+		
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_localiza(false);" title="Procura por palavra nos itens exibidos do gráfico"> 
 		<i class="fa fa-search"></i><span class="menu-text">Localizar (F) ...</span> 
@@ -4860,6 +5893,7 @@ function main() {
 		<i class="fa fa-search"></i><span class="menu-text">Itens ligados a coloridos ...</span> 
 		</button>
 		</li>	
+
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_selecionaGruposColoridos(false);" title="Seleciona grupos que tenham ao menos dois itens coloridos"> 
 		<i class="fa fa-search"></i><span class="menu-text">Grupos com dois coloridos</span> 
@@ -4883,65 +5917,159 @@ function main() {
 	</menu>
 	</li>
 	<li class="menu-item submenu">
-	<button type="button" class="menu-btn"> <i class="fa fa-file-export"></i> <span class="menu-text">Salvar/Abrir</span> </button>
+	<button type="button" class="menu-btn"><i class="fa fa-link"></i><span class="menu-text">Ligar</span></button>
 	<menu class="menu">
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
-		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel...</span> 
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportai2(false)" title="Salva dados dos itens da tela para o i2 Chart Reader(Experimental)" > 
-		<i class="fa fa-file-excel"></i><span class="menu-text">Salvar em Gráfico i2 Chart Reader...</span> 
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaSVG()" title="Salva imagem escalável em formato SVG" >
-		<i class="fa fa-save"></i><span class="menu-text" >Salvar Imagem SVG...</span>
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(false)" title="Salva arquivo JSON com os itens e ligações de todo o gráfico, que pode ser aberto pela opção ABRIR ARQUIVO JSON">
-		<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json...</span>
-		</button>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" id="menu_botao_importaJsonArquivo" disabled title="Abre dados de um arquivo JSON salvo pela opção Salvar Arquivo JSON"> 
-		<i class="fa fa-folder-open"></i><span class="menu-text">Abrir Arquivo Json...</span>
-		<input value="Importar" type="file" id="fileImportJSON" title="Adiciona grafico no formato JSON" />
-		</button>
-		<script>
-			document.getElementById('fileImportJSON').addEventListener('change', menu_importarJsonArquivo, false);
-		</script>
-		</li>
-		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false, true)" title="Salva as informações da visualização no servidor, o link poderá ser compartilhado">
-		<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor...</span>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo('', '', true);" title="Cria um novo item (que não seja PF ou PJ) com ligação opcional."> 
+		<span class="menu-text">Novo Item (U)...</span> 
 		</button>
 		</li>  
 		<li class="menu-item">
-		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_importaJSONServidor()" title="Carrega um arquivo de visualização exportado ao servidor.">
-		<i class="fa fa-download"></i> <span class="menu-text">Importar JSON do Servidor...</span>
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo('', '', false);" title="Cria novo item (que não seja PF ou PJ) e liga aos selecionados."> 
+		<span class="menu-text">Para Novo Item (SHIFT+U)...</span> 
 		</button>
-		</li>  
+		</li>      
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_novo('', '', false, true);" title="Cria novo item (que não seja PF ou PJ) e liga Entre os itens selecionados."> 
+		<span class="menu-text">Novo Item Entre Seleção(CTRL+U)...</span> 
+		</button>
+		</li>     
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(true);" title="Liga o primeiro aos demais itens selecionados"> 
+		<span class="menu-text">Em Estrela (L)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_ligar_selecionados(false);" title="Liga os itens selecionados em fila indiana"> 
+		<span class="menu-text">Em Fila (K)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(false);" title="Remove ligações entre os itens selecionados"> 
+		<span class="menu-text">Remover Entre (SHIFT+L)</span> 
+		</button>
+		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); menu_desligar_selecionados(true);" title="Remove todas as ligações dos itens selecionados"> 
+		<span class="menu-text">Remover Ligações</span> 
+		</button>
+		</li>
+	</menu>
+	</li>
 
+	<li class="menu-item submenu">
+	<button type="button" class="menu-btn"> <i class="fa fa-file-export"></i> <span class="menu-text">Salvar/Abrir</span> </button>
+	<menu class="menu">
+	
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Salva arquivo em formato Excel, SVG, i2 ou JSON."> <i class="fa fa-file-export"></i> <span class="menu-text">Arquivo</span> </button>
+		<menu class="menu">	
+
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaExcel(false)" title="Salva dados dos itens da tela em planilha Excel" > 
+			<i class="fa fa-file-excel"></i><span class="menu-text">Salvar Excel...</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportai2(false)" title="Salva dados dos itens da tela para o i2 Chart Reader(Experimental)" > 
+			<i class="fa fa-file-excel"></i><span class="menu-text">Salvar em Gráfico i2 Chart Reader...</span> 
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaSVG()" title="Salva imagem escalável em formato SVG" >
+			<i class="fa fa-save"></i><span class="menu-text" >Salvar Imagem SVG...</span>
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_salvaJsonArquivo(false)" title="Salva arquivo JSON com os itens e ligações de todo o gráfico, que pode ser aberto pela opção ABRIR ARQUIVO JSON. Json é um arquivo texto com informações dos itens exibidos na tela e das ligações entre os itens.">
+			<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json...</span>
+			</button>
+			</li>
+			<li class="menu-item">
+			<button type="button" class="menu-btn" id="menu_botao_importaJsonArquivo" disabled title="Abre dados de um arquivo JSON salvo pela opção Salvar Arquivo JSON"> 
+			<i class="fa fa-folder-open"></i><span class="menu-text">Abrir Arquivo Json...</span>
+			<input value="Importar" type="file" id="fileImportJSON" title="Adiciona grafico no formato JSON" />
+			</button>
+			<script>
+				document.getElementById('fileImportJSON').addEventListener('change', menu_importarJsonArquivo, false);
+			</script>
+			</li>
+ 	
+		</menu>
+		</li>
+
+	
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Exporta/Importa/apaga arquivo JSON no servidor."> <i class="fa fa-file-export"></i> <span class="menu-text">no Servidor</span> </button>
+		<menu class="menu">	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false)" title="Salva as informações da visualização no servidor e o link poderá ser compartilhado. Observação: os links no servidor poderão ser removidos sem aviso prévio... Para preservar as informações localmente, utilize a opção 'Salvar Arquivo Json'.">
+			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor...</span>
+			</button>
+			</li>  
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_importaJSONServidor()" title="Carrega um arquivo de visualização exportado ao servidor.">
+			<i class="fa fa-download"></i> <span class="menu-text">Importar JSON do Servidor...</span>
+			</button>
+			</li>  
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_importaJSONServidor(null, null, true)" title="Carrega um arquivo de visualização exportado e depois APAGA do servidor.">
+			<i class="fa fa-trash"></i> <span class="menu-text">Apagar JSON do Servidor...</span>
+			</button>
+			</li>  	
+		</menu>
+		</li>
+		
+		
+		<li class="menu-item submenu">
+		<button type="button" class="menu-btn" title="Salva/Lê/Apaga JSON local no navegador."> <i class="fa fa-file-export"></i> <span class="menu-text">no Navegador</span> </button>
+		<menu class="menu">	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_salvaJSONNavegador(false)" title='Salva as informações da visualização json neste navegador. Os dados ficarão no "localStorage" do navegador, sem necessidade de salvar um arquivo no computador ou exportar ao servidor.'>
+			<i class="fa fa-save"></i> <span class="menu-text">Salva JSON no Navegador...</span>
+			</button>
+			</li>  
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_carregaJSONNavegador()" title="Lê o arquivo de visualização json que está neste navegador.">
+			<i class="fa fa-folder-open"></i><span class="menu-text">Abre JSON no Navegador...</span>
+			</button>
+			</li>  
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_apagaJSONNavegador(null, null, true)" title="Apaga o json no navegador.">
+			<i class="fa fa-trash"></i> <span class="menu-text">Apagar JSON no Navegador...</span>
+			</button>
+			</li>  	
+		</menu>
+		</li>
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Salva seleção para JSON ou servidor"> <i class="fa fa-file-export"></i> <span class="menu-text">Seleção</span> </button>
 		<menu class="menu">
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJsonArquivo(true)" title="Salva arquivo JSON com os itens e ligações somente dos itens selecionados, que pode ser aberto pela opção Importar JSON">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_salvaJsonArquivo(true)" title="Salva arquivo JSON com os itens e ligações somente dos itens selecionados, que pode ser aberto pela opção Importar JSON">
 			<i class="fa fa-save"></i> <span class="menu-text">Salvar Arquivo Json...</span>
 			</button>
 			</li>  
 			<li class="menu-item">
-			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(true, true)" title="Salva as informações dos itens selecionados no servidor, o link poderá ser compartilhado e aberto em uma nova aba.">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(true)" title="Salva as informações dos itens selecionados no servidor, o link poderá ser compartilhado e aberto em uma nova aba.">
 			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor...</span>
 			</button>
 			</li>  		
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_copiaClip();" title="Copia os itens selecionados para a Área de Transferência da RedeCNPJ, que poderá cer colado em outra aba.">
+			<i class="fa fa-copy"></i><span class="menu-text">Copia Seleção (CTRL+C)</span>
+			</button>
+			</li>  	
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_colaClip();" title="Cola os itens da Área de Transferência da RedeCNPJ">
+			<i class="fa fa-paste"></i><span class="menu-text">Cola da Área (CRTL+V)</span>
+			</button>
+			</li>  	
 		</menu>
+		</li>
 		{% if parametros.usuarioLocal %}
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Opções para exportar para Banco de Dados"> <i class="fa fa-file-export"></i> <span class="menu-text">Base Local</span> </button>
+
 		<menu class="menu">
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidorParaBaseLocal(false)" title="Salva as informações da visualização no Banco de Dados Local SQLITE no Servidor">
@@ -4955,6 +6083,7 @@ function main() {
 			</li>  	
 		</menu>		
 		{% endif %}
+		
 		<li class="menu-item">
 		<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/cnpj-sqlite#arquivo_sqlite');" title="Página para baixar a base de dados de cnpj em SQLITE.">
 		<i class="fa fa-download"></i> <span class="menu-text">Baixar Base CNPJ</span>
@@ -5032,6 +6161,11 @@ function main() {
 	</li>	
 	{% if parametros.bBaseReceita %}
 	<li class="menu-item">
+	<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj#ajuda'); "> 
+	<i class="fa fa-info-circle"></i><span class="menu-text">Ajuda...</span> 
+	</button>
+	</li>
+	<li class="menu-item">
 	<button type="button" class="menu-btn" onclick="menuOnClick(); window.open('https://github.com/rictom/rede-cnpj'); "> 
 	<i class="fa fa-info-circle"></i><span class="menu-text">Sobre...</span> 
 	</button>
@@ -5043,7 +6177,7 @@ function main() {
 
 <div style="display:none;">
 	<div id="dlgLink">
-		<p><b>Digite parâmetros para inserir os dados da tabela Links.db</b></p>
+		<p><b>Digite os parâmetros da consulta</b></p>
 		<p>Número máximo de itens (Serão ordenados de forma decrescente)</p>
 		<input class="ajs-input" id="dlgLink_numeroItens" type="number" value="15" /> 
 		<p>Valor mínimo</p>

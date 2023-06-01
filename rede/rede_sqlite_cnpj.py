@@ -9,8 +9,8 @@ Não fazer Create table ou criar índice para uma tabela a ser criada ou modific
 2022-07-20 - Parâmetro WAL no sqlite para consultas concorrentes. (não funcionou, base trava)
 2022-11 - usando sqlite3 para fazer attach. fazendo consulta in memory.
 """
-import sys, os, time, copy, re, string, unicodedata, collections, json, secrets, io, contextlib
-from datetime import datetime
+import sys, os, time, copy, re, string, unicodedata, collections, json, secrets, io
+
 from functools import lru_cache
 import pandas as pd, sqlalchemy, sqlite3
 #from fnmatch import fnmatch 
@@ -18,9 +18,9 @@ import util_cpf_cnpj as cpf_cnpj
 
 import rede_config as config
 
-
 caminhoDBReceita = config.config['BASE']['base_receita'].strip()
 caminhoDBRede = config.config['BASE']['base_rede'].strip()
+caminhoDBRedeSearch = config.config['BASE'].get('base_rede_search', caminhoDBRede).strip()
 caminhoDBEnderecoNormalizado = config.config['BASE'].get('base_endereco_normalizado', '').strip()
 caminhoDBLinks = config.config['BASE'].get('base_links', '').strip()
 caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '').strip()
@@ -50,14 +50,13 @@ class DicionariosCodigosCNPJ():
         self.dicNaturezaJuridica = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
         self.dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
         self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
-        
-
-    
+        con = None
+#.class DicionariosCodigosCNPJ():        
 gdic = DicionariosCodigosCNPJ()
 
-dfaux=None
+#dfaux=None
 
-gTableIndex = 0
+#gTableIndex = 0
 kCaractereSeparadorLimite = '@'
 
 #decorator para medir tempo de execução de função
@@ -93,9 +92,9 @@ def checaTabelaLigacao(caminhoDB=caminhoDBReceita):
     insp = sqlalchemy.inspect(con)
     if 'ligacao' not in  insp.get_table_names():
         print('-'*50)
-        print('ATENÇÃO!!!! A partir da versão 0.8.9, é preciso ter uma tabela de "ligacao" na base cnpj.\nRode o script rede_cria_tabela.py para criar essa tabela.')
+        print('ATENÇÃO!!!! A partir da versão 0.8.9, é preciso ter uma tabela de "ligacao" na base cnpj.\nRode o script rede_cria_tabela_rede.db.py para criar essa tabela.')
         print('-'*50)
-        raise Exception('Rode o script rede_ajusta_base_cnpj.py para criar a tabela de "ligação"')
+        raise Exception('Rode o script rede_cria_tabela_rede.db.py para criar a tabela de "ligação"')
     con = None
 
 checaTabelaLigacao() #apaga quando abrir o módulo
@@ -107,23 +106,27 @@ def buscaPorNome(nomeIn, limite=10):
     '''
     #remove acentos
     #se limite==-1, não havia @N no nome
-    #nomeIn = 'dorivan mota bandeira'
+
     nomeIn = nomeIn.strip().upper()
 
     caracteres_pontuacao = set('''!#$%&\'\"()+,-./:;<=>@[\\]^_`{|}~''') #sem * ? "
     #alteração: removendo caracteres só no caso de Match...
-    #nomeIn = ''.join(ch for ch in nomeIn if ch not in caracteres_pontuacao) #ttt como o nomeIn é inserido como parametro, há menos risco de injection
+    #nomeIn = ''.join(ch for ch in nomeIn if ch not in caracteres_pontuacao) #como o nomeIn é inserido como parametro, há menos risco de injection
     if not nomeIn:
         return set()
     limite =  min(limite,100) if limite else 10
-    con = sqlite3.connect(caminhoDBRede, uri=True)
+    if nomeIn=='#TESTE#':
+         con = sqlite3.connect(caminhoDBRede, uri=True)
+    else:
+        con = sqlite3.connect(caminhoDBRedeSearch, uri=True)
     nome = ''.join(x for x in unicodedata.normalize('NFKD', nomeIn) if x in string.printable).upper()
 
     nomeMatch = ''
     nomeGlob = ''
-    if nomeIn=='TESTE':
+    if nomeIn=='#TESTE#':
         #query = '''select id_descricao as id from id_search where rowid > (abs(random()) % (select (select max(rowid) from id_search)+1)) LIMIT 1;'''
         query = '''select id1 as id from ligacao where rowid > (abs(random()) % (select (select max(rowid) from ligacao)+1)) LIMIT 1;'''
+        #query = '''select id_descricao as id from id_search where rowid > (abs(random()) % (select (select max(rowid) from id_search)+1)) LIMIT 1;'''
         #cursor = con.execute(query)
     elif ('*' in nomeIn) or ('?' in nomeIn):
         nomeMatch = ''.join(ch if ch not in caracteres_pontuacao else ' ' for ch in nome).strip()
@@ -142,20 +145,13 @@ def buscaPorNome(nomeIn, limite=10):
         if not nomeMatch:
             return set()
 
-        query = f''' --em alguns casos fica lento, quando não encontra ocorrencia
-                    select distinct id_descricao as id
-                    FROM id_search
-                    where id_descricao match :nomeMatch
-                    and id_descricao glob :nomeGlob
-                    limit {limite}       
-         '''
-        query = f'''
+        query = '''
                     select distinct id_descricao as id
                     FROM id_search
                     where -- id_descricao match :palavraM and
                     id_descricao match :nomeMatch
                     and id_descricao glob :nomeGlob
-                    limit {limite}      
+                    limit :limite     
         
         '''
 
@@ -164,19 +160,19 @@ def buscaPorNome(nomeIn, limite=10):
         if not nomeMatch:
             return set()
         #palavraM = nomeMatch.split(' ')[0]
-        query = f'''
+        query = '''
                 SELECT id_descricao as id
                 FROM id_search
                 where -- id_descricao match :palavraM and
                 id_descricao match :nomeMatch
-                limit {limite}  
+                limit :limite 
             '''
     con.row_factory = sqlite3.Row #para ver registros do sqlite3 como dicionário
     cur = con.cursor()
 
     try:
         #print(query, f'{nomeMatch=}', f'{nomeGlob=}', f'{palavraM=}') #xxx
-        cur.execute(query, {'nomeMatch':nomeMatch, 'nomeGlob':nomeGlob}) #, 'palavraM':palavraM})
+        cur.execute(query, {'nomeMatch':nomeMatch, 'nomeGlob':nomeGlob, 'limite':limite}) #, 'palavraM':palavraM})
     except Exception as e:
         print("ERROR : "+str(e))
         return set()
@@ -197,23 +193,22 @@ def buscaPorNome(nomeIn, limite=10):
 def busca_cnpj(cnpj_basico, limiteIn):
     kLimiteFiliais = 200
     #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}", execution_options=gEngineExecutionOptions)
-    con = sqlite3.connect(caminhoDBRede, uri=True)
+    con = sqlite3.connect(caminhoDBRedeSearch, uri=True)
     limite = min(limiteIn, kLimiteFiliais) 
     if not limite:
-        limite = 1
+        limite = 10 #xxx
         #melhor ignorar isso, com esse método fica difícil encontrar a matriz. Não necessariamente existe 0001 .Retorna o primeiro
         #cnpjMatch = 'PJ_' + cnpj_basico + '0001*' #não é bem a matriz, mas são poucas exceções de matriz que não seguem essa regra. E necessariamente vai aparecer a matriz ligada a alguma filial.
     
     cnpjMatch = 'PJ_' + cnpj_basico + '*'
-    query = f'''
+    query = '''
             SELECT distinct substr(id_descricao, 1, 17) as id
             FROM id_search
             where id_descricao MATCH :cnpjMatch
-            limit {limite} '''
-
+            limit :limite '''
     con.row_factory=sqlite3.Row
     cur = con.cursor()
-    cur.execute(query, {'cnpjMatch':cnpjMatch})
+    cur.execute(query, {'cnpjMatch':cnpjMatch,'limite':limite})
     spj = {k['id'] for k in cur}
     #r = con.execute(query, {'cnpjMatch':cnpjMatch}).fetchall()
     #spj = {'PJ_'+k[0] for k in r}
@@ -231,21 +226,21 @@ def busca_cpf(cpfin, limiteIn):
         limite = 10 #default
     #cpf = '***' + cpfin[3:9] + '**'
     #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}", execution_options=gEngineExecutionOptions)
-    con = sqlite3.connect(caminhoDBRede, uri=True)
+    con = sqlite3.connect(caminhoDBRedeSearch, uri=True)
     cpfMatch = 'PF_ ' + cpfin[3:9]
     cpfGlob = 'PF_' + '???' + cpfin[3:9] + '??*'
-    query = f'''
+    query = '''
                 SELECT distinct id_descricao as id
                 FROM id_search
                 where id_descricao Match :cpfMatch
                 --and id_descricao glob :cpfGlob
-                limit {limite}
+                limit :limite
             '''
     #print(query, cpf)
     scpf = set()
     con.row_factory=sqlite3.Row
     cur = con.cursor()
-    cur.execute(query, {'cpfMatch':cpfMatch, 'cpfGlob':cpfGlob})
+    cur.execute(query, {'cpfMatch':cpfMatch, 'cpfGlob':cpfGlob, 'limite':limite})
     #for c in con.execute(query, {'cpfMatch':cpfMatch, 'cpfGlob':cpfGlob}).fetchall():
     for c in cur:
         #lista.append((c,n))
@@ -271,7 +266,8 @@ def separaEntrada(listaIds=None):
     for cpfcnpjIn in listaIds:
         lista1.update({i.strip() for i in cpfcnpjIn.split(';') if i.strip()})
     for i in lista1:
-        if len(i)>3 and i[2]=='_':
+        #if len(i)>3 and i[2]=='_' and (i.startswith('PF_') or i.startswith('PJ_')  or i.startswith('ID_')):
+        if len(i)>3 and i[2]=='_' and (i[:3] in ('PF_', 'PJ_','PE_', 'ID_', 'EN_', 'EM_', 'TE_', 'LI_', 'CC_')):
             lista.add(i)
         else:
             limite = 0
@@ -360,23 +356,53 @@ def tabelaTemp():
         return 'tmp_'
     
 #@timeit
-#def criaTabelasTmpParaCamadas(con, cpfcnpjIn='', listaIds=None, grupo='', prefixo_tabela_temporaria=''):
 #def criaTabelasTmpParaCamadas(con, listaIds=None, grupo='', prefixo_tabela_temporaria='', bSomenteIds=False):
-def criaTabelasTmpParaCamadas(camDBAttach, aliasAttach, listaIds=None, grupo='', prefixo_tabela_temporaria='', tabelasACriar=None):
-    '''se camada<=1, vê se tem nomes. se camada>=2, supões que listaIds começa com padrão de identificador PJ_, PF_, ...'''
+def criaTabelasTmpParaCamadas(camDBAttach, aliasAttach, listaIds=None, grupo=None, prefixo_tabela_temporaria='', tabelasACriar=None):
+    '''se camada<=1, vê se tem nomes. se camada>=2, supões que listaIds começa com padrão de identificador PJ_, PF_, ...
+       se grupo for fornecido, ignora listaIds'''
     #https://www.sqlite.org/inmemorydb.html
     global gTable
     if prefixo_tabela_temporaria:
         tmp = prefixo_tabela_temporaria
     else:
         tmp = tabelaTemp()
+    #xxx4
     con = sqlite3.connect(':memory:') 
+    #con = sqlite3.connect('test_debug.db')
     #?mode=ro para read only
     con.execute("ATTACH DATABASE '" + camDBAttach.replace('\\','/') + "' as " + aliasAttach) 
     
     camadasIds = {}
-    
     #apagaTabelasTemporarias(tmp)
+    listGrupo = []
+    if grupo:
+        listGrupo = []
+        
+        listaAux = set()
+        if type(grupo)==dict:
+           for i, l in grupo.items():
+               for k in l:
+                   listGrupo.append([k, i])
+                   #{identificador, grupo, origem (repete o identificador), camada}
+                   listaAux.add(k)
+        elif type(grupo)==list or type(grupo)==set:
+            c = 1
+            for l in grupo:
+                for k in l:
+                    listGrupo.append([k, c])
+                    listaAux.add(k)
+                c += 1        
+        else:
+            raise Exception("tipo de grupo não disponível")
+        
+        listaIds = listaAux
+    elif listaIds:
+        # for k in listaIds:
+        #     listGrupo.append([k, ''])     
+        pass
+    else:
+        raise Exception('situação não prevista, grupo e listaIds vazios na função criaTabelasTmpParaCamadas')
+
     cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = set(), set(), set(), set()
     #if bSomenteIds:
     if tabelasACriar is None:
@@ -385,12 +411,15 @@ def criaTabelasTmpParaCamadas(camDBAttach, aliasAttach, listaIds=None, grupo='',
         ids, cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(listaIds=listaIds)
 
     if (tabelasACriar is None) or (not tabelasACriar) or ('ids' in tabelasACriar):
-        #if ids:
-        dftmptable = pd.DataFrame({'identificador' : list(ids)})
-        # else: 
-        #     dftmptable =  pd.DataFrame({'identificador' : ['______xxx']}) #tabela vazia causa lentidão no loop de camadas!!! coloca coisa qualquer
+        if grupo:
+            dftmptable = pd.DataFrame(listGrupo, columns=['identificador','grupo']) #, 'id_origem', 'camada'])           
+        else:    
+            dftmptable = pd.DataFrame({'identificador' : list(ids)})
+            # else: 
+            #     dftmptable =  pd.DataFrame({'identificador' : ['______xxx']}) #tabela vazia causa lentidão no loop de camadas!!! coloca coisa qualquer
+            dftmptable['grupo'] = ''
+        dftmptable['id_origem'] = dftmptable['identificador']
         dftmptable['camada'] = 0
-        dftmptable['grupo'] = grupo
         dftmptable.to_sql(f'{tmp}_ids', con=con, if_exists='replace', index=False) #, dtype=dtype_tmp_ids) # chunksize e multi deixa mais lento??, chunksize=50000, method='multi')
     #indice deixa a busca lenta!
     #con.execute('CREATE INDEX ix_tmp_ids_index ON tmp_ids ("identificador")')
@@ -400,14 +429,14 @@ def criaTabelasTmpParaCamadas(camDBAttach, aliasAttach, listaIds=None, grupo='',
     
     if tabelasACriar and ('cpfpjnomes' in tabelasACriar):
         dftmptable = pd.DataFrame(list(cpfpjnomes), columns=['cpfpj', 'nome'])
-        dftmptable['grupo'] = grupo
+        #dftmptable['grupo'] = grupo
         dftmptable['camada'] = 0
         #con.execute('DELETE FROM tmp_cpfnomes')
         dftmptable.to_sql(f'{tmp}_cpfpjnomes', con=con, if_exists='replace', index=False) #, dtype=dtype_tmp_cpfpjnomes)#, chunksize=50000, method='multi')       
 
     if tabelasACriar and ('cnpjs' in tabelasACriar):
         dftmptable = pd.DataFrame(list(cnpjs), columns=['cnpj'])
-        dftmptable['grupo'] = grupo
+        #dftmptable['grupo'] = grupo
         dftmptable['camada'] = 0
         #con.execute('DELETE FROM tmp_cpfnomes')
         dftmptable.to_sql(f'{tmp}_cnpjs', con=con, if_exists='replace', index=False) #, dtype=dtype_tmp_cpfpjnomes)#, chunksize=50000, method='multi')       
@@ -434,7 +463,7 @@ def id2cnpj(id):
     return id[3:]
 
 @timeit
-def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):    
+def camadasRede(listaIds=None, camada=1, grupo=None, criterioCaminhos='', bjson=True):    
     mensagem = '' #{'lateral':'', 'popup':'', 'confirmar':''}
     #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}", execution_options=gEngineExecutionOptions)
     '''
@@ -444,36 +473,40 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
     with engine.connect() as conn:
         print(conn.closed)
     print(conn.closed)'''
-    grupo = str(grupo)
-    nosaux = []
-    ligacoes = []
-    con, camadasIds, cnpjs, cpfnomes, tmp  = criaTabelasTmpParaCamadas(caminhoDBRede, 'rede', listaIds=listaIds, grupo=grupo,tabelasACriar=None if camada>1 else ['ids','cnpjs','cpfs_nomes']) #,' bSomenteIds=(camada>1))
+    tmp = 'tmp' #xxx verificar
+    con, camadasIds, cnpjs_, cpfnomes_, tmp  = criaTabelasTmpParaCamadas(caminhoDBRede, 'rede', listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp, tabelasACriar=None if camada>1 else ['ids','cnpjs','cpfs_nomes']) #,' bSomenteIds=(camada>1))
     cur = con.cursor()
-
     if len(camadasIds)==0:
         #print('consulta sem ids de entrada')
         textoJson={'no': [], 'ligacao':[], 'mensagem':'Não encontrou informações.'} 
+        cur.close() 
+        con = None        
         return textoJson
-
-    dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
+    # print(listaIds) #x3
+    # print(camadasIds) #x3
+    #dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
     registrosAnterior = 0
     tempoInicio = time.time()
     query = f'''
         DROP TABLE if exists {tmp}_ids_inicial;
         CREATE TABLE {tmp}_ids_inicial AS
-        SELECT *
-        FROM {tmp}_ids
+        SELECT * --identificador, grupo, id_origem, camada
+        FROM {tmp}_ids;
+        DROP TABLE if exists {tmp}_ligacao;
+        CREATE TABLE {tmp}_ligacao  --cria tabela para caso de cam 0, sem ido dá erro na ora de criar tabela final de ids com id1 e id2
+        (
+            id1 VARCHAR, id2 VARCHAR, descricao VARCHAR            
+        )
     '''
-    for sql in query.split(';'):
-        con.execute(sql)
-        
+
+    con.executescript(query)
+    cam=0
+    tinicial = time.time()
     for cam in range(1, camada+1):  
         query = f''' 
         DROP TABLE if exists {tmp}_ligacao;
         
         CREATE TABLE {tmp}_ligacao AS
-        SELECT DISTINCT * From 
-        (
             SELECT t.id1, t.id2, t.descricao
             FROM {tmp}_ids tl
             INNER JOIN rede.ligacao t ON t.id1=tl.identificador
@@ -481,56 +514,456 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
             SELECT t.id1, t.id2, t.descricao
             FROM {tmp}_ids tl
             INNER JOIN rede.ligacao t ON t.id2=tl.identificador 
-            WHERE t.descricao<>'filial'
-        );
- 
+            WHERE t.descricao<>'filial' 
+            --este where filial pode causar inconsistência na procura de caminhos por causar assimetria
+        
+            /* --fazer join para ver se tem repetição não faz diferença ou deixa um pouco mais lento
+            SELECT t.id1, t.id2, t.descricao
+            FROM {tmp}_ids ti
+            INNER JOIN rede.ligacao t ON t.id1=ti.identificador
+            LEFT JOIN {tmp}_ids tib ON t.id2=tib.identificador
+            WHERE tib.identificador IS NULL
+            UNION
+            SELECT t.id1, t.id2, t.descricao
+            FROM {tmp}_ids ti
+            INNER JOIN rede.ligacao t ON t.id2=ti.identificador 
+            LEFT JOIN {tmp}_ids tib ON t.id1=tib.identificador
+            WHERE tib.identificador IS NULL 
+            AND t.descricao<>'filial' 
+            --este where filial pode causar inconsistência na procura de caminhos por causar assimetria
+            */
+        ;
         DROP TABLE if exists {tmp}_ids;
         CREATE TABLE {tmp}_ids AS
         SELECT DISTINCT * FROM 
-        (
+        (   SELECT identificador
+            FROM {tmp}_ids_inicial
+            UNION
             SELECT t.id1 as identificador
             FROM {tmp}_ligacao t
             UNION
             SELECT t.id2 as identificador
             FROM {tmp}_ligacao t
         )
-    
         '''
         
-        for sql in query.split(';'):
-            #con.execute(sql)
-            cur.execute(sql)
+        con.executescript(query)
         #sqlite pode executar vários comandos com executescript(query)
         registros = cur.execute(f'select count(*) from {tmp}_ids').fetchone()[0]
 
         if registros==registrosAnterior: # and cam>1:
             if cam>1: 
-                mensagem += f'A camada {camada} não foi alcançada,  pois não havia mais itens. Chegou na camada {cam-1}.'
+                mensagem += f'A camada {camada} não foi alcançada, pois não havia mais itens além da camada {cam-1}.'
             break
         if cam<camada:
             if registros>kLimiteCamada:
-                mensagem=f'A camada {camada} não foi alcançada, pois excedeu o limite de itens. Chegou até a camada {cam}.'
+                mensagem +=f'A camada {camada} não foi alcançada, pois excedeu o limite de itens por camada ({kLimiteCamada}). Chegou até a camada {cam}.'
                 break
             if (time.time()-tempoInicio)>kTempoMaxConsulta:
                 #print('xxx', time.time()-tempoInicio)
-                mensagem=f'A camada {camada} não foi alcançada, pois excedeu o tempo máximo de consulta. Chegou até a camada {cam}.'
+                mensagem +=f'A camada {camada} não foi alcançada, pois excedeu o tempo máximo de consulta. Chegou até a camada {cam}.'
                 break
         registrosAnterior = registros
     #.for cam in range(camada): 
-    sno = set()
+    #print('camada rede em', time.time()-tinicial) 
+    #adiciona endereços, email, telefone e ligacoes da base local
     if camada>0:
-        queryLigacao = f''' SELECT id1 as origem, id2 as destino, descricao as label from {tmp}_ligacao'''
-        dlaux= pd.read_sql(queryLigacao, con)[['origem','destino','label']]
-        dlaux['cor']='silver'
-        dlaux['camada']=0
-        dlaux['tipoDescricao']=''
-        ligacoes.extend(dlaux.to_dict('records')) #yyy usando pandas para dict é mais rápido, mas tem que fazer mais ajustes
-        sno.update(dlaux['origem'])
-        sno.update(dlaux['destino'])
-    cur.close()
-    #con.close()
-    con = None
+        for tipoLink in ['endereco', 'base_local']:
+            if tipoLink=='endereco':
+                if not caminhoDBEnderecoNormalizado:
+                    continue
+                camDB = caminhoDBEnderecoNormalizado
+                tabela = tipoLink + '.link_ete'
+            else:
+                if not caminhoDBBaseLocal:
+                    continue
+                camDB = caminhoDBBaseLocal
+                tabela = tipoLink + '.links'   
+                #db = 'dlink'
+            
+            con.execute("ATTACH DATABASE '" + camDB.replace('\\','/') + "' as " + tipoLink)
+            query = f''' 
+                         INSERT INTO  {tmp}_ligacao
+                         SELECT distinct * from (
+                         SELECT t.id1, t.id2, t.descricao
+                         FROM {tmp}_ids tid
+                         INNER JOIN {tabela} t ON  tid.identificador = t.id1
+                         UNION
+                         SELECT t.id1, t.id2, t.descricao
+                         FROM {tmp}_ids tid
+                         INNER JOIN {tabela} t ON  tid.identificador = t.id2
+                         ) tu
+                         '''
+            con.execute(query)
+    if criterioCaminhos:
+        camadasRede_caminhos(con, tmp, camada, criterioCaminhos)
+        textoJson = camadasRede_json(con, tmp, camadasIds, mensagem, bCaminhos=True)
+    else:
+        textoJson = camadasRede_json(con, tmp, camadasIds, mensagem, bCaminhos=False)
+    
+    cur.close() 
+    con = None 
+    return textoJson
+#.def camadasRede
 
+@timeit
+def camadasRede_caminhos(con, tmp, camada, criterioCaminhos):
+    #Rotina de caminhos
+    #repete rede para os itens, mas agora coletando dados sobre grupo, id_origem e camada
+    query = f'''
+
+        DROP TABLE if exists {tmp}_ids;
+        CREATE TABLE {tmp}_ids AS
+        SELECT distinct *
+        FROM {tmp}_ids_inicial;
+        
+        CREATE TABLE {tmp}_lig AS
+        SELECT identificador as id1, identificador as id2, '' as descricao, grupo as grupo, identificador as id_origem, 0 as sentido, 0 as camada
+        from {tmp}_ids;
+        CREATE INDEX idx_{tmp}_ligacao1 ON  {tmp}_ligacao(id1);
+        CREATE INDEX idx_{tmp}_ligacao2 ON  {tmp}_ligacao(id2);
+    '''
+    con.executescript(query)
+    #for cam in range(1, camada+1):     
+    for cam in range(1, camada+2):  #+1 por causa de endereços
+        #print(f'{cam=}')
+        query = f''' 
+            -- aqui a tabela {tmp}_ligacao tem as ligações até a camada N.
+            -- agora vai se fazer os caminhos, marcando grupo
+            
+            INSERT INTO {tmp}_lig
+            /* codigo anterior, bem mais lento (5x), sem verificar repeticao de identificador no mesmo id_origem
+            SELECT DISTINCT * From 
+            (
+                SELECT t.id1, t.id2, t.descricao, ti.grupo, ti.id_origem, 1 as sentido, {cam} as camada
+                FROM {tmp}_ids ti
+                INNER JOIN {tmp}_ligacao t ON t.id1=ti.identificador
+                where ti.camada={cam-1}
+                UNION
+                SELECT t.id2 as id1, t.id1 as id2, t.descricao, ti.grupo, ti.id_origem, -1 as sentido, {cam} as camada
+                FROM {tmp}_ids ti
+                INNER JOIN {tmp}_ligacao t ON t.id2=ti.identificador 
+                where ti.camada={cam-1} 
+                
+            )*/
+
+            SELECT t.id1, t.id2, t.descricao, ti.grupo, ti.id_origem, 1 as sentido, {cam} as camada
+            FROM {tmp}_ids ti
+            INNER JOIN {tmp}_ligacao t ON t.id1=ti.identificador
+            LEFT JOIN {tmp}_ids tib on tib.identificador=t.id2 and tib.id_origem=ti.id_origem
+            where ti.camada={cam-1} and tib.identificador is NULL --remove repeticoes (ligacao de volta na camada+2)
+            UNION
+            SELECT t.id2 as id1, t.id1 as id2, t.descricao, ti.grupo, ti.id_origem, -1 as sentido, {cam} as camada
+            FROM {tmp}_ids ti
+            INNER JOIN {tmp}_ligacao t ON t.id2=ti.identificador 
+            LEFT JOIN {tmp}_ids tib on tib.identificador=t.id1 and tib.id_origem=ti.id_origem
+            where ti.camada={cam-1} and tib.identificador is NULL
+                
+            ;   
+            INSERT INTO {tmp}_ids 
+            SELECT t.id2 as identificador, t.grupo, t.id_origem, {cam} as camada
+            FROM {tmp}_lig t;
+        
+            DROP TABLE IF EXISTS {tmp}_ids_aux;
+            
+            CREATE TABLE {tmp}_ids_aux AS
+            SELECT identificador, grupo, id_origem, min(camada) as camada
+            FROM {tmp}_ids
+            GROUP BY identificador, grupo, id_origem;
+            
+            DROP TABLE if exists {tmp}_ids;
+            CREATE TABLE {tmp}_ids AS
+            SELECT *
+            FROM {tmp}_ids_aux;
+    
+        '''
+    
+        con.executescript(query)
+    #.for cam in range(camada): 
+        
+    # print('tamanho temp_ligacao', con.execute('Select count(*) from tmp_ligacao').fetchone())    
+    # print('tamanho temp_lig', con.execute('Select count(*) from tmp_lig').fetchone())
+
+    # Faz cruzamento para achar caminhos
+    
+    if criterioCaminhos=='caminhos':
+        where_complemento=''
+    elif criterioCaminhos=='intra':
+        where_complemento='AND t1.grupo=t2.grupo'
+    elif criterioCaminhos=='extra':
+        where_complemento='AND t1.grupo<>t2.grupo'
+    else:
+        raise Exception('critério de caminhos não previsto.')
+    
+    # print('tmp_lig----------------\n', xlig:=pd.read_sql(f'select * from tmp_lig', con))
+    # print(xlig[['id1','id2']])
+    
+    query = f'''
+            DROP TABLE IF EXISTS {tmp}_lig_min;
+            CREATE TABLE {tmp}_lig_min AS
+            SELECT id1, id2, descricao, grupo, id_origem, sentido, min(camada) as camada
+            FROM {tmp}_lig
+            GROUP BY id1, id2, descricao, grupo, id_origem, sentido
+            ;
+            drop table {tmp}_lig;
+            Create table {tmp}_lig AS
+            select *
+            from {tmp}_lig_min
+            '''
+    con.executescript(query)
+    # query = f'''
+    #         DROP TABLE IF EXISTS {tmp}_ids_cruzados;
+    #         CREATE TABLE {tmp}_ids_cruzados AS 
+    #         SELECT DISTINCT t1.id2 as id2, t1.camada, t1.id_origem, t2.id_origem as id_destino, t1.grupo as grupo_origem, t2.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+    #         FROM {tmp}_lig t1
+    #         INNER JOIN {tmp}_lig t2 on t2.id2=t1.id2
+    #         WHERE t1.id_origem<>t2.id_origem and t1.id1<>t2.id2
+    #         {where_complemento}
+    #         UNION
+    #         SELECT distinct t2.id2 as id2, t2.camada, t2.id_origem, t1.id_origem as id_destino, t2.grupo as grupo_origem, t1.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+    #         FROM {tmp}_lig t1
+    #         INNER JOIN {tmp}_lig t2 on t1.id2=t2.id2 
+    #         WHERE  t1.id_origem<>t2.id_origem  and t1.id1<>t2.id2
+    #         {where_complemento}      
+    #         ;
+    # '''
+  
+    # query = f''' --este é o gargalo da rotina
+    #         DROP TABLE IF EXISTS {tmp}_ids_cruzados;
+    #         CREATE TABLE {tmp}_ids_cruzados AS 
+    #         SELECT id2, camada, id_origem, id_destino, grupo_origem, grupo_destino, camada_caminho
+    #         FROM (
+    #             SELECT DISTINCT t1.id2 as id2, t1.camada, t1.id_origem, t2.id_origem as id_destino, t1.grupo as grupo_origem, t2.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+    #             FROM {tmp}_lig t1
+    #             INNER JOIN {tmp}_lig t2 on t2.id2=t1.id2
+    #             WHERE t1.id_origem<t2.id_origem and t1.id1<>t2.id1 --inves de t1.id_origem<t2.id_origem, para evitar repetição
+    #             {where_complemento}
+    #             UNION
+    #             SELECT DISTINCT t2.id2 as id2, t2.camada, t2.id_origem, t1.id_origem as id_destino, t2.grupo as grupo_origem, t1.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+    #             FROM {tmp}_lig t1
+    #             INNER JOIN {tmp}_lig t2 on t1.id2=t2.id2 
+    #             WHERE  t1.id_origem<t2.id_origem  and t1.id1<>t2.id1
+    #             {where_complemento}  
+    #         )
+    # '''
+    #xxx4
+    query = f''' --este era um gargalo da rotina, melhorou reduzindo o tamanho da tabela {tmp}_lig, removendo repetições (volta do nó)
+            --CREATE INDEX idx_{tmp}_lig1 ON  {tmp}_lig(id1); --parece mais rapido sem indice
+            --CREATE INDEX idx_{tmp}_lig2 ON  {tmp}_lig(id2); 
+
+            DROP TABLE IF EXISTS {tmp}_ids_cruzados;
+            CREATE TABLE {tmp}_ids_cruzados AS 
+
+            SELECT  t1.id2 as id2, t1.camada, t1.id_origem, t2.id_origem as id_destino, t1.grupo as grupo_origem, t2.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+            FROM {tmp}_lig t1
+            INNER JOIN {tmp}_lig t2 on t2.id2=t1.id2
+            WHERE t1.id_origem<t2.id_origem and t1.id1<>t2.id1 --t1.id_origem<t2.id_origem, para evitar repetição
+            {where_complemento}
+            UNION --union já remove duplicações
+            SELECT  t2.id2 as id2, t2.camada, t2.id_origem, t1.id_origem as id_destino, t2.grupo as grupo_origem, t1.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+            FROM {tmp}_lig t1
+            INNER JOIN {tmp}_lig t2 on t1.id2=t2.id2 
+            WHERE  t1.id_origem<t2.id_origem  and t1.id1<>t2.id1
+            {where_complemento}  
+            
+    '''
+    # query1 = f''' --este é o gargalo da rotina
+    #         --teste sem self join, não ajuda
+    #         DROP TABLE if exists {tmp}_lig2;
+    #         CREATE TABLE {tmp}_lig2 AS 
+    #         SELECT * from {tmp}_lig;
+    #         DROP TABLE IF EXISTS {tmp}_ids_cruzados;
+    #         CREATE TABLE {tmp}_ids_cruzados AS 
+    #         SELECT DISTINCT id2, camada, id_origem, id_destino, grupo_origem, grupo_destino, camada_caminho
+    #         FROM (
+    #             SELECT DISTINCT t1.id2 as id2, t1.camada, t1.id_origem, t2.id_origem as id_destino, t1.grupo as grupo_origem, t2.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+    #             FROM {tmp}_lig t1
+    #             LEFT JOIN {tmp}_lig2 t2 on t2.id2=t1.id2
+    #             WHERE t1.id_origem<>t2.id_origem and t1.id1<>t2.id2 
+    #             {where_complemento}
+    #             UNION
+    #             SELECT DISTINCT t2.id2 as id2, t2.camada, t2.id_origem, t1.id_origem as id_destino, t2.grupo as grupo_origem, t1.grupo as grupo_destino, t1.camada+t2.camada as camada_caminho
+    #             FROM {tmp}_lig t1
+    #             LEFT JOIN {tmp}_lig2 t2 on t1.id2=t2.id2 
+    #             WHERE  t1.id_origem<>t2.id_origem  and t1.id1<>t2.id2 
+    #             {where_complemento}  
+    #         )
+            
+    # '''
+
+    con.executescript(query)
+    query = f'''
+            --cria tabela que indica qual o menor camada_caminho entre origem e destino
+            DROP TABLE IF EXISTS {tmp}_menor_camada;
+            CREATE TABLE {tmp}_menor_camada AS
+            SELECT id_origem, id_destino, min(camada_caminho) as camada_caminho
+            FROM {tmp}_ids_cruzados
+            GROUP BY id_origem, id_destino
+            ;
+    '''
+    con.executescript(query)
+    query = f'''
+            --cria tabela com os id2 para refazer os caminhos para as origens
+            DROP TABLE IF EXISTS {tmp}_ids_cruzados_caminhos;
+            CREATE TABLE {tmp}_ids_cruzados_caminhos AS
+            SELECT DISTINCT tc.*
+            --id2, camada, id_origem, id_destino, grupo_origem, grupo_destino, camada_caminho
+            FROM {tmp}_ids_cruzados tc
+            INNER JOIN {tmp}_menor_camada tm
+            WHERE tc.id_origem=tm.id_origem AND tc.id_destino=tm.id_destino AND tc.camada_caminho=tm.camada_caminho
+    '''
+    con.executescript(query)
+    #print('tmp_lig\n', xtmp_lig:=pd.read_sql(f'select * from tmp_lig', con))
+    #print('_ids_cruzados\n', xids_cruzados:=pd.read_sql(f'select * from tmp_ids_cruzados', con))
+    #print('_menor_camada-------------\n', xmenor_camada:=pd.read_sql(f'select * from tmp_menor_camada', con))
+    #print('_ids_cruzados_caminhos\n', xids_cruzados_caminhos:=pd.read_sql(f'select * from tmp_ids_cruzados_caminhos', con))
+    # junta os caminhos fazendo caminho inverso a partir dos pontos de cruzamento
+    query = f'''
+            --tmp_ids_grupo tem as colunas
+            --SELECT t.id1, t.id2, t.descricao, tl.grupo, tl.id_origem, 1 as sentido, {cam} as camada
+            
+            --Faz caminho inverso de id2 até a origem
+            DROP TABLE IF EXISTS {tmp}_ids_cruzados_caminhos_passos;
+            CREATE TABLE {tmp}_ids_cruzados_caminhos_passos AS
+            SELECT DISTINCT tl.id1, tc.id2, tl.descricao, tc.camada, tl.sentido, tc.id_origem, tc.id_destino, tc.grupo_origem, tc.grupo_destino, tc.camada_caminho
+            FROM {tmp}_ids_cruzados_caminhos tc
+            INNER JOIN {tmp}_menor_camada tm on tm.id_origem=tc.id_origem and tm.id_destino=tc.id_destino and tm.camada_caminho=tc.camada_caminho
+            INNER JOIN {tmp}_lig tl on tl.id2=tc.id2 and tl.grupo=tc.grupo_origem and tl.id_origem=tc.id_origem 
+                and tl.camada=tc.camada
+    '''
+    con.executescript(query)
+    #print('_ids_cruzados_caminhos_passos-----\n', x:=pd.read_sql(f'select * from tmp_ids_cruzados_caminhos_passos', con))
+    #for cam in range(camada, -1, -1):
+    for cam in range(camada+1, -1, -1):
+        query = f'''
+            INSERT INTO {tmp}_ids_cruzados_caminhos_passos
+            SELECT tl.id1, tl.id2, tl.descricao, tl.camada, tl.sentido, tc.id_origem, tc.id_destino, tc.grupo_origem, tc.grupo_destino, tc.camada_caminho
+            FROM {tmp}_ids_cruzados_caminhos_passos tc
+            INNER JOIN {tmp}_lig tl on tl.id2=tc.id1 and tl.grupo=tc.grupo_origem and tl.id_origem=tc.id_origem 
+                and tl.camada+1=tc.camada   
+            where tc.camada={cam};
+            
+            DROP TABLE IF EXISTS {tmp}_ids_cruzados_caminhos_passos_aux;
+            CREATE TABLE {tmp}_ids_cruzados_caminhos_passos_aux AS
+            SELECT DISTINCT *
+            FROM {tmp}_ids_cruzados_caminhos_passos;
+            
+            DROP TABLE IF EXISTS {tmp}_ids_cruzados_caminhos_passos;
+            CREATE TABLE {tmp}_ids_cruzados_caminhos_passos AS
+            SELECT DISTINCT *
+            FROM {tmp}_ids_cruzados_caminhos_passos_aux;
+            
+        '''
+        con.executescript(query)
+    #.for cam in range(camada, -1, -1):
+        
+    #print('_ids_cruzados_caminhos_passos-----\n', xids_cruzados_caminhos_passos:=pd.read_sql(f'select * from tmp_ids_cruzados_caminhos_passos', con))
+    # organiza para ajustar o sentido
+    query = f'''
+            --organiza para ajustar o sentido
+            CREATE TABLE {tmp}_caminhos_final AS
+            SELECT  * 
+            FROM (
+                SELECT 
+                    id1, id2, descricao, camada, id_origem, id_destino, grupo_origem, grupo_destino, camada_caminho
+                FROM
+                {tmp}_ids_cruzados_caminhos_passos
+                WHERE sentido=1
+                UNION
+                SELECT 
+                    id2, id1, descricao, camada, id_origem, id_destino, grupo_origem, grupo_destino, camada_caminho
+                FROM
+                {tmp}_ids_cruzados_caminhos_passos
+                WHERE sentido=-1
+                
+            ) ORDER BY camada
+            '''
+    con.executescript(query)     
+    
+    #print('tmp_caminhos_final-----------\n', xcaminhos_final:=pd.read_sql(f'select * from tmp_caminhos_final', con))         
+    query = f'''
+            --somente ligacoes
+            
+            /*
+            --mostra duplas origem destino
+            CREATE TABLE {tmp}_origem_destino AS
+            SELECT DISTINCT id_origem, id_destino, camada_caminho
+            FROM {tmp}_caminhos_final;
+            */
+            --mostra duplas origem destino_grupo
+            CREATE TABLE {tmp}_origem_destino_grupo AS
+            SELECT DISTINCT id_origem, id_destino, grupo_origem, grupo_destino, camada_caminho
+            FROM {tmp}_caminhos_final;
+            
+            /*
+            CREATE TABLE {tmp}_ligacao_final AS
+            SELECT DISTINCT id1, id2, descricao, camada
+            FROM  {tmp}_caminhos_final 
+            */
+            
+            DROP TABLE IF exists {tmp}_ligacao;
+            CREATE TABLE {tmp}_ligacao AS
+            SELECT DISTINCT *
+            FROM {tmp}_caminhos_final;   
+            
+    '''
+    con.executescript(query)
+#.def camadasRede_caminhos
+
+@timeit
+#def camadasRede_json(camadasIds, cam, camada, mensagem, con, tmp, bCaminhos=False):
+def camadasRede_json(con, tmp, camadasIds, mensagem,  bCaminhos=False):
+    nosaux = []
+    ligacoes = []        
+    sno = set()
+    #if cam: 
+    query = f''' --atualiza {tmp}_ids para buscar dados de cnpjs
+            DROP TABLE if exists {tmp}_ids;
+            CREATE TABLE {tmp}_ids AS
+            --se calcular caminhos, não precisa adicionar itens sem ligações do conjunto de origem
+            { " "  if bCaminhos else f"SELECT identificador FROM {tmp}_ids_inicial UNION "}
+            SELECT t.id1 as identificador
+            FROM {tmp}_ligacao t
+            UNION
+            SELECT t.id2 as identificador
+            FROM {tmp}_ligacao t
+            
+    '''
+    con.executescript(query)
+    #if camada>0:
+    # queryLigacao = f''' SELECT id1 as origem, id2 as destino, descricao as label from {tmp}_ligacao'''
+    # dlaux= pd.read_sql(queryLigacao, con)[['origem','destino','label']]
+    # dlaux['cor']='silver'
+    # dlaux['camada']=0
+    # dlaux['tipoDescricao']=''
+
+    # ligacoes.extend(dlaux.to_dict('records')) #yyy usando pandas para dict é mais rápido, mas tem que fazer mais ajustes
+    # sno.update(dlaux['origem'].unique())
+    # sno.update(dlaux['destino'].unique())
+
+    #ligacoes=[]
+    queryLigacao = f''' SELECT id1 as origem, id2 as destino, descricao as label from {tmp}_ligacao'''
+    for row in con.execute(queryLigacao): #metade do tempo do que usar pd.read_sql
+        ligacoes.append({'origem':row[0], 
+                          'destino':row[1],
+                          'label':row[2],
+                          'cor':'silver',
+                          'camada':0,
+                          'tipoDescricao':''
+                          })
+        sno.add(row[0])
+        sno.add(row[1])
+   
+    # queryNos = f'''SELECT  identificador as id
+    #             from {tmp}_ids
+    #             '''
+    # dnoaux = pd.read_sql(queryNos, con)
+    # sno.update(dnoaux['id'])
+        
+    query = f'''Select distinct identificador as id, group_concat(grupo) as grupo from {tmp}_ids_inicial group by identificador'''
+    dgrupo = pd.read_sql(query, con)
+    dicGrupo = pd.Series(dgrupo.grupo.values, index=dgrupo.id).to_dict()
+    
     for n in sno:
         if n not in camadasIds:
             camadasIds[n] = 1 #não está calculando camadas... só distinguindo o que é camada 0 ou não
@@ -541,55 +974,69 @@ def camadasRede(listaIds=None, camada=1, grupo='', bjson=True):
             elif n.startswith('PE_'): 
                 descricao = '(EMPRESA SÓCIA NO EXTERIOR)'
             no = {'id': n, 'descricao':descricao, 
-                    'camada': camadasIds.get(n,1)} #, 
+                    'camada': camadasIds.get(n,1),
+                    } #, 
+            if n in dicGrupo:
+                no['nota'] = dicGrupo[n]
             nosaux.append(copy.deepcopy(no))    
-    cnpjs = {n.removeprefix('PJ_') for n in camadasIds.keys() if n.startswith('PJ_')} #usar sno ao inves de camadasIds.keys pula ligações
-    if cnpjs:
-        dadosDosNosCNPJs(cnpjs=cnpjs, nosaux=nosaux, dicRazaoSocial=dicRazaoSocial, camadasIds=camadasIds)
-    #camada=0, pega só os dados
-    if camada>0: 
-        #esta chamada de endereco estava deixando a rotina lenta. Ficou OK removendo a criação de tabela prévia.
-        #jsonEnderecos = camadaLink(cpfcnpjIn='',conCNPJ=con, camada=1,  grupo=grupo,  listaIds=list(camadasIds.keys()), tipoLink='endereco')
-        ids = set() #{'PJ_' + icnpj for icnpj in cnpjs}
-        for item in camadasIds.keys():
-            prefixo = ''
-            try: #se for cpfnome, é tuple e não consigo separar o pedaço.
-                prefixo = item[:3]
-                #if prefixo[2]=='_' and prefixo!='PF_':                
-                if prefixo[2]=='_':
-                    ids.add(item)
-            except:
+    
+    #print('diferença', set(camadasIds).difference(sno))
+    #bAdicionaItensQueNaoAparecemNaTabelaDeLigacao = True
+    if not bCaminhos: #se não for busca por caminhos, adiciona itens da camada 0
+        for n in set(camadasIds).difference(sno): #adiciona itens que não aparecem na tabela de ligacao rede.db (mas pode estar em outras, como links.db)
+            #no = {'id': n, 'descricao':'', 'camada': camadasIds.get(n,1)} #, 
+            if n[:3] in ('PF_', 'PJ_', 'ID_', 'EN_', 'EM_', 'TE_'):
                 continue
-        for tipo in ['endereco','base_local']: #endereço ou base_local só pega 1 camada.
-            if tipo=='endereco':
-                if not caminhoDBEnderecoNormalizado:
-                    continue
-            elif tipo=='base_local':
-                 if not caminhoDBBaseLocal:
-                    continue         
-            #jsonEnderecosBanco = camadaLink(cpfcnpjIn='', listaIds=ids, conCNPJ=None, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
-            #ttt
-            jsonEnderecosBanco = camadaLink(listaIds=ids, conCNPJ=None, camada=1 if tipo=='endereco' else camada,  grupo=grupo, tipoLink=tipo)
-            for item in jsonEnderecosBanco['no']:
-                if item['id'] not in camadasIds:
-                    nosaux.append(item)
-            ligacoes.extend(jsonEnderecosBanco['ligacao'])
-    #print(' jsonenderecos-fim: ' + ' '.join(str(time.ctime()).split()[3:]))
-    dadosDosNosBaseLocal(nosaux, camadasIds)
+            no = {'id': n, 'descricao': '', 
+                  'camada': camadasIds.get(n,1), 'tipo':0, 'situacao_ativa': True,
+                  #'logradouro': '',
+                  #'municipio': '', 'uf': '',  
+                  'cod_nat_juridica':''
+                  }
+            nosaux.append(copy.deepcopy(no))
+
+    # cnpjs = {n.removeprefix('PJ_') for n in camadasIds.keys() if n.startswith('PJ_')} #usar sno ao inves de camadasIds.keys pula ligações
+    # if cnpjs:
+    #     if cam: #se for camada 0, {tmp}_ids já existe
+    #         query = f''' --atualiza {tmp}_ids para buscar dados de cnpjs
+    #                 DROP TABLE if exists {tmp}_ids;
+    #                 CREATE TABLE {tmp}_ids AS
+    #                 SELECT DISTINCT * FROM 
+    #                 (   --se calcular caminhos, não precisa adicionar itens sem ligações do conjunto de origem
+    #                      { " "  if bCaminhos else f"SELECT identificador FROM {tmp}_ids_inicial UNION "}
+    #                     SELECT t.id1 as identificador
+    #                     FROM {tmp}_ligacao t
+    #                     UNION
+    #                     SELECT t.id2 as identificador
+    #                     FROM {tmp}_ligacao t
+    #                 )
+    #         '''
+    #         con.executescript(query)
+    #     #dadosDosNosCNPJs(cnpjs=cnpjs, nosaux=nosaux, camadasIds=camadasIds, tmp=tmp, con=con)
+    #     dadosDosNosCNPJs(nosaux=nosaux, camadasIds=camadasIds, tmp=tmp, con=con, dicGrupo=dicGrupo)
+
+    # cnpjs = {n.removeprefix('PJ_') for n in camadasIds.keys() if n.startswith('PJ_')} #usar sno ao inves de camadasIds.keys pula ligações
+    #fazer essa checagem em python demora, faz d
+
+    #dadosDosNosCNPJs(cnpjs=cnpjs, nosaux=nosaux, camadasIds=camadasIds, tmp=tmp, con=con)
+    dadosDosNosCNPJs(nosaux=nosaux, camadasIds=camadasIds, tmp=tmp, con=con, dicGrupo=dicGrupo)
+    dadosDosNosBaseLocal(nosaux, camadasIds, tmp=tmp, con=con)
     nosaux=ajustaLabelIcone(nosaux)
-    textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem} 
-    #print(textoJson)
-    # con.close()
-    # con = None
-    #apagaTabelasTemporarias(tmp)
+    if bCaminhos: #adiciona no json tabela de achados
+        queryLigacao = f''' SELECT * from {tmp}_origem_destino_grupo'''
+        dod= pd.read_sql(queryLigacao, con)    
+        
+        textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem, 'origem_destino':dod.to_dict('records')}
+    else:
+        textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem} 
     return textoJson
-#.def camadasRede
+#.def camadasRede_json
 
 #@timeit
-def dadosDosNosBaseLocal(nosInOut, camadasIds):
+def dadosDosNosBaseLocal(nosInOut, camadasIds, tmp=None, con=None):
     if not caminhoDBBaseLocal:
         return 
-    dicDados = jsonDadosBaseLocalDic(listaIds=list(camadasIds)) 
+    dicDados = jsonDadosBaseLocalDic(listaIds=list(camadasIds), tmp=tmp, con=con) 
     nosaux = []
     for n in nosInOut: 
         if n['id'] in dicDados:
@@ -601,80 +1048,91 @@ def dadosDosNosBaseLocal(nosInOut, camadasIds):
 #.def dadosDosNosBaseLocal
          
 #@timeit
-def dadosDosNosCNPJs(cnpjs, nosaux, dicRazaoSocial, camadasIds):
-    # con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
-    # dftmptable = pd.DataFrame({'cnpj' : list(cnpjs)})
-    # dftmptable['grupo'] = ''
-    # dftmptable['camada'] = 0
-    # tmp = tabelaTemp()
-    # dftmptable.to_sql(f'{tmp}_cnpjsdados', con=con, if_exists='replace', index=False) #, dtype=dtype_tmp_cnpjs)
-    
-    con, camadasIds_, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(caminhoDBReceita, 'cnpj', listaIds=list(cnpjs), grupo='', prefixo_tabela_temporaria='', tabelasACriar=['cnpjs'])
+#def dadosDosNosCNPJs(cnpjs, nosaux, camadasIds, tmp, con):
+def dadosDosNosCNPJs(nosaux, camadasIds, tmp, con, dicGrupo=None):
+
+    con.execute("ATTACH DATABASE '" + caminhoDBReceita.replace('\\','/') + "' as " + 'cnpj')
     con.row_factory=sqlite3.Row
     cur = con.cursor()
-    query = f'''
-                SELECT tt.cnpj, te.razao_social, tt.nome_fantasia, tt.situacao_cadastral as situacao, tt.matriz_filial,
+    query = f'''                
+                DROP TABLE if exists {tmp}_cnpjs;
+                
+                CREATE TABLE {tmp}_cnpjs AS -- a tabela vai conter identificadores PJ_xx camada 0 que não estão na base
+                SELECT distinct substr(identificador,4) as cnpj from {tmp}_ids 
+                where substr(identificador,1,3)='PJ_';
+                
+                SELECT tp.cnpj, te.razao_social, tt.nome_fantasia, tt.situacao_cadastral as situacao, tt.matriz_filial,
                 tt.tipo_logradouro, tt.logradouro, tt.numero, tt.complemento, tt.bairro,
                 ifnull(tm.descricao,tt.nome_cidade_exterior) as municipio, tt.uf as uf, tpais.descricao as pais_,
                 te.natureza_juridica as cod_nat_juridica
                 from {tmp}_cnpjs tp
-                inner join cnpj.estabelecimento tt on tt.cnpj = tp.cnpj
+                left join cnpj.estabelecimento tt on tt.cnpj = tp.cnpj
                 left join cnpj.empresas te on te.cnpj_basico = tt.cnpj_basico --trocar por inner join deixa a consulta lenta...
                 left join cnpj.municipio tm on tm.codigo=tt.municipio
                 left join cnpj.pais tpais on tpais.codigo=tt.pais
             ''' #pode haver empresas fora da base de teste
-    setCNPJsRecuperados = set()
-    # # dk = pd.read_sql(query, con)
-    # # for ix, k in dk.iterrows(): # isso deixa mais lento
-    # res = con.execute(query) #.fetchall()
-    # colsname = [t[0] for t in res.description]
-    # for k1 in res.fetchall():
+    #setCNPJsRecuperados = set()
 
-    cur.execute(query)
+    for subquery in query.split(';'):
+        cur.execute(subquery)
+
     for k in cur:
         #k = dict(zip(colsname, k1))
-        logradouro_complemento =  k['complemento'].strip() #strip(';')]
-        if k['uf']!='EX':
-            #listaaux.append(k['bairro']) #se for empresa no exterior, o bairro as vezes aparece como municipio
-            logradouro_complemento += ('-' + k['bairro'].strip()) if k['bairro'].strip() else ''
-            logradouro_complemento = logradouro_complemento.removeprefix('-')
-        #listalogradouro = [j.strip() for j in listaaux if j.strip()]
-        #listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
-        logradouro = ', '.join([k['logradouro'].strip(), k['numero'].strip()] )
-        if not logradouro.startswith(k['tipo_logradouro'].strip()):
-            logradouro = k['tipo_logradouro'].strip() + ' ' + logradouro
-        logradouro = re.sub("\s\s+", " ", logradouro)
-        logradouro_complemento = re.sub("\s\s+", " ", logradouro_complemento)
-        no = {'id': cnpj2id(k['cnpj']), 'descricao': k['razao_social'], 'nome_fantasia':k['nome_fantasia'],
-              'camada': camadasIds[cnpj2id(k['cnpj'])], 'tipo':0, 'situacao_ativa': int(k['situacao'])==2,
-              'logradouro': logradouro,
-              'logradouro_complemento': logradouro_complemento, #quebrando complemento, para poder usar logradouro no openstreetmap
-              'municipio': k['municipio'], 
-              'uf':k['uf'], 
-              'cod_nat_juridica':k['cod_nat_juridica']
-              }
-        if k['uf']=='EX':
-            no['municipio']=k['bairro']
-            no['pais']=k['pais_']
+        if k['razao_social']: #cnpj na base
+            logradouro_complemento =  k['complemento'].strip() #strip(';')]
+            if k['uf']!='EX':
+                #listaaux.append(k['bairro']) #se for empresa no exterior, o bairro as vezes aparece como municipio
+                logradouro_complemento += ('-' + k['bairro'].strip()) if k['bairro'].strip() else ''
+                logradouro_complemento = logradouro_complemento.removeprefix('-')
+            #listalogradouro = [j.strip() for j in listaaux if j.strip()]
+            #listalogradouro = [j.strip() for j in [k['logradouro'].strip(), k['numero'], k['complemento'].strip(';'), k['bairro']] if j.strip()]
+            logradouro = ', '.join([k['logradouro'].strip(), k['numero'].strip()] )
+            if not logradouro.startswith(k['tipo_logradouro'].strip()):
+                logradouro = k['tipo_logradouro'].strip() + ' ' + logradouro
+            logradouro = re.sub("\s\s+", " ", logradouro)
+            logradouro_complemento = re.sub("\s\s+", " ", logradouro_complemento)
+            no = {'id': cnpj2id(k['cnpj']), 
+                  'descricao': cpf_cnpj.removeCPFFinal(k['razao_social']), #xxx gambiarra, remove cpf no final de razao social de empresario individual
+                  'nome_fantasia': k['nome_fantasia'], 
+                  'camada': camadasIds[cnpj2id(k['cnpj'])], 'tipo':0, 'situacao_ativa': int(k['situacao'])==2,
+                  'logradouro': logradouro,
+                  'logradouro_complemento': logradouro_complemento, #quebrando complemento, para poder usar logradouro no openstreetmap
+                  'municipio': k['municipio'], 
+                  'uf':k['uf'], 
+                  'cod_nat_juridica':k['cod_nat_juridica']
+                  }
+            if k['uf']=='EX':
+                no['municipio']=k['bairro']
+                no['pais']=k['pais_']
+            if int(k['situacao']) not in (2, 8):
+                no['situacao_fiscal'] = gdic.dicSituacaoCadastral.get(k['situacao'],'') 
+        else:
+            no = {'id': cnpj2id(k['cnpj']), 'descricao': 'NÃO FOI LOCALIZADO NA BASE', 
+                  'camada': camadasIds[cnpj2id(k['cnpj'])], 'tipo':0, 'situacao_ativa': True,
+                  'logradouro': '',
+                  'municipio': '', 'uf': '',  'cod_nat_juridica':''
+                  }
+        if dicGrupo:
+            if no['id'] in dicGrupo:
+                no['nota'] = dicGrupo[no['id']]
         nosaux.append(copy.deepcopy(no))
-        setCNPJsRecuperados.add(k['cnpj'])
+        #setCNPJsRecuperados.add(k['cnpj'])
     #trata caso excepcional com base de teste, cnpj que é sócio não tem registro na tabela empresas
-    diffCnpj = cnpjs.difference(setCNPJsRecuperados)
-    for cnpj in diffCnpj:
-        no = {'id': cnpj2id(cnpj), 'descricao': dicRazaoSocial.get(cnpj, 'NÃO FOI LOCALIZADO NA BASE'), 
-              'camada': camadasIds[cnpj2id(cnpj)], 'tipo':0, 'situacao_ativa': True,
-              'logradouro': '',
-              'municipio': '', 'uf': '',  'cod_nat_juridica':''
-              }
-        nosaux.append(copy.deepcopy(no))
+    # if False:
+    #     diffCnpj = cnpjs.difference(setCNPJsRecuperados)
+    #     for cnpj in diffCnpj:
+    #         #no = {'id': cnpj2id(cnpj), 'descricao': dicRazaoSocial.get(cnpj, 'NÃO FOI LOCALIZADO NA BASE'), 
+    #         no = {'id': cnpj2id(cnpj), 'descricao': 'NÃO FOI LOCALIZADO NA BASE', 
+    #               'camada': camadasIds[cnpj2id(cnpj)], 'tipo':0, 'situacao_ativa': True,
+    #               'logradouro': '',
+    #               'municipio': '', 'uf': '',  'cod_nat_juridica':''
+    #               }
+    #         nosaux.append(copy.deepcopy(no))
     #ajusta nos, colocando label
     #nosaux=ajustaLabelIcone(nosaux)
+    
     nos = nosaux #nosaux[::-1] #inverte, assim os nos de camada menor serao inseridas depois, ficando na frente
     nosaux = nos.sort(key=lambda n: n['camada'], reverse=True) #inverte ordem, porque os últimos icones vão aparecer na frente. Talvez na prática não seja útil.   
-    #con.execute(f'DROP TABLE if exists {tmp}_cnpjsdados ') 
-    cur.close()
-    con = None
-    #return nos
 #.def dadosDosNosCNPJs
 
 #@timeit
@@ -715,33 +1173,6 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
                     ON  tl.identificador = t.id2
                      ) ORDER by valor DESC
                     '''
-    elif tipoLink=='endereco' or tipoLink=='base_local':
-        if tipoLink=='endereco':
-            if caminhoDBEnderecoNormalizado:
-                camDB = caminhoDBEnderecoNormalizado
-                #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBEnderecoNormalizado}", execution_options=gEngineExecutionOptions)        
-                #db = 'dlink'
-                tabela = 'dlink.link_ete'
-        else:
-            if caminhoDBBaseLocal:
-                camDB = caminhoDBBaseLocal
-                #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}", execution_options=gEngineExecutionOptions)
-                tabela = 'dlink.links'   
-                #db = 'dlink'
-
-        valorMinimo=0
-        valorMaximo=0
-        numeroItens=0
-        bValorInteiro = True
-
-        query = f''' SELECT distinct t.id1, t.id2, t.descricao, t.valor
-                     FROM {tmp}_ids tl
-                     INNER JOIN {tabela} t ON  tl.identificador = t.id1
-                     UNION
-                     SELECT t.id1, t.id2, t.descricao, t.valor
-                     FROM {tmp}_ids tl
-                     INNER JOIN {tabela} t ON  tl.identificador = t.id2
-                     '''
 
     if not camDB: #con:
         print('tipoLink indefinido')
@@ -751,13 +1182,13 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     #nosids = set()
     ligacoes = []
     setLigacoes = set()
-    con, camadasIds, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(camDB, 'dlink', listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp)
+    con, camadasIds, cnpjs, cpfnomes_, tmp = criaTabelasTmpParaCamadas(camDB, 'dlink', listaIds=listaIds, grupo=grupo, prefixo_tabela_temporaria=tmp)
     #https://docs.python.org/2/library/sqlite3.html#using-the-connection-as-a-context-manager 
     con.row_factory = sqlite3.Row #para ver registros do sqlite3 como dicionário
     cur = con.cursor()
     
     cnpjsInicial = copy.deepcopy(cnpjs)
-    dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
+    #dicRazaoSocial = {} #excepcional, se um cnpj que é sócio na tabela de socios não tem cadastro na tabela empresas
     limite = numeroItens #15
     #passo = numeroItens*2 #15
     #cnt1 = collections.Counter() #contadores de links para o id1 e id2
@@ -778,7 +1209,11 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
         # for k1 in res.fetchall():
         
 
-        cur.execute(query + ' LIMIT ' + str(limite) if limite else query)
+        #cur.execute(query + ' LIMIT ' + str(limite) if limite else query)
+        if limite:
+            cur.execute(query + ' LIMIT :limite', {'limite':limite})
+        else:
+            cur.execute(query)
         for k in cur:
             
             #k=dict(zip(colsname,k1))
@@ -850,9 +1285,7 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
                 break
         registrosAnterior = registros
     #.for cam in range(1, camada+1):
-    cur.close()
-    #con.close()
-    con = None
+
     for c in camadasIds:
         if c.startswith('PJ_'):
             cnpjs.add(c[3:])
@@ -862,7 +1295,8 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     #     conCNPJaux = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     cnpjs = cnpjs.difference(cnpjsInicial)
     #nos = dadosDosNosCNPJs(conCNPJaux, cnpjs, nosaux, dicRazaoSocial, camadasIds)
-    dadosDosNosCNPJs(cnpjs, nosaux, dicRazaoSocial, camadasIds)
+    #dadosDosNosCNPJs(cnpjs, nosaux, camadasIds=camadasIds, tmp=tmp, con=con)
+    dadosDosNosCNPJs(nosaux, camadasIds=camadasIds, tmp=tmp, con=con)
 
     for c in camadasIds:
         if c.startswith('PJ_'):
@@ -877,11 +1311,11 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
                     'camada': camadasIds[c]} #, 
 
         nosaux.append(copy.deepcopy(no))    
-    dadosDosNosBaseLocal(nosaux, camadasIds)
+    dadosDosNosBaseLocal(nosaux, camadasIds, tmp=tmp, con=con)
     nosaux=ajustaLabelIcone(nosaux)
     textoJson={'no': nosaux, 'ligacao':ligacoes, 'mensagem':mensagem} 
-    # con.close()
-    # con = None
+    con.close()
+    con = None
 
     #apagaTabelasTemporarias(tmp, camDB)
     return textoJson
@@ -901,22 +1335,21 @@ def cnae_secundariaF(codigos):
     return t.removesuffix('; ')
 #.def cnae_secondariaF
    
-def jsonDados(cpfcnpjin, bsocios=False):
-#def jsonDados(listaIds):
-#def jsonDados(cpfcnpjIn, listaIds=False):
+def jsonDados(cpfcnpjListain:list, bsocios=False):
     '''pegando apenas dados do primeiro item da lista'''
-    cids, cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada([cpfcnpjin,])
+    cids, cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjListain)
     #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}",execution_options=gEngineExecutionOptions)
     #con = sqlite3.connect(caminhoDBReceita, uri=True)    
 
     if cnpjs:
-        dlista = jsonDadosReceita([list(cnpjs)[0],], bsocios)
+        #dlista = jsonDadosReceita([list(cnpjs)[0],], bsocios)
+        dlista = jsonDadosReceita(list(cnpjs), bsocios)
     else:
         dlista = []
 
     dicDados = {}
     if caminhoDBBaseLocal:
-        dicDados = jsonDadosBaseLocalDic([cpfcnpjin,]) #cpfcnpjIn=cpfcnpjIn) 
+        dicDados = jsonDadosBaseLocalDic(cids) #cpfcnpjIn=cpfcnpjIn) 
         if dicDados:
             nosaux = []
             for n in dlista: 
@@ -934,11 +1367,11 @@ def jsonDados(cpfcnpjin, bsocios=False):
             dlista = nosaux
     #print('jsonDados-fim: ' + time.ctime())   
     #con = None
-    return dlista[0] if dlista else {} #retornando só primeiro
+    #return dlista[0] if dlista else {} #retornando só primeiro
+    return dlista
 #.def jsonDados
 
 def jsonDadosReceita(cnpjlista, bsocios=False):
-#def jsonDados(cpfcnpjIn, listaIds=False):
     '''dados'''
     
     if bsocios:
@@ -1001,6 +1434,7 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
         # if da:
         #     da['proximo_cnpj'] = d['cnpj']
         #     break
+        d['razao_social'] = cpf_cnpj.removeCPFFinal(d['razao_social'])
         capital = d['capital_social'] 
         capital = f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.')
         # listalogradouro = [k.strip() for k in [d['logradouro'].strip(), d['numero'], d['complemento'].strip(';'), d['bairro']] if k.strip()]
@@ -1021,7 +1455,6 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
             d['motivo_situacao_cadastral'] = ''
         else:
             d['motivo_situacao_cadastral'] = f"{d['motivo_situacao_cadastral']}-{gdic.dicMotivoSituacao.get(d['motivo_situacao_cadastral'],'')}"
-        d['natureza_juridica'] = f"{d['natureza_juridica']}-{gdic.dicNaturezaJuridica.get(d['natureza_juridica'],'')}"
         #d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(int(d['cnae_fiscal']),'')}"
         d['cnae_fiscal'] = f"{d['cnae_fiscal']}-{gdic.dicCnae.get(d['cnae_fiscal'],'')}"
         d['cnae_secundaria'] = cnae_secundariaF(d['cnae_fiscal_secundaria'])
@@ -1037,6 +1470,16 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
         d = {k:v for k,v in d.items() if k in camposPJ}
         d['id'] = 'PJ_'+ d['cnpj']
         d['cnpj_formatado'] = f"{d['cnpj'][:2]}.{d['cnpj'][2:5]}.{d['cnpj'][5:8]}/{d['cnpj'][8:12]}-{d['cnpj'][12:]}"
+        
+        if d['natureza_juridica'] in ('2135', '4120'): #remove empresario individual, produtor rural
+            ts = '#INFORMAÇÃO EDITADA#'
+            d['endereco'] = ts
+            d['telefone1'] = ts
+            d['telefone2'] = ''
+            d['fax'] = ''
+            d['correio_eletronico'] = ts
+            d['cep'] = ts
+        d['natureza_juridica'] = f"{d['natureza_juridica']}-{gdic.dicNaturezaJuridica.get(d['natureza_juridica'],'')}"   
         if bsocios:
             d['dados_socios'] = dsocios.get(d['cnpj'])
         dlista.append(copy.deepcopy(d))
@@ -1048,7 +1491,7 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
     return dlista
 #.def jsonDadosReceita
 
-def jsonDadosBaseLocalDic(listaIds=None):  
+def jsonDadosBaseLocalDic(listaIds=None, tmp=None, con=None):  
 #def jsonDadosBaseLocal(cpfcnpjIn=None, listaIds=None):    
     if not caminhoDBBaseLocal:
         return {}
@@ -1058,8 +1501,12 @@ def jsonDadosBaseLocalDic(listaIds=None):
     # dftmptable = pd.DataFrame({'id' : list(listaIds)})
     # tmp = tabelaTemp()
     # dftmptable.to_sql(f'{tmp}_idsj', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
-    con_, camadasIds_, cnpjs, cpfnomes, tmp = criaTabelasTmpParaCamadas(caminhoDBBaseLocal, 'dlocal', listaIds=listaIds, grupo='', prefixo_tabela_temporaria='')    
-    with contextlib.closing(con_) as con:
+    if  con:
+        con.execute("ATTACH DATABASE '" + caminhoDBBaseLocal.replace('\\','/') + "' as dlocal") 
+    else:
+        con, camadasIds_, cnpjs_, cpfnomes_, tmp = criaTabelasTmpParaCamadas(caminhoDBBaseLocal, 'dlocal', listaIds=listaIds, grupo='', prefixo_tabela_temporaria='')    
+    #with contextlib.closing(con) as con1:
+    if True:
         query = f'''
             select tj.id, tj.json
             from {tmp}_ids t
@@ -1101,33 +1548,70 @@ def jsonDadosBaseLocalDic(listaIds=None):
                 dicLista[k['id']]=copy.deepcopy(daux)
         cur.close()
     #con.execute(f'Drop table if exists {tmp}_idsj')
-    con = None
+    #con = None
     return dicLista
 #.def jsonDadosBaseLocalDic
 
+def dados_api_cnpj(cnpj, itensFlag):
+    cnpjin = cnpj #request.args.get('cnpj', default = '', type = str)
 
-def dados_html_cnpj(request, render_template):
-    cnpjin = request.args.get('cnpj', default = '', type = str)
-    bmobile = any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android'])
     qr = qteEmpresas_referenciaF()
-    dados = {'cnpj_qtde':qr['cnpj_qtde'], 'data_referencia':qr['data_referencia'],'desktop': not bmobile}
-    dados['usuario_local'] = (request.remote_addr ==  '127.0.0.1')
-    dados['textoH2'] = ''
+    dados = {'base_rfb_cnpj_qtde':qr['cnpj_qtde'], 'base_rfb_data_referencia_da_base':qr['data_referencia']}
+
     if not cnpjin:
         dados['cnpj'] = ''
-        return render_template('dados_cnpj.html', dados = dados)   
+        return dados   
     cnpj = cnpjin.removeprefix('PJ_').replace('.','').replace('-','').replace('/','').strip()
     cnpj = cpf_cnpj.validar_cnpj(cnpj)
     dados2 = {}
     if cnpj:
-        dados2 = jsonDados(cnpj, True)
+        dados2 = jsonDados(['PJ_'+cnpj,], True) #precisa reincluir PJ_ para fazer busca na base local
         dados.update(dados2)
         dados['cnpj_formatado'] = cpf_cnpj.cnpj_formatado(cnpj)
     if not dados2:
         dados['cnpj'] = cnpjin 
-    return render_template('dados_cnpj.html', dados=dados) #, parametros=paramsInicial)
-#.def serve_html_pagina
+    dado_adicional = {key:dados.get(key) for key in itensFlag if dados.get(key)}
+    # for key in itensFlag:
+    #     if dados.get(key):
+    #         dado_adicional[key] = dados[]
+    #         htadicional += "<b>" + key + ": </b> "+ dados.get(key)+ "<br>";
+    dados['dado_adicional'] = dado_adicional
+    return dados
+#.def dados_api_cnpj
 
+def dados_consulta_cnpj(request, render_template, itensFlag):
+    cnpjListain = request.args.get('cnpj', default = '', type = str)
+    bmobile = any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android'])
+    qr = qteEmpresas_referenciaF()
+    dadosReferencia = {'cnpj_qtde':qr['cnpj_qtde'], 'data_referencia':qr['data_referencia'],'desktop': not bmobile}
+    dadosReferencia['usuario_local'] = (request.remote_addr ==  '127.0.0.1')
+    dadosReferencia['textoH2'] = ''
+    listaDados = []
+    if not cnpjListain:
+        dadosReferencia['cnpj'] = ''
+        return render_template('dados_cnpj.html', listaDados = listaDados, dadosReferencia=dadosReferencia) 
+    dadosReferencia['cnpj'] = cnpjListain 
+    cnpjs = set()
+    for cnpj_ in cnpjListain.split(';')[:100]:  #faz corte de 100 elementos
+        cnpj = cnpj_.removeprefix('PJ_').replace('.','').replace('-','').replace('/','').strip()
+        cnpj = cpf_cnpj.validar_cnpj(cnpj)
+        if cnpj:
+            cnpjs.add(cnpj)
+    
+    if cnpjs:
+        #dados2 = jsonDados('PJ_'+cnpj, True) #precisa reincluir PJ_ para fazer busca na base local
+        #lista = []
+        for dados1cnpj_ in jsonDados(cnpjs, True): #precisa reincluir PJ_ para fazer busca na base local
+            dados1cnpj = copy.deepcopy(dados1cnpj_)
+            dado_adicional = {key:dados1cnpj.get(key) for key in itensFlag if dados1cnpj.get(key)}
+            dados1cnpj['dado_adicional'] = copy.deepcopy(dado_adicional)      
+            listaDados.append(copy.deepcopy(dados1cnpj))
+        #dados['lista'] = lista
+        #dados['cnpj_formatado'] = 'cnpj_formatado' #cpf_cnpj.cnpj_formatado(cnpj)
+    # if not cnpjs:
+    #     dadosReferencia['cnpj'] = cnpjListain 
+    return render_template('dados_cnpj.html', listaDados = listaDados, dadosReferencia=dadosReferencia) 
+#.def dados_consulta_cnpj
 
 def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
     if not caminhoDBBaseLocal:
@@ -1204,7 +1688,7 @@ def dadosParaExportar(dados):
     listaCpfCnpjs = list(sids)
     con, camadasIds_, cnpjs_, cpfnomes_, tmp = criaTabelasTmpParaCamadas(caminhoDBReceita, 'cnpj', listaIds=listaCpfCnpjs, grupo='', tabelasACriar=['ids', 'cpfpjnomes'])
     querysocios = f'''
-                SELECT distinct * from
+                SELECT * FROM -- distinct * from
     				(SELECT t.cnpj, te.razao_social, t.cnpj_cpf_socio, t.nome_socio, sq.descricao as cod_qualificacao, 
                      t.data_entrada_sociedade, t.pais, tpais.descricao as pais_, t.representante_legal, t.nome_representante, t.qualificacao_representante_legal, sq2.descricao as qualificacao_representante_legal_, t.faixa_etaria
                 FROM cnpj.socios t
@@ -1264,10 +1748,13 @@ def dadosParaExportar(dados):
                 left join cnpj.pais on pais.codigo=tt.pais
                 where tp.nome=''
             '''
+    con.row_factory = sqlite3.Row #para ver registros do sqlite3 como dicionário
+    cur = con.cursor()
     #from io import BytesIO
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         dfe=pd.read_sql_query(queryempresas, con)
+        dfe['razao_social'] =  dfe['razao_social'].apply(lambda t: cpf_cnpj.removeCPFFinal(t))
         dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.') if capital else '')  
         dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
         dfe['data_inicio_atividades'] = dfe['data_inicio_atividades'].apply(ajustaData)
@@ -1278,11 +1765,12 @@ def dadosParaExportar(dados):
         dfe['cnae_fiscal'] = dfe['cnae_fiscal'].apply(lambda x: x +'-'+ gdic.dicCnae.get(x,'') if x else '')
         dfe['cnae_fiscal_secundaria'] = dfe['cnae_fiscal_secundaria'].apply(lambda x: cnae_secundariaF(x))
         dfe['porte_empresa'] = dfe['porte_empresa'].apply(lambda x: x+'-' + gdic.dicPorteEmpresa.get(x,'') if x else '')
-        
+
         cols = [c for c in dfe.columns if not c.startswith('cnpj')]
         cols.insert(0, 'cnpj')
         dfe[cols].to_excel(writer, merge_cells = False, sheet_name = "Empresas", index=False, freeze_panes=(1,0))
-
+    
+        
         #coloca dados em duas colunas
         #dfe.T.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "EmpresasT", index=True, freeze_panes=(0,1))
         lempresas = [['N','coluna','dado']]
@@ -1295,15 +1783,15 @@ def dadosParaExportar(dados):
         pd.DataFrame(lempresas).to_excel(writer, header=False, sheet_name = "Empresas_", index=False, freeze_panes=(1,0))
         
         dfs=pd.read_sql_query(querysocios, con)
-        dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False)
+        dfs.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "Socios", index=False, freeze_panes=(1,0))
         dfin = pd.DataFrame.from_dict(dados['no']) #,orient='index',  columns=['id', 'descricao', 'nota', 'camada', 'cor', 'posicao', 'pinado', 'imagem', 'logradouro', 'municipio', 'uf', 'cod_nat_juridica', 'situacao_ativa', 'tipo', 'sexo'])
-        dfin.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "identificadores", index=False)
+        dfin.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "identificadores", index=False, freeze_panes=(1,0))
     
         ligacoes = []
         for lig in dados['ligacao']:
             ligacoes.append([lig['origem'], lig['destino'], lig['label'], lig['tipoDescricao']])
         dflig = pd.DataFrame(ligacoes, columns=['origem','destino','ligacao','tipo_ligacao'])
-        dflig.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "ligacoes", index=False)
+        dflig.to_excel(writer, startrow = 0, merge_cells = False, sheet_name = "ligacoes", index=False, freeze_panes=(1,0))
      
     #writer.close()
     output.seek(0)
@@ -1353,9 +1841,11 @@ def ajustaLabelIcone(nosaux):
         elif prefixo=='PE':
             imagem = 'icone-grafo-empresa.png'
         elif prefixo=='ID':
-            imagem = 'folder-o.png'
+            imagem = 'icone-grafo-id.png'
+        elif prefixo=='UG':
+            imagem = 'icone-grafo-ug.png'
         else:
-            imagem = 'icone-grafo-desconhecido.png' #caso genérico
+            imagem = 'icone-grafo-id.png' #caso genérico
         #no['imagem'] = '/rede/static/imagem/' + imagem
         no['imagem'] = no.get('imagem', imagem)
         no['cor'] =  no.get('cor', '')
@@ -1411,9 +1901,8 @@ def qteEmpresas_referenciaF():
     data_referencia = con.execute("select valor from _referencia where referencia='CNPJ'").fetchone()[0]
     con = None
     return {'cnpj_qtde':cnpj_qtde, 'data_referencia':data_referencia}
-
+#.def qteEmpresas_referenciaF(): 
 
 if __name__ == '__main__':
     #apagaTabelasTemporarias('tmp_') #apaga todas as tabelas tmp_ 
     pass
-    

@@ -99,8 +99,8 @@
 .menu-item.submenu:hover::after { border-left-color: #fff; }
 
 .menu .menu {
-  top: 4px;
-  left: 99%;
+  top: 0px; /* era 4px */
+  left: 100%; /* 99%; */
 }
 
 .show-menu, .menu-item:hover > .menu {
@@ -112,5 +112,5 @@
 
 .menu-item:hover > .menu {
   -webkit-transition-delay: 100ms;
-  transition-delay: 300ms;
+  transition-delay: 100ms;
 }	

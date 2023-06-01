@@ -9,19 +9,19 @@ def validar_cpf(cpf):
     """
     cpf = ''.join(re.findall('\d', str(cpf)))
     
-    if (not cpf):
+    if not cpf:
         return ''
     
-    if (len(cpf) > 11):
+    if len(cpf) > 11:
         if cpf[:len(cpf)-11]=='0'.zfill(len(cpf)-11):
             cpf = cpf[len(cpf)-11:]
         else:
             return ''
         
-    if (len(cpf)<3):
+    if len(cpf)<3:
         return ''
     
-    if (len(cpf) < 11):
+    if len(cpf) < 11:
         cpf = cpf.zfill(11)
         
     
@@ -49,10 +49,10 @@ def validar_cnpj(cnpj):
     
     cnpj = ''.join(re.findall('\d', str(cnpj)))
     
-    if (not cnpj):
+    if not cnpj:
         return ''
     cnpjin = cnpj
-    if (len(cnpj) > 14):
+    if len(cnpj) > 14:
         if cnpj[:len(cnpj)-14]=='0'.zfill(len(cnpj)-14):
             cnpj = cnpj[len(cnpj)-14:]
         else:
@@ -92,3 +92,11 @@ def validar_cnpj(cnpj):
 def cnpj_formatado(cnpj):
     return f"{cnpj[:2]}.{cnpj[2:5]}.{cnpj[5:8]}/{cnpj[8:12]}-{cnpj[12:]}"
 #.def cnpj_formatado(cnpj):
+
+exprTerminaCPF = re.compile('.*\d{11}$')
+def removeCPFFinal(nomeIn):
+    if exprTerminaCPF.search(nomeIn):
+        return nomeIn[:-11].strip()
+    else:
+        return nomeIn
+#.def removeCPFFinal

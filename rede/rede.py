@@ -6,7 +6,7 @@ https://github.com/rictom/rede-cnpj
 
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, render_template, send_from_directory, send_file, jsonify, Response
+from flask import Flask, request, render_template, send_from_directory, send_file, Response, abort
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
@@ -16,15 +16,26 @@ import os, sys, json, secrets, io, glob, pathlib, unicodedata, string, importlib
 from functools import lru_cache
 import rede_config as config
 import pandas as pd
+from datetime import datetime
+
+#from flask import jsonify
+from orjson import dumps as jsonify #orjson é muito mais rápido que jsonify
 
 nome_modulo_relacionamento = config.config['BASE'].get('modulo_relacionamento', 'rede_sqlite_cnpj').strip()
 print(f'Carregando {nome_modulo_relacionamento}')
 rede_relacionamentos = importlib.import_module(nome_modulo_relacionamento)
 print(f'Utilizando {nome_modulo_relacionamento} como rede_relacionamentos.')
 
-sys.path.append('busca') #pasta com rotinas de busca
-sys.path.append('pyanx') #rotina do i2 chart reader
-import rede_google, mapa, rede_i2
+# sys.path.append('busca') #pasta com rotinas de busca
+# sys.path.append('i2') #rotina do i2 chart reader
+# import rede_google, mapa, rede_i2
+#import rede_i2
+
+# from busca import rede_google, mapa
+# from i2 import rede_i2
+
+from modulos.busca import rede_google, mapa
+from modulos.i2 import rede_i2
 
 try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
     import rede_acao
@@ -34,19 +45,27 @@ except:
 #rede_relacionamentos.gtabelaTempComPrefixo=False
 
 app = Flask("rede")
+#app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False #pretty print torna jsonify lento
+#app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
+
 kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
+
 limiter = flask_limiter.Limiter(app=app, key_func=get_remote_address) #, default_limits=["200 per day", "50 per hour"])
+
 limiter_padrao = config.config['ETC'].get('limiter_padrao', '20/minute').strip() 
 limiter_dados = config.config['ETC'].get('limiter_dados', limiter_padrao).strip() 
 limiter_google = config.config['ETC'].get('limiter_google', '4/minute').strip() 
+limiter_arquivos = config.config['ETC'].get('limiter_arquivos', '2/minute').strip() 
 bConsultaGoogle = config.config['ETC'].getboolean('busca_google',False)
 bConsultaChaves = config.config['ETC'].getboolean('busca_chaves',False)
 ggeocode_max  = config.config['ETC'].getint('geocode_max', 15) 
+api_key_validas = [k.strip() for k in config.config['API'].get('api_keys', '').split(',')]
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
+gp['itensFlag'] = ['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev', 'servidor_siape']
 
 #como é usada a tabela tmp_cnpjs no sqlite para todas as consultas, se houver requisições simultâneas ocorre colisão. 
 #o lock faz esperar terminar as requisições por ordem.
@@ -79,7 +98,7 @@ if False: #bloqueia em rede_sqlite_cnpj.py
 # def raiz():
 #     return redirect("/rede/", code = 302)
 
-@app.route("/rede/")
+@app.route("/rede/",  methods=['GET','POST'])
 @app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
 @app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
 @limiter.limit(limiter_padrao)
@@ -88,14 +107,10 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     #inserirDefault = ''
     listaEntrada = ''
     listaJson = ''
-    #camada = config.par.camadaInicial if config.par.camadaInicial else camada
-    #camada = camada if camada else config.par.camadaInicial
     camada = min(gp['camadaMaxima'], camada)
-    #print(list(request.args.keys()))
-    #print(request.args.get('mensagem_inicial'))
-    # if par.idArquivoServidor:
-    #     idArquivoServidor =  par.idArquivoServidor
-    #idArquivoServidor = config.par.idArquivoServidor if config.par.idArquivoServidor else idArquivoServidor
+    bbMenuInserirInicial = config.par.bMenuInserirInicial
+    #janelaPai = ''
+    
     idArquivoServidor = idArquivoServidor if idArquivoServidor else config.par.idArquivoServidor
     if idArquivoServidor:
         idArquivoServidor = secure_filename(idArquivoServidor)
@@ -122,14 +137,14 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
         if extensao in ['.csv', '.txt', '.xlsx', 'xls']:
             listaEntrada = ''
             for linha in df.values:
-                listaEntrada += '\t'.join([i.replace('\t',' ') for i in linha]) + '\n'       
+                listaEntrada += '\t'.join([i.replace('\t',' ') for i in linha]) + '\n' #isso deve ser um caso particular, tab dentro de valor troca para espaço.
             #print(listaEntrada)
             df = None            
     elif not cpfcnpj and not idArquivoServidor: #define cpfcnpj inicial, só para debugar.
         #cpfcnpj = config.par.cpfcnpjInicial
         mensagemInicial = config.config['INICIO'].get('mensagem_advertencia','').replace('\\n','\n').strip()
         if  mensagemInicial:
-            mensagemInicial += rede_relacionamentos.mensagemInicial()
+            mensagemInicial += '\n' + rede_relacionamentos.mensagemInicial()
             #inserirDefault = 'TESTE'     
         # else:
         #     config.par.bMenuInserirInicial = False
@@ -139,11 +154,33 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
             listaEntrada = config.par.tipo_lista + '\n' + listaEntrada 
         else:
             listaEntrada = config.par.tipo_lista + listaEntrada
+
+    if request.method == 'POST': #atende chamadas javascript da função openWindowWithPost 
+        try:
+            dadosPost = request.form.get('data')
+            jsonaux = json.loads(dadosPost)
+            #print(jsonaux)
+            if isinstance(jsonaux, dict):
+                #listaJson = jsonaux
+                #listaJson = jsonaux.get('json', jsonaux) #temporário para manter compatibilidade reversa
+                listaJson = jsonaux.get('json', '') #temporário para manter compatibilidade reversa
+                listaEntrada = jsonaux.get('entradas', '')
+                #janelaPai = jsonaux.get('janelaPai', '') #problemas com message, não funcionou
+            elif isinstance(jsonaux, str):
+                listaEntrada = jsonaux
+            else:
+                abort(404, 'Situação não prevista, request POST diferente de dict ou de texto.')
+                return
+        except:
+            abort(404, 'Erro no processamente do POST')
+            return
+        mensagemInicial=''
+        bbMenuInserirInicial = False
             
     paramsInicial = {'cpfcnpj':cpfcnpj, 
                      'camada':camada,
                      'mensagem':mensagemInicial,
-                     'bMenuInserirInicial': config.par.bMenuInserirInicial,
+                     'bMenuInserirInicial': bbMenuInserirInicial, #config.par.bMenuInserirInicial,
                      'inserirDefault':'', #'TESTE',
                      'idArquivoServidor':idArquivoServidor,
                      'lista':listaEntrada,
@@ -158,9 +195,12 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'geocode_max':ggeocode_max,
                      'bbusca_chaves': config.config['ETC'].getboolean('busca_chaves', False),
                      'mobile':any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android']),
-                     'usuarioLocal': usuarioLocal()
+                     'chrome':'Chrome' in request.headers.get('User-Agent',''),
+                     'usuarioLocal': usuarioLocal(),
+                     #'janelaPai': janelaPai,
+                     'itensFlag':gp['itensFlag'] #['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
                     }
-    #print(paramsInicial) 
+    #print(paramsInicial)
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
     config.par.cpfcnpjInicial=''
@@ -168,27 +208,39 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
 #.def serve_html_pagina
 
 #@lru_cache #isto pode dar inconsistência com parametros via post??
-@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>', methods=['GET','POST'])
+#@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>', methods=['GET','POST'])
+@app.route('/rede/grafojson/<tipo>/<int:camada>/<cpfcnpj>', methods=['POST',]) #methods=['GET','POST'])
 @limiter.limit(limiter_padrao)
-def serve_rede_json_cnpj(cpfcnpj='', camada=1):
+def serve_rede_json_cnpj(tipo, camada=1, cpfcnpj=''):
     # if request.remote_addr in ('xxx'):
     #     return jsonify({'acesso':'problema no acesso. favor não utilizar como api de forma intensiva, pois isso pode causar bloqueio para outros ips.'})        
     camada = min(gp['camadaMaxima'], int(camada))
+        
+    criterioCaminhos = ''
+    if tipo=='cnpj':
+        pass
+    elif tipo.startswith('caminhos'):
+        criterioCaminhos = tipo.removeprefix('caminhos-')
+    else:
+        abort(404, description='Recurso não encontrado')
     #cpfcnpj = cpfcnpj.upper().strip() #upper dá inconsistência com email, que está minusculo na base
     listaIds = []
-    if request.method == 'GET':
+    if request.method == 'POST':
+        listaIds = request.get_json()
+    elif request.method == 'GET': #este caso não está sendo usado, só pra debug
         cpfcnpj = cpfcnpj.strip()
         listaIds = [cpfcnpj,]
-    else:
-        listaIds = request.get_json()
+
     r = None
     try:
         if gUwsgiLock:
             uwsgi.lock()
         with gLock:
-            noLig = rede_relacionamentos.camadasRede(listaIds=listaIds, camada=camada, grupo='', bjson=True)
+            if not criterioCaminhos:
+                noLig = rede_relacionamentos.camadasRede(camada=abs(camada), listaIds=listaIds, grupo = '',  bjson=True)
+            elif criterioCaminhos:
+                noLig = rede_relacionamentos.camadasRede(camada=abs(camada), grupo=listaIds, criterioCaminhos = criterioCaminhos, bjson=True)
             r = jsonify(noLig)
-
     except Exception as e:
         print("ERROR : "+str(e))
     finally:
@@ -207,7 +259,6 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
     else:
         listaIds = request.get_json()
     r = None
-
     try:
         if gUwsgiLock:
             uwsgi.lock()
@@ -223,29 +274,75 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
 @app.route('/rede/dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST']) 
 @limiter.limit(limiter_dados)
 def serve_dados_detalhes(cpfcnpj):
+    if request.method == 'GET':
+        idin = cpfcnpj
+    else:
+        idin = request.get_json()['idin']
     try: 
         if gUwsgiLock:
             uwsgi.lock()
         with gLock:
-            r = rede_relacionamentos.jsonDados(cpfcnpj)
-            return jsonify(r)
+            r = rede_relacionamentos.jsonDados([idin,])
+            if r:
+                return jsonify(r[0])
+            return jsonify({})
     finally:
         if gUwsgiLock:
             uwsgi.unlock()    
 #.def serve_dados_detalhes
 
-@app.route('/rede/consulta_cnpj/', methods=['GET', 'POST']) 
+@app.route('/rede/consulta_cnpj/', methods=['GET', 'POST']) #precisa manter com / no final para manter compatibilidade com robots
 @limiter.limit(limiter_dados)
 def serve_dados_html():
     try: 
         if gUwsgiLock:
             uwsgi.lock()
         with gLock:
-            return rede_relacionamentos.dados_html_cnpj(request, render_template)
+            return rede_relacionamentos.dados_consulta_cnpj(request, render_template, gp['itensFlag'])
     finally:
         if gUwsgiLock:
             uwsgi.unlock()    
 #.def serve_dados_detalhes
+
+if config.config['API'].getboolean('api_cnpj', False):
+    @app.route('/rede/api/<tipo>/<cnpj>', methods=['GET', 'POST']) 
+    @limiter.limit(limiter_dados)
+    def serve_dados_api(tipo, cnpj):
+        try: 
+            if gUwsgiLock:
+                uwsgi.lock()
+            with gLock:
+                return jsonify(rede_relacionamentos.dados_api_cnpj(cnpj, gp['itensFlag']))
+        finally:
+            if gUwsgiLock:
+                uwsgi.unlock()    
+    #.def serve_dados_detalhes
+    
+if config.config['API'].getboolean('api_caminhos', False):
+    @app.route('/rede/api/caminhos', methods=['GET', 'POST']) 
+    @limiter.limit(limiter_dados)
+    def serve_api_caminhos():
+        try: 
+
+            if gUwsgiLock:
+                uwsgi.lock()
+            with gLock:
+                try:
+                    dados = request.get_json(force=True)
+                    
+                except:
+                    return abort(400, description='Não encontrou json na requisição')
+                
+                if (dados.get('api_key','') not in api_key_validas) or not dados.get('api_key'):
+                    return abort(401,  description='Chave inválida')
+                #print(dados)
+                #return jsonify(dados)
+                camada = min(gp['camadaMaxima'], int(dados['camada']))
+                return jsonify(rede_relacionamentos.camadasRede(camada=camada, grupo= dados['grupo'], listaIds=None, criterioCaminhos=dados['criterioCaminhos']))
+        finally:
+            if gUwsgiLock:
+                uwsgi.unlock()    
+    #.def serve_api_caminhos
 
 #https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 
@@ -261,16 +358,20 @@ def serve_dados_html():
 #local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'arquivos')
 local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos)
 
-@app.route('/rede/arquivos_json/<arquivopath>', methods=['POST'])
+@app.route('/rede/arquivos_json/<arquivopath>', methods=['GET','POST','DELETE'])
 @limiter.limit(limiter_padrao)
 def serve_arquivos_json(arquivopath):
+    #paramApagar = request.args.get('apagar', default = '', type = str)
     filename = secure_filename(arquivopath)
+    #parametros = request.get_json()
     extensao = os.path.splitext(filename)[1]
     if not extensao:
         filename += '.json'
         extensao = '.json'
-    if extensao =='.json':
-        if filename.startswith('temporario'): #se for temporário, apaga depois de copiar dados para stream
+    #if extensao =='.json':
+    if extensao in ('.json', '.csv', '.xlsx', '.pdf'):
+        #if filename.startswith('temporario') or parametros.get('apagar','')=='sim': #se for temporário, apaga depois de copiar dados para stream
+        if filename.startswith('_temporario') or request.method=='DELETE': #se for temporário, apaga depois de copiar dados para stream
             return_data = io.BytesIO()
             caminho = os.path.join(local_file_dir,filename)
             if not os.path.exists(caminho):
@@ -278,7 +379,8 @@ def serve_arquivos_json(arquivopath):
             with open(caminho, 'rb') as fo:
                 return_data.write(fo.read())
             return_data.seek(0)
-            os.remove(caminho)
+            if filename not in ['rede_cnpj_diagrama.json',] and extensao=='.json':
+                os.remove(caminho)
             return send_file(return_data, mimetype='application/json', download_name=arquivopath)            
         else:
             return send_from_directory(local_file_dir, filename)
@@ -327,32 +429,6 @@ def serve_arquivos_upload():
     return jsonify({'nomeArquivoServidor':filename})
 #.def serve_arquivos_upload
 
-@app.route('/rede/selecao_de_itens', methods=['POST']) #usando post, não precisa criar arquivo temporário para abrir nova aba com itens selecionados
-@limiter.limit(limiter_padrao)
-def serve_post_json():
-    listaJson = request.form.get('data')
-    try:
-        listaJson = json.loads(listaJson)
-    except:
-        listaJson = {}
-    paramsInicial = {'cpfcnpj':'', 
-                     'camada':0,
-                     'mensagem':'',
-                     'bMenuInserirInicial': config.par.bMenuInserirInicial,
-                     'inserirDefault':'',
-                     'idArquivoServidor':'',
-                     'lista':'',
-                     'json':listaJson,
-                     'listaImagens': imagensNaPastaF(True),
-                     'bBaseReceita': 1 if config.config['BASE'].get('base_receita','') else 0,
-                     'bBaseFullTextSearch': 1 if config.config['BASE'].get('base_receita_fulltext','') else 0,
-                     'bBaseLocal': 1 if config.config['BASE'].get('base_local','') else 0,
-                     'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
-                     'referenciaBD':config.referenciaBD,
-                     'referenciaBDCurto':config.referenciaBD.split(',')[0]}
-    return render_template('rede_template.html', parametros=paramsInicial)
-#.def serve_post_json
-
 @app.route('/rede/json_para_base/<comentario>', methods=['POST'])
 @limiter.limit(limiter_padrao)
 def serve_arquivos_json_upload_para_base(comentario=''):
@@ -397,7 +473,7 @@ def serve_envia_json_acao(acao=''):
 
       
 @app.route('/rede/dadosemarquivo/<formato>', methods = ['POST'])
-@limiter.limit(limiter_padrao)
+@limiter.limit(limiter_arquivos)
 def serve_dadosEmArquivo(formato='xlsx'):
     #dados = json.loads(request.form['dadosJSON']) #formato anterior
     try: 
@@ -507,7 +583,8 @@ if bConsultaChaves:
         try:
         #if True:
             if texto_busca:
-                r = await rede_google.json_busca(texto_busca, pagina, n_palavras_chave)
+                #r = await rede_google.json_busca(texto_busca, pagina, n_palavras_chave)
+                r = await rede_google.json_google_chaves(texto_busca, pagina, n_palavras_chave)
             elif link:
                 if link.startswith('LI_'):
                     link = link[3:]
