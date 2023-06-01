@@ -1,7 +1,7 @@
 # REDE-CNPJ - Visualização de dados públicos de CNPJ
 
 ## TUTORIAL:
-Instalação passo-a-passo no Windows:<br>
+Instalação passo-a-passo no Windows (versão 1/6/2023):<br> 
 
 - Instale o Anaconda, no link https://www.anaconda.com/<br>
 ![image](https://user-images.githubusercontent.com/71139693/179334927-750cff12-88ce-4102-b004-05a9f005c470.png)
@@ -47,16 +47,15 @@ para executar a rede-cnpj<br>
   
  ## USAR A BASE COMPLETA DE CNPJS: <br>
  - As instruções para gerar a base completa de CNPJs estão na página https://github.com/rictom/cnpj-sqlite <br>
- - Copie o arquivo cnpj.db para a pasta rede: <br>
-  ![image](https://user-images.githubusercontent.com/71139693/179335685-d193dcf6-738e-4628-8221-b5132896c27a.png)
+ - Copie o arquivo cnpj.db para a pasta rede/bases: <br>
 
- - A partir da versão 0.9, é preciso gerar um arquivo rede.db. Para isso, rode o comando <b>python rede_cria_tabela.py</b>. Obs: esse script tenta criar a tabela primeiro na memória do computador. Se este tiver menos de 16GB, a rotina dará erro de "database or disk full"<br>
+
+ - A partir da versão 1.0, é preciso gerar um arquivo rede.db e rede_search.db. Para isso, posicione o console na pasta bases e rode o comando <b>python rede_cria_tabela_rede.db.py</b>. Obs: esse script tenta criar a tabela primeiro na memória do computador. Se este tiver menos de 16GB, a rotina dará erro de "database or disk full"<br>
  - Se o computador tiver <b>menos de 16GB</b>, ao invés do script <b>rede_cria_tabela.py</b> utilize <b>python rede_cria_tabela_rede.db.HD.py</b>
  - Para utilizar a base completa na rede-cnpj, abra o arquivo o rede.ini no Bloco de Notas:<br>
- ![image](https://user-images.githubusercontent.com/71139693/208316096-b29c636e-6af1-4cbd-810a-1d7a3eec4a3f.png)
-
- - Altere o parâmetro base_rede para rede.db e base_receita para cnpj.db<br>
-![image](https://user-images.githubusercontent.com/71139693/208316115-0054e118-df41-46d6-8474-ae2618039fef.png)
+base_rede = bases/rede.db<br>
+base_rede_search = bases/rede_search.db<br>
+base_receita = bases/cnpj.db<br>
 
  - Altere também a mensagem_advertencia para não causar confusão. Tire o # do primeiro mensagem_advertencia e coloque #  no segundo mensagem_advertencia. <br>
    ![image](https://user-images.githubusercontent.com/71139693/179335724-39085411-4caf-4ee5-ac5b-275ff195a8a8.png)
@@ -68,12 +67,12 @@ para executar a rede-cnpj<br>
  - Agora o projeto está rodando localmente com a base completa de cnpjs.<br>
   
  ## Para visualizar os links de endereços, telefones e e-mails
- - Gere o arquivo cnpj_links_ete.db pelo comando <b>python cnpj_normaliza_enderecos.py</b><br>
+ - Gere o arquivo cnpj_links_ete.db pelo comando <b>python rede_cria_tabela_cnpj_links_ete.py</b><br>
 
 
  - Altere o arquivo de configuração rede.ini<br>
-![image](https://user-images.githubusercontent.com/71139693/179335812-edc5461b-1bee-45ee-8741-d1171e919b9b.png)
-- Coloque base_endereco_normalizado = cnpj_links_ete.db. Salve o rede.ini e reinicie o projeto.
+base_endereco_normalizado = cnpj_links_ete.db.<br>
+ Salve o rede.ini e reinicie o projeto.<br>
 
 
   
