@@ -180,9 +180,6 @@ https://fontawesome.com<br>
 - Arrastar link traz o favicon do site correspondente.<br>
 - Opção para buscar caminhos;<br>
 - Opção para apagar arquivo json no servidor.<br>
-- Dados de devedores em situação de cobrança na PGFN;<br>
-- Dados de pagamento para favorecidos do Portal da Transparência da CGU;<br>
-- Marcador de servidor público federal com dados do Portal da CGU.<br>
 
 <b>versão 0.9 (dezembro/2022)</b>
 - Grande melhoria de desempenho (10X mais rápido!!!);<br>
