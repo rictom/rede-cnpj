@@ -168,16 +168,16 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
-<b>versão online 0.9.3 (maio/2023)</b>
+<b>versão 1.0 (junho/2023)</b>
+- Agora é necessário usar os arquivos rede.db e rede_search.db (ver guia de instalação Windows);<br>
+- Arquivos sqlite .db na pasta bases;<br>
+- Arquivos db de teste tem nomes embaralhados;<br>
+- Compatível com versão aplicativo disponível no site redecnpj.com.br;<br>
 - Botões Gravar no Navegador e Adicionar: Possibilita guardar o gráfico e recuperar os dados em outra sessão;<br>
 - Opções Copiar (CTRL+C) e Colar (CTRL+V) itens entre abas da RedeCNPJ.<br>
-
-<b>versão online 0.9.2 (abril/2023)</b>
 - Botão Copy/Drag para copiar itens selecionados para uma nova aba da RedeCNPJ;<br>
 - Opção Menu> Filtrar/Localizar> Busca em sites> Abre Busca em Abas (Tecla B) - Abre abas com busca no Google, Bing, DuckDuckGo, etc.<br>
 - Arrastar link traz o favicon do site correspondente.<br>
-
-<b>versão online 0.9.1 (março/2023)</b>
 - Opção para buscar caminhos;<br>
 - Opção para apagar arquivo json no servidor.<br>
 - Dados de devedores em situação de cobrança na PGFN;<br>
