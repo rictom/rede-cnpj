@@ -37,7 +37,6 @@ except:
 
 app = Flask("rede")
 app.secret_key = '+_5(hu=eva((beu_wbm5d_4s8g)*!)xmw&pfw^w4bw$2^r$h&s'  # Defina uma chave secreta para usar na sessão
-API_URL = 'http://redecnpj.cge.rj.gov.br/auth'  # URL da API de autenticação
 app.config['MAX_CONTENT_PATH'] = 100000000
 app.config['UPLOAD_FOLDER'] = 'arquivos'
 kExtensaoDeArquivosPermitidos = ['.xls','.xlsx','.txt','.docx','.doc','.pdf', '.ppt', '.pptx', '.csv','.html','.htm','.jpg','.jpeg','.png', '.svg', '.anx', '.anb']
@@ -219,11 +218,15 @@ if False: #bloqueia em rede_sqlite_cnpj.py
     gLock =  contextlib.suppress()
     gUwsgiLock = False
 
+AUTH_URL = 'http://redecnpj.cge.rj.gov.br/auth'  # URL da API de autenticação
+
 def autenticar_usuario(username, password):
     # Função para autenticar o usuário na API REST de autenticação
-    response = requests.get(API_URL, params={'username': username, 'password': password})
-    if response.status_code == 200 and response.json().get('message') == 'Ok':
-        return True
+    response = requests.get(AUTH_URL, params={'username': username, 'password': password})
+    if response.status_code == 200:
+        data = response.json()
+        if data.get('message') == 'Ok' and 'REDECNPJ' in data.get('groups', []):
+            return True
     return False
 
 @app.route("/")
