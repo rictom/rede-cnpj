@@ -27,11 +27,12 @@ Orientações detalhadas para instalação em Windows no link https://github.com
 ## Como utilizar o Banco de dados completo de CNPJs com a versão em Python:
 O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa.<br>
 
-Observação: Para rodar o projeto localmente com a base completa, é necessário ter os arquivos cnpj.db e rede.db. O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
+Observação: Para rodar o projeto localmente com a base completa, é necessário ter os arquivos cnpj.db, rede.db e rede_search.db. O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
 O código foi ajustado para o formato disponibilizado pela Receita Federal a partir de 2021.<br> 
 Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
-<b>base_rede = rede.db</b><br>
-<b>base_receita = cnpj.db</b><br>
+<b>base_rede = bases/rede.db</b><br>
+<b>base_rede_search = bases/rede_search.db</b><br>
+<b>base_receita = bases/cnpj.db</b><br>
 
 ### Diagrama da RedeCNPJ na RedeCNPJ<br>
 ![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
