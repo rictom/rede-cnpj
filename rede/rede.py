@@ -163,12 +163,12 @@ login_html = '''
     <div class="container">
        <form action="/login" method="POST" id="login-form">
             <h2 class="title">REDECNPJ</h2><br><br>
-            <p class="error-message" style="color: red;"><!-- ERROR_MESSAGE --></p>
             <label for="username">Nome de usuário:</label>
             <input type="text" id="username" name="username" {% if username %}value="{{ username }}"{% endif %} {% if error_message %}data-error="true"{% endif %} required>
             <label for="password">Senha:</label>
             <input type="password" id="password" name="password" required>
             <input type="submit" value="Entrar">
+            <br><p class="error-message" style="color: red;"><!-- ERROR_MESSAGE --></p><br>
         </form>
         <script>
      document.addEventListener("DOMContentLoaded", function() {
@@ -185,7 +185,6 @@ login_html = '''
         }
     });
 </script>
-
     </div>
 </body>
 </html>
@@ -225,7 +224,16 @@ def autenticar_usuario(username, password):
     response = requests.get(AUTH_URL, params={'username': username, 'password': password})
     if response.status_code == 200:
         data = response.json()
-        if data.get('message') == 'Ok' and 'REDECNPJ' in data.get('groups', []):
+        if data.get('message') == 'Ok':
+            return True
+    return False
+
+def verificar_permissao(username):
+    # Função para verificar se o usuário possui permissão 'REDECNPJ'
+    response = requests.get(AUTH_URL, params={'username': username})
+    if response.status_code == 200:
+        data = response.json()
+        if 'REDECNPJ' in data.get('groups', []):
             return True
     return False
 
@@ -242,15 +250,24 @@ def login():
     if request.method == "POST":
         username = request.form.get('username')
         password = request.form.get('password')
+        
+        # Verificar se o usuário/senha são válidos
         if autenticar_usuario(username, password):
-            session['username'] = username
-            return redirect("/rede")
+            
+            # Verificar permissão 'REDECNPJ'
+            if verificar_permissao(username):
+                session['username'] = username
+                return redirect("/rede")
+            else:
+                error_message = "Permissão insuficiente."
         else:
-            username = request.form.get('username')
             error_message = "Usuário ou senha inválidos"
-            login_html_with_error = login_html.replace('<!-- ERROR_MESSAGE -->', escape(error_message))
-            login_html_with_error = login_html_with_error.replace('value="{{ username }}"', 'value="' + escape(username) + '"')
-            return login_html_with_error
+        
+        # Exibir mensagem de erro adequada
+        username = request.form.get('username')
+        login_html_with_error = login_html.replace('<!-- ERROR_MESSAGE -->', escape(error_message))
+        login_html_with_error = login_html_with_error.replace('value="{{ username }}"', 'value="' + escape(username) + '"')
+        return login_html_with_error
     else:
         return login_html
 
@@ -259,6 +276,7 @@ def login():
 def logout():
     session.pop('username', None)
     return redirect("/login")
+
 
 # @app.route("/")
 # def raiz():
