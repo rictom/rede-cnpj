@@ -225,17 +225,8 @@ def autenticar_usuario(username, password):
     if response.status_code == 200:
         data = response.json()
         if data.get('message') == 'Ok':
-            return True
-    return False
-
-def verificar_permissao(username):
-    # Função para verificar se o usuário possui permissão 'REDECNPJ'
-    response = requests.get(AUTH_URL, params={'username': username})
-    if response.status_code == 200:
-        data = response.json()
-        if 'REDECNPJ' in data.get('groups', []):
-            return True
-    return False
+            return data.get('groups', [])
+    return None
 
 @app.route("/")
 def index():
@@ -244,26 +235,25 @@ def index():
     else:
         return redirect("/login")
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     username = None
     if request.method == "POST":
         username = request.form.get('username')
         password = request.form.get('password')
-        
-        # Verificar se o usuário/senha são válidos
-        if autenticar_usuario(username, password):
-            
-            # Verificar permissão 'REDECNPJ'
-            if verificar_permissao(username):
+
+        groups = autenticar_usuario(username, password)
+
+        if groups:
+            if 'REDECNPJ' in groups:
                 session['username'] = username
                 return redirect("/rede")
             else:
                 error_message = "Permissão insuficiente."
         else:
             error_message = "Usuário ou senha inválidos"
-        
-        # Exibir mensagem de erro adequada
+
         username = request.form.get('username')
         login_html_with_error = login_html.replace('<!-- ERROR_MESSAGE -->', escape(error_message))
         login_html_with_error = login_html_with_error.replace('value="{{ username }}"', 'value="' + escape(username) + '"')
@@ -271,12 +261,10 @@ def login():
     else:
         return login_html
 
-
 @app.route("/logout")
 def logout():
     session.pop('username', None)
     return redirect("/login")
-
 
 # @app.route("/")
 # def raiz():
