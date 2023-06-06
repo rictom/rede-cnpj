@@ -28,8 +28,20 @@ caminhoDBBaseLocal =  config.config['BASE'].get('base_local', '').strip()
 if not caminhoDBReceita: #se não houver db da receita, carrega um template para evitar erros nas consultas
     caminhoDBReceita = 'base_cnpj_vazia.db'
 
-if not caminhoDBRede or not os.path.isfile(caminhoDBRede) or not caminhoDBReceita or not os.path.isfile(caminhoDBReceita):
-    sys.exit('Arquivo base cnpj.db ou base rede.db não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto. Devem existir as tabelas rede.db e cnpj.db. O arquivo rede.db é criado com o script rede_cria_tabela.db.')
+# if not caminhoDBRede or not os.path.isfile(caminhoDBRede) or not caminhoDBReceita or not os.path.isfile(caminhoDBReceita):
+#     sys.exit('Arquivo base cnpj.db ou base rede.db não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto. Devem existir as tabelas rede.db e cnpj.db. O arquivo rede.db é criado com o script rede_cria_tabela.db.')
+
+#checagem de arquivos (erro comum)
+for cam in [caminhoDBRede, caminhoDBRedeSearch, caminhoDBEnderecoNormalizado, caminhoDBLinks, caminhoDBBaseLocal]:
+    if not cam:
+        continue
+    if not os.path.isfile(cam):
+        print(f'O arquivo {cam} não foi localizado. Verifique se este arquivo existe. Talvez o parâmetro no arquivo de configuracao rede.ini estaja incorreto. Veja as orientações para instalação da redecnpj.')
+        resp = input('Pressione Enter')
+        sys.exit('Erro.')
+#.for
+
+           
 
 ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
 kLimiteCamada = config.config['ETC'].getint('limite_registros_camada', 1000)
@@ -910,7 +922,7 @@ def camadasRede_caminhos(con, tmp, camada, criterioCaminhos):
     con.executescript(query)
 #.def camadasRede_caminhos
 
-@timeit
+#@timeit
 #def camadasRede_json(camadasIds, cam, camada, mensagem, con, tmp, bCaminhos=False):
 def camadasRede_json(con, tmp, camadasIds, mensagem,  bCaminhos=False):
     nosaux = []

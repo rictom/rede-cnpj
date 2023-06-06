@@ -672,3 +672,9 @@ if __name__ == '__main__':
         webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 
     app.run(host='0.0.0.0',debug=True, use_reloader=False, port=config.par.porta_flask)
             #ssl_context=('certificado/rede_selfsigned.crf', 'certificado/rede_selfsigned.key'))
+    try: #fecha splash na versão .exe
+        import pyi_splash
+        pyi_splash.update_text('UI Loaded ...')
+        pyi_splash.close()
+    except:
+        pass

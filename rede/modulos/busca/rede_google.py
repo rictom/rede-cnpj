@@ -17,7 +17,7 @@ if platform.system()=='Windows': #evitar um erro no windows
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
 try: #spacy usa muita memória. Se não for utilizar, não colocar rede_spacy na pasta busca.
-    from busca import rede_spacy
+    from . import rede_spacy
     bspacy = True
 except Exception as err:
     print('módulo rede_spacy não foi carregado: ', err)
