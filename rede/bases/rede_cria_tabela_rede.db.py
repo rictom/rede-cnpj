@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+""" 
 Created 2022/10/01
 @author: rictom
 https://github.com/rictom/rede-cnpj
@@ -12,12 +12,25 @@ Esta rotina:
 O arquivo cnpj.db deve estar na mesma pasta que este script. 
 """
 
-import sqlalchemy, time, sys, sqlite3 
+#import sqlalchemy
+import time, sys, sqlite3, os, psutil
 
-#camDbSqliteBaseCompleta = r"cnpj.db" #aqui precisa ser a tabela completa
-camDBcnpj = r"cnpj.db" #aqui precisa ser a tabela completa
-camDBrede = r"rede.db"
-camDBrede_search = r'rede_search.db'
+#camDbSqliteBaseCompleta = r"cnpj.db" 
+camDBcnpj = "cnpj.db" 
+camDBrede = 'rede.db'
+camDBrede_search = 'rede_search.db'
+
+bMemoria = False #se tiver menos de 16GB, use bMemoria=False
+
+if bMemoria:
+    if psutil.virtual_memory().total < 17005105152: #16GB
+        print('ATENÇÃO. Como este script tenta gerar a tabela primeiro na memória RAM, há um requisito minimo de 16GB. Por isso este script possivelmente dará erro.')
+        sys.exit()
+
+hdd = psutil.disk_usage('/')
+if hdd.free/(2**30) < 20:
+    print(f'ATENÇÃO. Este script vai criar arquivos do tamanho de aproximadamente 20G, mas há somente {hdd.free/(2**30)} livres no HD. Libere espaço e tente novamente.')
+    sys.exit()
 
 if os.path.exists(camDBrede):
     print('o arquivo ' + camDBrede + ' já existe. Apague-o primeiro.')
@@ -26,13 +39,12 @@ if os.path.exists(camDBrede_search):
     print('o arquivo ' + camDBrede_search + ' já existe. Apague-o primeiro.')
     sys.exit(0)
 
-resp = input(f'Este script vai criar ou alterar a base {camDBrede}. Leva cerca de duas horas. Deseja prosseguir (y,n)?')
+    
+resp = input(f'Este script vai criar ou alterar a base {camDBrede}. Leva cerca de 1 ou 2hs. Deseja prosseguir (y,n)?')
 if resp.lower()!='y' and resp.lower()!='s':
     sys.exit()
 
-#engine = sqlalchemy.create_engine(f'sqlite:///{camDbSqliteBaseCompleta}')
-engine = sqlite3.connect(camDBrede)
-engine.execute("ATTACH DATABASE '" + camDBcnpj.replace('\\','/') + "' as cnpj")
+
 
 sql_ligacao= '''
 -- cria tabela de ligação (necessário a partir de versão 0.8.9 (outubro/2022)
@@ -84,12 +96,32 @@ from cnpj.socios t
 left join cnpj.qualificacao_socio sq ON sq.codigo=t.qualificacao_representante_legal
 where length(t.cnpj_cpf_socio)=11 and t.representante_legal<>'***000000**' --t.nome_socio=''
 ;
--- PJ->PJ filial->matriz
+--tabela filiais
+create table tfilial AS 
+select cnpj, cnpj_basico
+from estabelecimento t
+where  t.matriz_filial = '2' -- is '1' 
+;
+CREATE INDEX idx_filiais ON tfilial (cnpj_basico)
+;
+-- PJ filial-> PJ matriz
+insert into ligacao1
+select 'PJ_'||tf.cnpj as origem, 'PJ_'||t.cnpj as destino, 'filial' as tipo, 'estabelecimento' as base
+from tfilial tf
+left join cnpj.estabelecimento t on t.cnpj_basico=tf.cnpj_basico 
+where  t.matriz_filial = '1' -- is '1'
+;
+DROP TABLE IF EXISTS tfilial 
+;
+/*
+-- PJ->PJ filial->matriz, versao anterior, lenta por causa do self join
 insert into ligacao1
 select 'PJ_'||tf.cnpj as origem, 'PJ_'||t.cnpj as destino, 'filial' as tipo, 'estabelecimento' as base
 from cnpj.estabelecimento t
-inner join cnpj.estabelecimento tf on tf.cnpj_basico=t.cnpj_basico and tf.cnpj<>t.cnpj
-where t.matriz_filial is "1" -- estava "1" --is é mais rapido que igual (igual é muito lento)
+left join cnpj.estabelecimento tf on tf.cnpj_basico=t.cnpj_basico 
+where  t.matriz_filial = '1' -- is '1' 
+and tf.matriz_filial = '2' -- is '2' --tf.cnpj<>t.cnpj 
+*/
 ;
 
 -----------------------------------
@@ -111,6 +143,14 @@ CREATE  INDEX idx_ligacao_destino ON ligacao (id2)
 ;
 '''
 
+#engine = sqlalchemy.create_engine(f'sqlite:///{camDbSqliteBaseCompleta}')
+
+if bMemoria:
+    engine = sqlite3.connect(':memory:')
+else:
+    engine = sqlite3.connect(camDBrede)
+engine.execute("ATTACH DATABASE '" + camDBcnpj.replace('\\','/') + "' as cnpj")
+
 def executaSequencia(camDB, sqlsequencia):    
     print(time.ctime(), f'Inicio - criando tabela {camDB}')
     ktotal = len(sqlsequencia.split(';'))
@@ -128,14 +168,17 @@ def executaSequencia(camDB, sqlsequencia):
     print(time.ctime(), ' fim sqlseq')
     
     print(time.ctime(), 'salvando tabela')
-    #bckengine = sqlite3.connect(camDB, detect_types=sqlite3.PARSE_DECLTYPES, uri=True)
-    #with bckengine: #isso faz commit
-    #    engine.backup(bckengine)
-    #bckengine.close()
-    #engine.close()
+    if bMemoria:
+        bckengine = sqlite3.connect(camDB, detect_types=sqlite3.PARSE_DECLTYPES, uri=True)
+        with bckengine: #isso faz commit
+            engine.backup(bckengine)
+        bckengine.close()
+    engine.close()
 #.def executaSequencia
 
+# cria tabela rede.db
 executaSequencia(camDBrede, sqlsequencia=sql_ligacao)
+
 
 sql_search= '''
 ----------------------------------------------
@@ -153,34 +196,67 @@ select 'PJ_' || te.cnpj ||'-' || t.razao_social  as id_descricao
 from cnpj.estabelecimento te 
 left join cnpj.empresas t on t.cnpj_basico=te.cnpj_basico
 where te.matriz_filial is '1'
-UNION
+UNION ALL
 select 'PJ_' || te.cnpj ||'-' || te.nome_fantasia  as id_descricao 
 from cnpj.estabelecimento te 
--- where trim(te.nome_fantasia) <>''
-UNION
+-- where trim(te.nome_fantasia) <>'' --incluir este where faz que ignore cnpj filial sem nome fantasia, o que faz falta na hora de busca filiais por cnpj básico
+UNION ALL
 select  id1  as id_descricao
-from ligacao
+from rede.ligacao
 where substr(id1,1,3)<>'PJ_'
-UNION
+UNION ALL
 select  id2 as id_descricao
-from ligacao
+from  rede.ligacao
 where substr(id2,1,3)<>'PJ_'
 ) as tunion
 group by id_descricao --talvez group by seja mais rápido que distinct
-
+;
 
 '''
 
-#engine = sqlalchemy.create_engine(f'sqlite:///{camDBrede_search}')
-engine = sqlite3.connect(camDBrede_search)
-#engine = sqlite3.connect(':memory:')
-engine.execute("ATTACH DATABASE '" + camDBcnpj.replace('\\','/') + "' as cnpj")
-engine.execute("ATTACH DATABASE '" + camDBrede + "' as rede")
+#incluir na mão id_search para a tabela links. Abrir rede.db no dbbrowser, anexar links.db e  rodar o sql abaixo
+parte_tabela_links = '''
+--inserir tabela links para busca em id_search
+insert into id_search
+select distinct id_descricao
+from ( 
+select  t.id1  as id_descricao
+from links.links t
+where substr(t.id1,1,3)<>'PJ_'
+UNION
+select  t.id2 as id_descricao
+from links.links t
+where substr(t.id2,1,3)<>'PJ_'
+) as tunion
+group by id_descricao --talvez group by seja mais rápido que distinct
+;
+'''
 
+#engine = sqlalchemy.create_engine(f'sqlite:///{camDbSqliteBaseCompleta}')
+#engine = sqlite3.connect(camDBrede)
+if bMemoria:
+    engine = sqlite3.connect(':memory:')
+    
+else:
+    engine = sqlite3.connect(camDBrede_search)
+engine.execute("ATTACH DATABASE '" + camDBrede + "' as rede")
+engine.execute("ATTACH DATABASE '" + camDBcnpj.replace('\\','/') + "' as cnpj")
+
+# cria tabela rede_search.db
 executaSequencia(camDBrede_search, sqlsequencia=sql_search)
 
 
-print('As tabelas rede.db e rede_search.db foram criadas.')
-print(time.ctime(), 'Fim. ')
+'''
+#https://stackoverflow.com/questions/5831548/how-to-save-my-in-memory-database-to-hard-disk
+conn = sqlite3.connect('file:existing_db.db?mode=memory',detect_types=sqlite3.PARSE_DECLTYPES,uri=True)
+bckup = sqlite3.connect('file:backup.db',detect_types=sqlite3.PARSE_DECLTYPES,uri=True)
+with bckup:
+    conn.backup(bckup)
+bckup.close()
+conn.close()
+'''
+
+print(f'Os arquivos {camDBrede} e {camDBrede_search} foram gerados.')
+print(time.ctime(), 'Fim!!!!!!!!!! ')
 resp = input('Pressione Enter.')
                
