@@ -31,7 +31,7 @@ Instalação passo-a-passo no Windows (versão 1/6/2023):<br>
 ![image](https://user-images.githubusercontent.com/71139693/179335482-85938f00-3176-45ed-82be-d51b54c30e6b.png)
 
 - O Projeto pode ser executado, mas deve se mudar o console para a pasta rede. Digite cd rede <Enter> e na outra linha<br>
-python rede.py<br>
+ <b>python rede.py</b><br>
 para executar a rede-cnpj<br>
 ![image](https://user-images.githubusercontent.com/71139693/179335510-4f092b99-c988-4c02-a22d-200f500d8d42.png)
 
@@ -49,29 +49,28 @@ para executar a rede-cnpj<br>
  - As instruções para gerar a base completa de CNPJs estão na página https://github.com/rictom/cnpj-sqlite <br>
  - Copie o arquivo cnpj.db para a pasta rede/bases: <br>
 
-
- - A partir da versão 1.0, é preciso gerar um arquivo rede.db e rede_search.db. Para isso, posicione o console na pasta bases e rode o comando <b>python rede_cria_tabela_rede.db.py</b>. Obs: esse script tenta criar a tabela primeiro na memória do computador. Se este tiver menos de 16GB, a rotina dará erro de "database or disk full"<br>
- - Se o computador tiver <b>menos de 16GB</b>, ao invés do script <b>rede_cria_tabela.py</b> utilize <b>python rede_cria_tabela_rede.db.HD.py</b>
+ - A partir da versão 1.0, é preciso gerar um arquivo rede.db e rede_search.db. Para isso, posicione o console na pasta bases e rode o comando <b>python rede_cria_tabela_rede.db.py</b>. Obs: Se o computador este tiver pouca memória RAM, a rotina poderá dar erro de "database or disk full"<br>
  - Para utilizar a base completa na rede-cnpj, abra o arquivo o rede.ini no Bloco de Notas:<br>
-base_rede = bases/rede.db<br>
+<b>base_rede = bases/rede.db<br>
 base_rede_search = bases/rede_search.db<br>
-base_receita = bases/cnpj.db<br>
+ base_receita = bases/cnpj.db<br></b>
 
  - Altere também a mensagem_advertencia para não causar confusão. Tire o # do primeiro mensagem_advertencia e coloque #  no segundo mensagem_advertencia. <br>
    ![image](https://user-images.githubusercontent.com/71139693/179335724-39085411-4caf-4ee5-ac5b-275ff195a8a8.png)
  - Salve o arquivo rede.ini. <br>
  - Se a rede-cnpj ainda estiver rodando no console, pressione CTRL+C para parar (não dá para rodar duas instâncias do projeto ao mesmo tempo)<br>
- - Digite no console python rede.py<br>
+ - Digite no console <b>python rede.py</b><br>
 ![image](https://user-images.githubusercontent.com/71139693/179335747-16939bf1-0f02-4329-849d-d41677f05920.png)
 
  - Agora o projeto está rodando localmente com a base completa de cnpjs.<br>
   
  ## Para visualizar os links de endereços, telefones e e-mails
  - Gere o arquivo cnpj_links_ete.db pelo comando <b>python rede_cria_tabela_cnpj_links_ete.py</b><br>
+ - Obs: O arquivo cnpj_links_ete.db é opcional, a redeCNPJ funciona mesmo sem este arquivo, que tem os vínculos entre empresas com mesmo endereço, telefone ou email.
 
 
  - Altere o arquivo de configuração rede.ini<br>
-base_endereco_normalizado = cnpj_links_ete.db.<br>
+ <b>base_endereco_normalizado = cnpj_links_ete.db.</b><br>
  Salve o rede.ini e reinicie o projeto.<br>
 
 
