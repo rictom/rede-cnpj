@@ -32,7 +32,7 @@ if not caminhoDBReceita: #se não houver db da receita, carrega um template para
 #     sys.exit('Arquivo base cnpj.db ou base rede.db não foi localizado. Veja o caminho da base no arquivo de configuracao rede.ini está correto. Devem existir as tabelas rede.db e cnpj.db. O arquivo rede.db é criado com o script rede_cria_tabela.db.')
 
 #checagem de arquivos (erro comum)
-for cam in [caminhoDBRede, caminhoDBRedeSearch, caminhoDBEnderecoNormalizado, caminhoDBLinks, caminhoDBBaseLocal]:
+for cam in [caminhoDBReceita, caminhoDBRede, caminhoDBRedeSearch, caminhoDBEnderecoNormalizado, caminhoDBLinks, caminhoDBBaseLocal]:
     if not cam:
         continue
     if not os.path.isfile(cam):
@@ -40,8 +40,6 @@ for cam in [caminhoDBRede, caminhoDBRedeSearch, caminhoDBEnderecoNormalizado, ca
         resp = input('Pressione Enter')
         sys.exit('Erro.')
 #.for
-
-           
 
 ligacaoSocioFilial = config.config['ETC'].getboolean('ligacao_socio_filial',False) #registra cnpjs consultados
 kLimiteCamada = config.config['ETC'].getint('limite_registros_camada', 1000)
@@ -1483,14 +1481,14 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
         d['id'] = 'PJ_'+ d['cnpj']
         d['cnpj_formatado'] = f"{d['cnpj'][:2]}.{d['cnpj'][2:5]}.{d['cnpj'][5:8]}/{d['cnpj'][8:12]}-{d['cnpj'][12:]}"
         
-        if d['natureza_juridica'] in ('2135', '4120'): #remove empresario individual, produtor rural
-            ts = '#INFORMAÇÃO EDITADA#'
-            d['endereco'] = ts
-            d['telefone1'] = ts
-            d['telefone2'] = ''
-            d['fax'] = ''
-            d['correio_eletronico'] = ts
-            d['cep'] = ts
+        # if d['natureza_juridica'] in ('2135', '4120'): #remove empresario individual, produtor rural
+        #     ts = '#INFORMAÇÃO EDITADA#'
+        #     d['endereco'] = ts
+        #     d['telefone1'] = ts
+        #     d['telefone2'] = ''
+        #     d['fax'] = ''
+        #     d['correio_eletronico'] = ts
+        #     d['cep'] = ts
         d['natureza_juridica'] = f"{d['natureza_juridica']}-{gdic.dicNaturezaJuridica.get(d['natureza_juridica'],'')}"   
         if bsocios:
             d['dados_socios'] = dsocios.get(d['cnpj'])
