@@ -40,7 +40,7 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 
 
 ## Site RedeCNPJ:
-No site https://www.redecnpj.com.br é possível baixar uma versão "aplicativo" da RedeCNPJ, bem como outro aplicativo para baixar os arquivos de dados abertos do site da Receita Fedral e converter para o formato para uso na RedeCNPJ. Isto é recomendado para os usuários que não tem familiaridade com o Python.
+O site https://www.redecnpj.com.br está funcionando com uma base de teste, sem dados reais de empresas. Para os usuários que não tem familiaridade com o Python, em https://www.redecnpj.com.br/rede/aviso é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ. 
 
 ## Opções:<a id="ajuda"></a>
 
