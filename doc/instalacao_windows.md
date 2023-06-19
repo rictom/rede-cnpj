@@ -57,6 +57,8 @@ base_rede_search = bases/rede_search.db<br>
 
  - Altere também a mensagem_advertencia para não causar confusão. Tire o # do primeiro mensagem_advertencia e coloque #  no segundo mensagem_advertencia. <br>
    ![image](https://user-images.githubusercontent.com/71139693/179335724-39085411-4caf-4ee5-ac5b-275ff195a8a8.png)
+ - Altere o parâmetro referencia_bd que será exibido na parte superior da tela da redeCNPJ e coloque a data da base de CNPJs, por exemplo:<br>
+   <b>referencia_bd=CNPJ(11/02/2023)</b><br>
  - Salve o arquivo rede.ini. <br>
  - Se a rede-cnpj ainda estiver rodando no console, pressione CTRL+C para parar (não dá para rodar duas instâncias do projeto ao mesmo tempo)<br>
  - Digite no console <b>python rede.py</b><br>
