@@ -36,7 +36,6 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 
 ### Diagrama da RedeCNPJ na RedeCNPJ<br>
 ![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
-https://www.redecnpj.com.br/rede/grafico_no_servidor/rede_cnpj_diagrama.json
 
 
 ## Site RedeCNPJ:
