@@ -40,7 +40,8 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 
 
 ## Site RedeCNPJ:
-O site https://www.redecnpj.com.br está funcionando com uma base de teste, sem dados reais de empresas. Para os usuários que não tem familiaridade com o Python, em https://www.redecnpj.com.br/rede/aviso é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ. 
+Para os usuários que não tem familiaridade com o Python, em https://www.redecnpj.com.br/rede/aviso é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ.<br>
+[Este site](https://rictom.pythonanywhere.com/rede/) está rodando com uma versão da RedeCNPJ com base de teste, sem dados reais de empresas. 
 
 ## Opções:<a id="ajuda"></a>
 
