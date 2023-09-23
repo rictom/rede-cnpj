@@ -36,12 +36,12 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 
 ### Diagrama da RedeCNPJ na RedeCNPJ<br>
 ![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
-[Clique para abrir o diagrama](https://rictom.pythonanywhere.com/rede/grafico_no_servidor/rede_cnpj_diagrama.json)
+[Clique para abrir o diagrama](https://redecnpj.pythonanywhere.com/rede/grafico_no_servidor/rede_cnpj_diagrama.json)
 
 
 ## Site RedeCNPJ:
 Para os usuários que não tem familiaridade com o Python, em https://www.redecnpj.com.br/rede/aviso é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ.<br>
-[Este site](https://rictom.pythonanywhere.com/rede/) está rodando com uma versão da RedeCNPJ com base de teste, sem dados reais de empresas. 
+[Este site](https://redecnpj.pythonanywhere.com/rede/) está rodando com uma versão da RedeCNPJ com base de teste, sem dados reais de empresas. 
 
 ## Opções:<a id="ajuda"></a>
 
