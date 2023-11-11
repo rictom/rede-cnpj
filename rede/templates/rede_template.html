@@ -7,7 +7,6 @@
 <meta name="description" content="Visualização Gráfica de Empresas e de Sócios com dados abertos da Receita Federal do Brasil. Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."/>
 <meta name="keywords" content="CNPJ, Dados Abertos, Receita Federal, OSINT"/>
 <meta name="author" content="https://github.com/rictom/rede-cnpj"/>
-<meta name="google-site-verification" content="6mPFyguPx-3Gmn2rMu4YXAv7BrAJGGDGZl6K0oCOtGg" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" /> <!--, minimal-ui" /--> 
 <!--meta name="viewport" content="width=device-width, user-scalable=no" /-->
@@ -26,8 +25,7 @@ https://www.freepik.com/
 
 <meta property="og:title" content="Rede CNPJ" />
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://www.redecnpj.com.br" />
-<meta property="og:image" content="https://www.redecnpj.com.br/static/imagem/favicon.jpg"/>
+<meta property="og:url" content="" />
 <!--
 <link rel="shortcut icon" href="/static/imagem/favicon.ico" type="imagem/x-icon"> colocando /rede/ abaixo, para evitar erro quando rodando no nginx. -->
 <link rel="icon" href="/static/imagem/favicon.ico?v=1" type="imagem/x-icon"/>
@@ -5514,10 +5512,10 @@ function main() {
 		</button>
 		
 		{% if not parametros.mobile %}
-			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir este projeto no Github.&#10;&#10;{{ parametros.mensagem }}'>
-				<b>RedeCNPJ</b>
+			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://github.com/rictom/rede-cnpj/')"  title='Clique para abrir o código original no Github. ATENÇÃO: o projeto é open source.'>
+				<b>RedeCNPJ no Github</b>
 			</button>
-			<a href=mailto:redecnpj.com.br@gmail.com?subject=RedeCNPJ title='Envie comentários e sugestões para o email redecnpj.com.br@gmail.com. Para problemas técnicos, abra uma issue na página do projeto no Github.'><i class="fa fa-envelope" aria-hidden="true"></i></a>
+			
 		{% endif %}
 		{% if parametros.bBaseReceita %}
 			{% if not parametros.mobile %}
