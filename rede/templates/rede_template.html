@@ -3926,9 +3926,13 @@ function alterarItens(dadosNos) {//altera dados do item a partir de lista de dad
 					ui.getElementsByTagName('rect')[0].setAttribute('fill',valor);
 				} catch (e){console.log(e); };		
 			} else if (chave=='imagem') {
+				var urlImagem = baseImagem + valor;
+				if (valor.startsWith('http')) {
+					urlImagem = valor;
+				}
 				try {
-					ui.getElementsByTagName('image')[0].setAttribute('xlink:href', baseImagem + valor);
-				} catch (e){console.log(e); };			
+					ui.getElementsByTagName('image')[0].setAttribute('xlink:href', urlImagem);
+				} catch (e){console.log(e); };				
 			}
 		}		
 	}
