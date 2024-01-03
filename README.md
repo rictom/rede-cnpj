@@ -8,6 +8,15 @@ Ferramenta para observar o relacionamento entre empresas e sócios, a partir dos
 A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 
+## RedeCNPJ Online:
+A versão online com dados públicos funciona agora no site https://www.redecnpj.com. A versão online com acesso gratuito foi descontinuada em maio/2023.
+
+## Versões Aplicativo:
+Para os usuários que não tem familiaridade com o Python, em [https://www.redecnpj.com.br/rede/aplicativo.html](https://www.redecnpj.com.br/rede/pag/aplicativo.html) é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ. Os aplicativos foram gerados a partir do código fonte deste repositório.<br>
+
+## Versão Online de teste:
+[Este site](https://redecnpj.pythonanywhere.com/rede/) está rodando com uma versão da RedeCNPJ com base de teste, sem dados reais de empresas. 
+
 ## Versão em python (execução local):
 É preciso ter instalado no computador:
 - python <b>versão 3.9</b> ou posterior.<br> 
@@ -36,12 +45,7 @@ Altere o arquivo de configuração rede.ini, mudando as linhas de configuração
 
 ### Diagrama da RedeCNPJ na RedeCNPJ<br>
 ![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
-[Clique para abrir o diagrama](https://rictom.pythonanywhere.com/rede/grafico_no_servidor/rede_cnpj_diagrama.json)
-
-
-## Site RedeCNPJ:
-Para os usuários que não tem familiaridade com o Python, em https://www.redecnpj.com.br/rede/aviso é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ.<br>
-[Este site](https://rictom.pythonanywhere.com/rede/) está rodando com uma versão da RedeCNPJ com base de teste, sem dados reais de empresas. 
+[Clique para abrir o diagrama](https://redecnpj.pythonanywhere.com/rede/grafico_no_servidor/rede_cnpj_diagrama.json)
 
 ## Opções:<a id="ajuda"></a>
 
