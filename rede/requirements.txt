@@ -14,5 +14,6 @@ aioflask
 aiohttp
 asgiref
 #para mapa
-folium
+#folium
+branca
 orjson
