@@ -145,23 +145,6 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 #### Base de CNPJ
 Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj ou https://dadosabertos.rfb.gov.br/CNPJ/ (http://200.152.38.155/CNPJ/).<br>
 
-#### Doações e Pagamentos - Eleições 2022
-https://dadosabertos.tse.jus.br/dataset/dadosabertos-tse-jus-br-dataset-prestacao-de-contas-eleitorais-2022
-
-#### Portal da Transparência da CGU
-https://www.portaltransparencia.gov.br/download-de-dados/pep<br>
-https://www.portaltransparencia.gov.br/download-de-dados/ceaf<br>
-https://www.portaltransparencia.gov.br/download-de-dados/ceis<br>
-https://www.portaltransparencia.gov.br/download-de-dados/cnep<br>
-https://www.portaltransparencia.gov.br/download-de-dados/acordos-leniencia<br>
-https://portaldatransparencia.gov.br/download-de-dados/despesas-favorecidos<br>
-
-#### Devedores PGFN
-https://www.gov.br/pgfn/pt-br/assuntos/divida-ativa-da-uniao/transparencia-fiscal-1/copy_of_dados-abertos
-
-#### Pagamentos de municipios no Estado de São Paulo
-https://transparencia.tce.sp.gov.br/conjunto-de-dados
-
 ## Bibliotecas e outros projetos utilizados:
 Biblioteca em javascript para visualização:<br>
 https://github.com/anvaka/VivaGraphJS<br>
