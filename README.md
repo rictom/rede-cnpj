@@ -157,6 +157,10 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+
+<b>versão 1.1 (fevereiro/2024)</b>
+- Removido a dependência de sqlalchemy<=2.0, evitando erro se a biblioteca sqlalchemy for atualizada;<br>
+
 <b>versão 1.0 (junho/2023)</b>
 - Agora é necessário usar os arquivos rede.db e rede_search.db (ver guia de instalação Windows);<br>
 - Arquivos sqlite .db na pasta bases;<br>
