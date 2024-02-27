@@ -144,6 +144,12 @@ defs.innerHTML = ' \
 	';
 defs.append(markerSeta);	
 
+// funções auxiliares -------------------
+function dcopy(objetoIn) {
+	// substituir por https://developer.mozilla.org/en-US/docs/Web/API/structuredClone
+	return JSON.parse(JSON.stringify(objetoIn));
+}
+
 function labelsNo_LI(idno, tamCorte) {
 	idno = idno.substr(3);
 	if (idno.startsWith('https://')) {
@@ -206,6 +212,8 @@ function labelsNo(node, tipoResumido) {
 		if (idno.includes('__')) {
 			idno = idno.substr(idno.indexOf('__')+2); 
 		}
+	} else if (idno.startsWith('OO_')) {
+		idno = '';
 	} else {
 		idno = idno.substr(3);
 		if (idno.includes('__') && !descricao) {
@@ -461,6 +469,14 @@ function iconeF(idno) {
 		imagem = imagemLinkDeSite(idno); 
 	} else if (tipo=='AR_') {
 		imagem = 'external-link.png';
+	} else if (tipo=='PM_') { //PM_ pessoa mulher
+		imagem = 'icone-grafo-feminino.png';
+	} else if (tipo=='PH_') { //PH_ pessoa homem
+		imagem = 'icone-grafo-masculino.png';
+	} else if (tipo=='PP_') { //PP_ pessoa pessoa
+		imagem = 'icone-grafo-desconhecido.png';
+	} else if (tipo=='OO_') {
+		imagem = 'circle-o.png';
 	} else if (idno.startsWith('ID_')) {
 		var idnox = idno.substr(3);
 		if (idnox.includes('__')) { //dois undercores depois da numeração de id
@@ -2379,6 +2395,29 @@ function pegaAnguloLigacaoDoItemSelecionado(brandom) {
 	return Math.atan2(posicaoReferencia.y - somaY/Math.max(linksDoNo.length, 1), posicaoReferencia.x - somaX/Math.max(linksDoNo.length, 1));
 } //.function pegaAnguloLigacaoDoItemSelecionado
 
+function reinsereComNovoId(id, idNovo) { 
+	//reinsere nó com outro id, mantendo os dados do nó e das ligações.
+	var dados = dcopy(graph.hasNode(id)).data;
+	var llinks = [];
+	graph.forEachLinkedNode( id, function(nodeaux, link) { 
+		llinks.push(dcopy(link.data));
+	});
+	//graph.removeNode(id);
+	//console.log(JSON.stringify(dados)); 
+	//console.log(JSON.stringify(llinks));
+	var posicao = gparam.layout.getNodePosition(id);
+	removeIdNo(id);
+	dados.id = idNovo;
+	graph.addNode(idNovo, dcopy(dados));
+	for (let li of llinks) {
+		var lix = dcopy(li);
+		lix.origem = (lix.origem==id) ? idNovo : lix.origem;
+		lix.destino = (lix.destino==id) ? idNovo : lix.destino;
+		graph.addLink(lix.origem, lix.destino, dcopy(lix));
+	}
+	gparam.layout.setNodePosition(idNovo, posicao.x, posicao.y);
+} //.function reinsereComNovoId
+
 function inserirJson(jsonIn, texto, bNaoConfirma, bSelecionaCaminho) {
 	var no = jsonIn.no;
 	var ligacao = jsonIn.ligacao;
@@ -3742,8 +3781,60 @@ function criarNovoNo(idNovo, descricaoNovo, nota, nomeLigacao, dados, bNaoLigar,
 	selecionaNoid(idNovo, false, false);
 } //.function criarNovoNo
 
-function menu_ligar_novo(idNovo, descricaoNovo, bNaoLigar, bLigarEntre) {
+//xxe
+//const editarIconeColarImagem = async (e) => {
+async function editarIconeColarImagem(e) {
+	e.preventDefault();
+	try {
+		var clipboardItems = typeof navigator?.clipboard?.read === 'function' ? await navigator.clipboard.read() : e.clipboardData.files;
+	} catch (error) {
+		alertify.error('Não conseguiu ler a área de transferência. Tente pressionar CTRL+V');
+		return;
+	}
+	for (const clipboardItem of clipboardItems) { //só os flavors como image/ aparecem aqui... Deve estar filtrado pelo campo? quando se copia de outra janela EditarImagem, copia aparece como text/html com base64
+		let blob;
+		if (clipboardItem.type?.startsWith('image/')) {
+			// For files from `e.clipboardData.files`.
+			blob = clipboardItem;
+			// Do something with the blob.
+			//appendImage(blob);
+			editarColarImagemDoClipboard(blob);
+		} else {
+			  // For files from `navigator.clipboard.read()`.
+			  const imageTypes = clipboardItem.types?.filter(type => type.startsWith('image/'))
+			  for (const imageType of imageTypes) {
+				blob = await clipboardItem.getType(imageType);
+				// Do something with the blob.
+				editarColarImagemDoClipboard(blob);
+			  }
+		}
+	}
+} //.function editarIconeColarImagem
+
+function editarColarImagemDoClipboard(blob) {
+	const reader = new FileReader();
+	reader.onload = function (event) {
+		const base64 = event.target.result;
+		//const img = document.createElement("img");
+		var img = document.getElementById('dlgItemEditar_imagem');
+		img.src = URL.createObjectURL(blob);
+		//document.body.append(img);
+		//imageContainer.appendChild(img);
+		//console.log(base64);
+		gparam.base64Imagem = base64;
+	};
+	reader.readAsDataURL(blob);	
+} //.function editarColarImagemDoClipboard
+
+function menu_ligar_novo(idNovo, descricaoNovo, bNaoLigar, bLigarEntre, bInverterLIgacaoPadrao, posicao) {
 	//cria novo item (não PJ) e liga com nós selecionados.
+	if (idNovo && !bNaoLigar) {
+		if (graph.hasNode(idNovo) && idNovo.startsWith('LI_')) { //neste caso, só liga com o nó já existente
+			var resp = alert('O item já existe no gráfico. Este será selecionado:\n:' + idNovo);
+			selecionaNoid(idNovo);
+			return;
+		}
+	}
 	idNovo = idNovo ? idNovo: ''; //idNovo = idNovo ?? ''
 	descricaoNovo = descricaoNovo ? descricaoNovo: '';
 	var dlgItemOriginal = document.getElementById('dlgItem');
@@ -3754,9 +3845,24 @@ function menu_ligar_novo(idNovo, descricaoNovo, bNaoLigar, bLigarEntre) {
 	camposTexto[1].value= descricaoNovo; 
 	camposTexto[2].value= '';
 	camposTexto[3].value= '';
+
+	var campoImagem = camposTexto[4];
+	if (1) {
+		const img = document.createElement("img");
+		img.id = "dlgItemEditar_imagem";
+		img.alt = "Cole imagem aqui";
+		img.height=100;
+		img.width=100;
+		img.title = "Para substituir a imagem, Cole (CTRL+V) aqui";
+		campoImagem.appendChild(img);
+	}
+	
 	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
-	dlgItem.outerHTML = ''; //receita de bolo. sem isso  a linha de cima dava erro no chrome
+	dlgItem.outerHTML = ''; //receita de bolo para usar o alertify.confirm. sem isso  a linha de cima dava erro no chrome
 	ativaAtalhos(false);
+	gparam.base64Imagem = null;
+	campoImagem.addEventListener('paste', editarIconeColarImagem);	
+	
 	alertify.confirm(dlgItem)
 	//não funciona .set('defaultFocusOff', true)
 	//não funciona .set('focus', camposTexto[0])
@@ -3783,17 +3889,19 @@ function menu_ligar_novo(idNovo, descricaoNovo, bNaoLigar, bLigarEntre) {
 			//não faz nada
 		} else {
 			idNovo = idNovo.toUpperCase();
+			idNovo = tipoPresumido(idNovo);
+			while (graph.hasNode(idNovo)) {
+				idNovo = prompt('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nAltere o novo identificador:', idNovo);
+				if (idNovo===null) {
+					return;
+				}
+				idNovo = idNovo.toUpperCase();
+				idNovo = tipoPresumido(idNovo);
+			}		
 		}
-		idNovo = tipoPresumido(idNovo);
-		while (graph.hasNode(idNovo)) {
-			/*if (graph.hasNode(idNovo)) {
-				alert('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
-				return;
-			}*/
-			idNovo = prompt('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nAltere o novo identificador:', idNovo);
-			if (idNovo===null) {
-				return;
-			}
+		if (graph.hasNode(idNovo)) { //caso LI_ AR_
+			alert('O identificador ' + idNovo + ' já existe no gráfico. Não será feita a inclusão');
+			return;
 		}
 		/*
 		if (idNovo.startsWith('PJ_')) {
@@ -3806,11 +3914,19 @@ function menu_ligar_novo(idNovo, descricaoNovo, bNaoLigar, bLigarEntre) {
 			bNaoLigar = false;
 		} 
 		//dados.camada = bNaoLigar? 0 : 1; //ttt
-		criarNovoNo(idNovo, descricaoNovo, tnota, tligacao, dados, bNaoLigar, bLigarEntre);
-	}, function() { 
+		criarNovoNo(idNovo, descricaoNovo, tnota, tligacao, dados, bNaoLigar, bLigarEntre, bInverterLIgacaoPadrao);
+		if (posicao) {
+			gparam.layout.setNodePosition(idNovo, posicao.x, posicao.y);
+			//console.log('setnodeposition: ' + posicao.x + ' ; ' +  posicao.y);
+		}
+		if (gparam.base64Imagem) {
+			menu_faviconNosItens(gparam.base64Imagem);
+		}
+	}, function() { campoImagem.removeEventListener("paste", editarIconeColarImagem, false); 
 		ativaAtalhos(true); }
-	).set('oncancel', function() { ativaAtalhos(true);  })
-	.set('title',"Novo Item");
+	).set('oncancel', function() { campoImagem.removeEventListener("paste", editarIconeColarImagem, false); 
+									ativaAtalhos(true);  })
+	.set('title',"Novo Item (U)");
 
 } //.function menu_ligar_novo
 
@@ -3832,9 +3948,29 @@ function menu_editar_no(noid) {
 	camposTexto[0].value= noid;
 	camposTexto[1].value= node.data.descricao;
 	camposTexto[2].value= node.data.nota;
+	//camposTexto[3] = texto ligacao, não existe mais para o formulário de edição
+		
+	var campoImagem = camposTexto[3];
+	if (1) {
+		const img = document.createElement("img");
+		var nodeUI = graphics.getNodeUI(noid);
+		if (nodeUI) {
+			img.src = nodeUI.getElementsByTagName('image')[0].getAttribute('xlink:href');
+		} 
+		img.id = "dlgItemEditar_imagem";
+		img.alt = "Cole imagem aqui";
+		img.height=100;
+		img.width=100;
+		img.title = "Para substituir a imagem, Cole (CTRL+V) aqui";
+		campoImagem.appendChild(img);
+	}
+	
 	dlgItemOriginal.parentNode.appendChild(dlgItem); // para dlgItem.outerHTML = '' funcionar no chrome
 	dlgItem.outerHTML = ''; //receita de bolo para usar o alertify.confirm. sem isso  a linha de cima dava erro no chrome
 	ativaAtalhos(false);
+	gparam.base64Imagem = null;
+	campoImagem.addEventListener('paste', editarIconeColarImagem);
+	
 	alertify.confirm(dlgItem).set('onok', function(closeevent, value) { 
 		ativaAtalhos(true); 
 		var camposTexto = dlgItem.getElementsByClassName('ajs-input');
@@ -3845,33 +3981,61 @@ function menu_editar_no(noid) {
 			alert('O Identificador não pode ser nulo.');
 			return;
 		}
-		if (idNovo.startsWith('https://') || idNovo.startsWith('http://')) {
+		
+		if (idNovo.toLowerCase().startsWith('https://') || idNovo.toLowerCase().startsWith('http://')) {
 			idNovo = 'LI_' + idNovo;
-		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) {
+		} else if (idNovo.startsWith('"') && idNovo.endsWith('"')) { //aspas quando se copia o caminho completo pelo menu contextual no windows. não sei como fica em outros sistemas
 			idNovo = 'AR_' + idNovo.slice(1,-1);
-		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\') || (idNovo.substr(1,2)==':\\')) {
+		} else if (idNovo.startsWith('C:\\') || idNovo.startsWith('D:\\') || (idNovo.substr(1,2)==':\\')) { //isso só vai funcionar no windows
 			idNovo = 'AR_' + idNovo;
+		} else if (idNovo.startsWith('LI_') || idNovo.startsWith('AR_')) { //não por em maiuscula, senão link para url não funciona
+			//não faz nada
+		} else {
+			idNovo = idNovo.toUpperCase();
+			idNovo = tipoPresumido(idNovo);
+			while (graph.hasNode(idNovo) && (noid!=idNovo) ) {
+				idNovo = prompt('Editar Item:\n\nO identificador ' + idNovo + ' não pode ser utilizado, pois já existe no gráfico.\nAltere o identificador:', idNovo);
+				if (idNovo===null) {
+					return;
+				}
+				idNovo = idNovo.toUpperCase();
+				idNovo = tipoPresumido(idNovo);
+			}
 		}
-		idNovo = tipoPresumido(idNovo);
+
 		if (noid==idNovo) {
 			node.data.descricao = camposTexto[1].value;
 			node.data.nota = camposTexto[2].value;
+			//poderia se usar reinsereComNovoId(idNovo, idNovo) ao invês de trocar uis
 			ui.getElementsByTagName('tspan')[1].text(node.data.descricao);
 			ui.getElementsByTagName('tspan')[2].text(node.data.nota);
 			
 		} else {
-			if (graph.hasNode(idNovo)) {
-				alert('Item novo:\n\nO identificador ' + idNovo + ' já existe no gráfico.\nTente novamente com identificador diferente.');
+			if (graph.hasNode(idNovo)) { //caso LI_ AR_
+				alert('O identificador ' + idNovo + ' já existe no gráfico. Não será feita a inclusão');
 				return;
-			} else {
-				criarNovoNo(idNovo, node.data.descricao, node.data.nota, tligacao, node.data);
 			}
+			if ([ 'PF_', 'PJ_', 'EN_', 'TE_', 'EM_'].includes(noid.substr(0,3))) { 
+				if (!confirm('ESTA OPERAÇÃO NÃO É RECOMENDADA!! Alterar este identificador pode causar INCONSISTÊNCIAS e não será possível buscar informações no Banco de Dados. Deseja prosseguir?')) {
+					return;
+				}
+			}	
+			node.data.descricao = camposTexto[1].value;
+			node.data.nota = camposTexto[2].value;
+			reinsereComNovoId(noid, idNovo); //xxx se alterar o id, essa rotina apaga e corrige .data em no e nas ligações.
 		}		
+		if (nodeUI && gparam.base64Imagem) {
+			menu_faviconNosItens(gparam.base64Imagem);
+		}
 	}, function() { 
+		campoImagem.removeEventListener("paste", editarIconeColarImagem, false);
 		ativaAtalhos(true); }
-	).set('oncancel', function() { ativaAtalhos(true);  })
-	.set('title',"Editar Item");
+	).set('oncancel', function() { campoImagem.removeEventListener("paste", editarIconeColarImagem, false); 
+									ativaAtalhos(true); })
+	.set('title',"Editar Item (E)");
 } //.function menu_editar_no
+
+
 
 function soDigitos(id) {
 //usar com cautela, só deixar digitos para verificar cpf/cnpj pode dar resultado incorreto, p. ex: yy12345678901 seria considerado cpf
@@ -6196,15 +6360,30 @@ function main() {
 		<p><b>Digite parâmetros para inserir novo item</b></p>
 		<p><b>ID (IDENTIFICADOR)</b></p>
 		<p>Digite nome ou identificador de novo item (deve ser único no gráfico)</p>
-		<input class="ajs-input" id="dlgItem_id" type="text" value="" /> 
+		<input class="ajs-input" id="dlgItem_id" type="text" value="" title="O Identificador deve começar com DUAS LETRAS seguidos de underscore(_). Hà alguns Prefixos pré-definidos, como PF_ (Pessoa Física na base de sócios), PJ_ (Pessoa Jurídica), EN_ (Endereço normalizado), EM_ (Email), TE_ (Telefone), LI_ (Link de site), AR_ (Arquivo), PH_ (Homem) , PM_ (Mulher), PP_ (Pessoa). O Prefixo OO_ é especial para definir um círculo sem texto para agrupar itens. Se não for informado um Prefixo no identificador, será adicionado ID_. No gráfico o texto do rótulo na primeira linha abaixo do ícone não irá exibir o Prefixo" /> 
 		<p>Descrição (texto aparece na segunda linha)</p>
 		<input class="ajs-input" id="dlgItem_descricao" type="text" value="" /> 
 		<p>Nota (texto na terceira linha - opcional)</p>
 		<input class="ajs-input" id="dlgItem_nota" type="text" value="" /> 
 		<p>Nome da Ligação com item(s) selecionado(s) (pode ficar vazio)</p>
 		<input class="ajs-input" id="dlgItem_ligacao" type="text" value=""/> 
+		<div style="width: 100%; display: table;">
+			<div style="display: table-row">
+				<div class="ajs-input" style="width: 100px; height: 100px; background: white; display: table-cell;" id="dlgItemEditar_imagem_div" contenteditable="true">
+					<!-- isto vai ser criado dinamicamente
+					<image class="ajs-input" style="width: 100px; height: 100px; background: silver;" id="dlgItemEditar_imagem" tag="dlgItemEditar_imagem" onpaste="editarIconeColarImagem(event);"></image>
+					-->
+				</div>
+				<div style="display: table-cell;">
+					{% if not parametros.firefox %}
+					<button onclick="editarIconeColarImagem(event);" id="dlgItemEditar_btn" title="Clique para colar imagem da área de transferência. Se isso não funcionar, pressione CTRL+V">Colar</button>
+					{% endif %}
+				</div>	
+			</div>
+		</div>
 	</div>
 </div>
+
 
 <div style="display:none;">
 	<div id="dlgItemEditar">
@@ -6215,10 +6394,22 @@ function main() {
 		<input class="ajs-input" id="dlgItemEditar_descricao" type="text" value="" /> 
 		<p>Nota (texto na terceira linha - opcional)</p>
 		<input class="ajs-input" id="dlgItemEditar_nota" type="text" value="" /> 
-		<p>Nome da Ligação com item(s) selecionado(s) (pode ficar vazio)</p>
-		<input class="ajs-input" id="dlgItemEditar_ligacao" type="text" value=""/> 
-	</div>
-</div>
+		<div style="width: 100%; display: table;">
+			<div style="display: table-row">
+				<div class="ajs-input" style="width: 100px; height: 100px; background: white; display: table-cell;" id="dlgItemEditar_imagem_div" contenteditable="true">
+					<!-- isto vai ser criado dinamicamente
+					<image class="ajs-input" style="width: 100px; height: 100px; background: silver;" id="dlgItemEditar_imagem" tag="dlgItemEditar_imagem" onpaste="editarIconeColarImagem(event);"></image>
+					-->
+				</div>
+				<div  style="display: table-cell;">
+					{% if not parametros.firefox %}
+					<button onclick="editarIconeColarImagem(event);" id="dlgItemEditar_btn" title="Clique para colar imagem da área de transferência. Se isso não funcionar, pressione CTRL+V">Colar</button>
+					{% endif %}	
+				</div>	
+			</div>
+		</div>
+		
+	</div></div>
 
 
 <div id="img_home" style="display:none;"></div>
