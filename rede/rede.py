@@ -196,6 +196,7 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'bbusca_chaves': config.config['ETC'].getboolean('busca_chaves', False),
                      'mobile':any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android']),
                      'chrome':'Chrome' in request.headers.get('User-Agent',''),
+                     'firefox':'Firefox' in request.headers.get('User-Agent',''),
                      'usuarioLocal': usuarioLocal(),
                      #'janelaPai': janelaPai,
                      'itensFlag':gp['itensFlag'] #['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];

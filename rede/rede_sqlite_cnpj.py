@@ -49,18 +49,20 @@ class DicionariosCodigosCNPJ():
     def __init__(self):
         if not caminhoDBReceita:
             return
-        con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}")
-        dfaux = pd.read_sql_table('qualificacao_socio', con, index_col=None )
+        con = sqlite3.connect(f'file:{caminhoDBReceita}?mode=ro', uri=True) #não é possível usar o sqlite3 com pd.read_sql_table
+        dfaux = pd.read_sql('select * from qualificacao_socio', con, index_col=None )
         self.dicQualificacao_socio = pd.Series(dfaux.descricao.values,index=dfaux.codigo).to_dict()
-        dfaux = pd.read_sql_table('motivo', con, index_col=None )
+        dfaux = pd.read_sql('select * from motivo', con, index_col=None )
         self.dicMotivoSituacao = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
-        dfaux = pd.read_sql_table('cnae', con, index_col=None )
+        dfaux = pd.read_sql('select * from cnae', con, index_col=None )
         self.dicCnae = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
-        dfaux = pd.read_sql_table('natureza_juridica', con, index_col=None )
+        dfaux = pd.read_sql('select * from natureza_juridica', con, index_col=None )        
+        
         self.dicNaturezaJuridica = pd.Series(dfaux['descricao'].values, index=dfaux['codigo']).to_dict()
         self.dicSituacaoCadastral = {'01':'Nula', '02':'Ativa', '03':'Suspensa', '04':'Inapta', '08':'Baixada'}
         self.dicPorteEmpresa = {'00':'Não informado', '01':'Micro empresa', '03':'Empresa de pequeno porte', '05':'Demais (Médio ou Grande porte)'}
         con = None
+
 #.class DicionariosCodigosCNPJ():        
 gdic = DicionariosCodigosCNPJ()
 
@@ -83,31 +85,6 @@ def timeit(method):
                   (method.__name__, (te - ts) * 1000))
         return result    
     return timed
-
-# def apagaTabelasTemporarias(prefixo_tabela_temporaria='tmp', caminhoDB=caminhoDBReceita):
-#     '''apaga tabelas temporárias. Isto pode dar erro em ambiente com threads??
-#     se prefixo_tabela_temporaria='', apaga TODAS as tabelas tmp_'''
-#     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDB}", execution_options=gEngineExecutionOptions)
-#     insp = sqlalchemy.inspect(con)
-#     tmp = prefixo_tabela_temporaria if prefixo_tabela_temporaria else 'tmp_'
-#     tmp_tabelas = [t for t in insp.get_table_names() if t.startswith(tmp)]
-#     for t in tmp_tabelas:
-#         con.execute(f'Drop table if exists {t}')
-#     con = None
-
-# apagaTabelasTemporarias() #apaga quando abrir o módulo
-
-def checaTabelaLigacao(caminhoDB=caminhoDBReceita):
-    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}")
-    insp = sqlalchemy.inspect(con)
-    if 'ligacao' not in  insp.get_table_names():
-        print('-'*50)
-        print('ATENÇÃO!!!! A partir da versão 0.8.9, é preciso ter uma tabela de "ligacao" na base cnpj.\nRode o script rede_cria_tabela_rede.db.py para criar essa tabela.')
-        print('-'*50)
-        raise Exception('Rode o script rede_cria_tabela_rede.db.py para criar a tabela de "ligação"')
-    con = None
-
-checaTabelaLigacao() #apaga quando abrir o módulo
 
 
 def buscaPorNome(nomeIn, limite=10): 
@@ -202,7 +179,6 @@ def buscaPorNome(nomeIn, limite=10):
 
 def busca_cnpj(cnpj_basico, limiteIn):
     kLimiteFiliais = 200
-    #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}", execution_options=gEngineExecutionOptions)
     con = sqlite3.connect(caminhoDBRedeSearch, uri=True)
     limite = min(limiteIn, kLimiteFiliais) 
     if not limite:
@@ -234,8 +210,7 @@ def busca_cpf(cpfin, limiteIn):
     limite = min(limiteIn, 100)
     if not limite:
         limite = 10 #default
-    #cpf = '***' + cpfin[3:9] + '**'
-    #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}", execution_options=gEngineExecutionOptions)
+
     con = sqlite3.connect(caminhoDBRedeSearch, uri=True)
     cpfMatch = 'PF_ ' + cpfin[3:9]
     cpfGlob = 'PF_' + '???' + cpfin[3:9] + '??*'
@@ -341,21 +316,6 @@ def separaEntrada(listaIds=None):
     return cids, cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes
 #.def separaEntrada
 
-# dtype_tmp_ids={'identificador':sqlalchemy.types.VARCHAR,
-#                        'grupo':sqlalchemy.types.VARCHAR,
-#                        'camada':sqlalchemy.types.INTEGER }
-# dtype_tmp_cnpjs={'cnpj':sqlalchemy.types.VARCHAR,
-#                        'grupo':sqlalchemy.types.VARCHAR,
-#                        'camada':sqlalchemy.types.INTEGER }
-# dtype_tmp_cpfnomes={'cpf':sqlalchemy.types.VARCHAR,
-#                        'nome':sqlalchemy.types.VARCHAR,
-#                        'grupo':sqlalchemy.types.VARCHAR,
-#                        'camada':sqlalchemy.types.INTEGER }
-
-# dtype_tmp_cpfpjnomes={'cpfpj':sqlalchemy.types.VARCHAR,
-#                        'nome':sqlalchemy.types.VARCHAR,
-#                        'grupo':sqlalchemy.types.VARCHAR,
-#                        'camada':sqlalchemy.types.INTEGER }
 
 gtabelaTempComPrefixo = False
 def tabelaTemp():
@@ -475,7 +435,7 @@ def id2cnpj(id):
 @timeit
 def camadasRede(listaIds=None, camada=1, grupo=None, criterioCaminhos='', bjson=True):    
     mensagem = '' #{'lateral':'', 'popup':'', 'confirmar':''}
-    #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBRede}", execution_options=gEngineExecutionOptions)
+
     '''
     https://stackoverflow.com/questions/17497614/sqlalchemy-core-connection-context-manager
     from sqlalchemy import create_engine
@@ -1167,8 +1127,6 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
             mensagem = 'Não há tabela de links configurada.'
             return {'no': [], 'ligacao':[], 'mensagem': mensagem} 
         camDB = caminhoDBLinks
-        #db = 'dlink'
-        #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBLinks}",execution_options=gEngineExecutionOptions)
         tabela = 'dlink.links'
         bValorInteiro = False
         query = f''' SELECT * From (
@@ -1299,13 +1257,9 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     for c in camadasIds:
         if c.startswith('PJ_'):
             cnpjs.add(c[3:])
-    # if 0: #conCNPJ:
-    #     conCNPJaux =conCNPJ
-    # else:
-    #     conCNPJaux = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
+
     cnpjs = cnpjs.difference(cnpjsInicial)
-    #nos = dadosDosNosCNPJs(conCNPJaux, cnpjs, nosaux, dicRazaoSocial, camadasIds)
-    #dadosDosNosCNPJs(cnpjs, nosaux, camadasIds=camadasIds, tmp=tmp, con=con)
+
     dadosDosNosCNPJs(nosaux, camadasIds=camadasIds, tmp=tmp, con=con)
 
     for c in camadasIds:
@@ -1331,11 +1285,6 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
     return textoJson
 #.def camadaLink
 
-# def apagaLog():
-#     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
-#     con.execute('DROP TABLE IF EXISTS log_cnpjs;')
-#     con.execute('DROP TABLE IF EXISTS log_cpfnomes;')
-#     con = None
 
 def cnae_secundariaF(codigos):
     t = ''
@@ -1348,11 +1297,8 @@ def cnae_secundariaF(codigos):
 def jsonDados(cpfcnpjListain:list, bsocios=False):
     '''pegando apenas dados do primeiro item da lista'''
     cids, cnpjs, cpfnomes, outrosIdentificadores, cpfpjnomes = separaEntrada(cpfcnpjListain)
-    #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}",execution_options=gEngineExecutionOptions)
-    #con = sqlite3.connect(caminhoDBReceita, uri=True)    
 
     if cnpjs:
-        #dlista = jsonDadosReceita([list(cnpjs)[0],], bsocios)
         dlista = jsonDadosReceita(list(cnpjs), bsocios)
     else:
         dlista = []
@@ -1425,7 +1371,6 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
 				'ddd1', 'telefone1', 'ddd2', 'telefone2', 'ddd_fax', 'fax', 'correio_eletronico', 'capital_social'
 				]
     
-    #con = sqlalchemy.create_engine(f'sqlite:///{caminhoDBReceita}')
     con = sqlite3.connect(caminhoDBReceita, uri=True)    
     con.row_factory=sqlite3.Row
     cur = con.cursor()    
@@ -1507,10 +1452,7 @@ def jsonDadosBaseLocalDic(listaIds=None, tmp=None, con=None):
         return {}
     if not listaIds: #and not cpfcnpjIn:
         return {}
-    # con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}",execution_options=gEngineExecutionOptions)
-    # dftmptable = pd.DataFrame({'id' : list(listaIds)})
-    # tmp = tabelaTemp()
-    # dftmptable.to_sql(f'{tmp}_idsj', con=con, if_exists='replace', index=False, dtype=sqlalchemy.types.VARCHAR)
+
     if  con:
         con.execute("ATTACH DATABASE '" + caminhoDBBaseLocal.replace('\\','/') + "' as dlocal") 
     else:
@@ -1626,7 +1568,7 @@ def dados_consulta_cnpj(request, render_template, itensFlag):
 def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
     if not caminhoDBBaseLocal:
         return
-    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBBaseLocal}") #,execution_options=gEngineExecutionOptions)
+    con = sqlite3.connect(caminhoDBBaseLocal) 
     listaNo = []
     for dados in nosLigacoes['no']:
         dic = {key:valor for key,valor in dados.items() if key!='id'}
@@ -1645,9 +1587,9 @@ def carregaJSONemBaseLocal(nosLigacoes, comentario=''):
         except:
             print('erro...', lig)
     dftmptable = pd.DataFrame(listaNo, columns = ['id', 'json', 'comentario'])
-    dftmptable.to_sql('dadosjson', con=con, if_exists='append', index=False) #, dtype=sqlalchemy.types.VARCHAR)
+    dftmptable.to_sql('dadosjson', con=con, if_exists='append', index=False) 
     dftmptable = pd.DataFrame(listaLigacao, columns = ['id1', 'id2', 'descricao','valor', 'comentario'])
-    dftmptable.to_sql('links', con=con, if_exists='append', index=False) #, dtype=sqlalchemy.types.VARCHAR)
+    dftmptable.to_sql('links', con=con, if_exists='append', index=False) 
     con = None
 #.def carregaJSONemBaseLocal
 
@@ -1690,8 +1632,6 @@ def ajustaData(d): #aaaammdd para dd/mm/aaaa
         return ''
 
 def dadosParaExportar(dados):    
-    #print('dadosParaExportar-inicio: ' + time.ctime())
-    #con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
     sids = set()
     for item in dados['no']:
         sids.add(item['id'])
@@ -1886,26 +1826,11 @@ def mensagemInicial():
             mensagemInicial += f'''\nA base cnpj tem {tnumeroEmpresas} empresas. '''+config.referenciaBD
     return mensagemInicial
 
-# @lru_cache(8)
-# def numeroDeEmpresasNaBase(): 
-#     #pega qtde de registros na tabela _referencia para acelerar o início da rotina
-#     if not caminhoDBReceita:
-#         return 0
-#     con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}", execution_options=gEngineExecutionOptions)
-#     try:
-#         res = con.execute("select valor from _referencia where referencia='cnpj_qtde'").fetchone()[0]
-#         r = int(res)
-#     except:
-#         r = 0
-#     if not r:
-#         print('select count(*) as contagem from estabelecimento')
-#         r = con.execute('select count(*) as contagem from estabelecimento').fetchone()[0]
-#     return r
 
 @lru_cache(8)
 def qteEmpresas_referenciaF(): 
     #pega qtde de registros na tabela _referencia para acelerar o início da rotina
-    con = sqlalchemy.create_engine(f"sqlite:///{caminhoDBReceita}")
+    con = sqlite3.connect(caminhoDBReceita)
     res = con.execute("select valor from _referencia where referencia='cnpj_qtde'").fetchone()[0]
     cnpj_qtde = int(res)
     data_referencia = con.execute("select valor from _referencia where referencia='CNPJ'").fetchone()[0]

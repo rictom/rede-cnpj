@@ -14,7 +14,7 @@ PyPDF2
 pysos
 requests
 spacy
-SQLAlchemy==1.4.47
+SQLAlchemy
 textract
 urllib3
 orjson
