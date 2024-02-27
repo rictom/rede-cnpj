@@ -160,6 +160,10 @@ https://fontawesome.com<br>
 
 <b>versão 1.1 (fevereiro/2024)</b>
 - Removido a dependência de sqlalchemy<=2.0, evitando erro se a biblioteca sqlalchemy for atualizada;<br>
+- Opção para inserir foto (Tecla E):<br>
+![image](https://github.com/rictom/rede-cnpj/assets/71139693/3fdf5def-36ea-4cfa-bbc6-8e19123c07ad)
+
+
 
 <b>versão 1.0 (junho/2023)</b>
 - Agora é necessário usar os arquivos rede.db e rede_search.db (ver guia de instalação Windows);<br>
