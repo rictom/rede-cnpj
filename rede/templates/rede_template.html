@@ -5350,14 +5350,7 @@ function evento_teclasDown(e) {
 	} else if (testa('KeyJ', false, true)) { 
 		menu_localiza_itensComMaisLigacoes();
 	} else if (testa('KeyI', false, false)) { 
-		try { //ler do clipboard, funciona só no chrome, firefox dá erro (precisa configurar algo)
-			navigator.clipboard
-			.readText()
-			.then((clipText) => {menu_inserir(clipText);})
-		} 
-		catch(err){
-			menu_inserir();
-		};
+		menu_inserir();
 	} else if (testa('KeyU', false, false)) { 
 		menu_ligar_novo('', '', true); //novo item sem ligação com selecionados
 	} else if (testa('KeyU', true, false)) { 
