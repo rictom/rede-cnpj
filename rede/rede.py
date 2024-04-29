@@ -199,8 +199,9 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'firefox':'Firefox' in request.headers.get('User-Agent',''),
                      'usuarioLocal': usuarioLocal(),
                      #'janelaPai': janelaPai,
-                     'itensFlag':gp['itensFlag'] #['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
-                    }
+                     'itensFlag':gp['itensFlag'], #['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
+                     'bgrafico_no_servidor': ('/rede/grafico_no_servidor/' + idArquivoServidor) == request.path 
+ }
     #print(paramsInicial)
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
     config.par.arquivoEntrada=''
@@ -392,18 +393,41 @@ def serve_arquivos_json(arquivopath):
 @app.route('/rede/arquivos_json_upload/<nomeArquivo>', methods=['POST'])
 @limiter.limit(limiter_padrao)
 def serve_arquivos_json_upload(nomeArquivo):
+    '''
+        2024-03-09 permite salvar arquivo se estiver no padrao nome.secrets_tokenhex().json
+    '''
+    cam = ''
+    tamanhoToken = 10
     nomeArquivo = unquote(nomeArquivo)
     filename = secure_filename(nomeArquivo)
     if len(request.get_json())>100000:
         #return jsonify({'mensagem':{'lateral':'', 'popup':'O arquivo é muito grande e não foi salvo', 'confirmar':''}})
         return jsonify({'mensagem':'O arquivo é muito grande e não foi salvo'})
     nosLigacoes = request.get_json()
-    if usuarioLocal():
-        cam = nomeArquivoNovo(os.path.join(local_file_dir, filename + '.json'))
-        filename = os.path.split(cam)[1]
-    else:
-        filename += '.'+secrets.token_hex(10) + '.json'
-        cam = os.path.join(local_file_dir, filename)  
+    breescreve = (request.args.get('reescreve', default='', type=str)=='S')
+    if breescreve:
+        if not usuarioLocal():
+            #verifica se nome já tem hex_digits
+            pnome = filename.split('.')
+            if len(pnome)>=3 and pnome[-1]=='json' and len(pnome[-2])==2*tamanhoToken and set(pnome[-2]).issubset(string.hexdigits):
+                breescreve = True
+            else:
+                breescreve = False
+                return jsonify({'mensagem': 'O arquivo ' + filename + ' não foi encontrado no servidor.'})
+        if breescreve:     
+                #nome tem token_hex, pode ser nome de arquivo válido
+                camTeste = os.path.join(local_file_dir, filename)  
+                if os.path.exists(camTeste):
+                    cam = camTeste 
+                else:
+                    return jsonify({'mensagem': 'O arquivo ' + filename + ' não foi encontrado no servidor.'})
+    if not cam:
+        if usuarioLocal():
+            cam = nomeArquivoNovo(os.path.join(local_file_dir, filename + '.json'))
+            filename = os.path.split(cam)[1]
+        else:
+            filename += '.'+secrets.token_hex(tamanhoToken) + '.json'
+            cam = os.path.join(local_file_dir, filename)  
     with open(cam, 'w') as outfile:
         json.dump(nosLigacoes, outfile)
     return jsonify({'nomeArquivoServidor':filename})

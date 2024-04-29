@@ -725,23 +725,26 @@ graphics.link(function(link){
 		var toNodeSize = gparam.nodeSize,
 		fromNodeSize = gparam.nodeSize;
 
+		var dyFromRotulo = (gparam.btextoEmbaixoIcone && !linkUI.link.fromId.startsWith('OO_'))? gparam.tamanhoFonte*2 : 0;
+		var dyToRotulo = (gparam.btextoEmbaixoIcone && !linkUI.link.toId.startsWith('OO_'))? gparam.tamanhoFonte*2 : 0;
+		
 		var from = gparam.geom.intersectRect(
 			fromPos.x - fromNodeSize / 2, // left
 			fromPos.y - fromNodeSize / 2, // top
 			fromPos.x + fromNodeSize / 2, // right
-			fromPos.y + fromNodeSize / 2 + (gparam.btextoEmbaixoIcone? gparam.tamanhoFonte*2 : 0), // bottom
+			fromPos.y + fromNodeSize / 2 + dyFromRotulo, // bottom
 			fromPos.x, fromPos.y, toPos.x, toPos.y)
 		|| fromPos;
-
+		
 		var to = gparam.geom.intersectRect(
 			toPos.x - toNodeSize / 2, // left
 			toPos.y - toNodeSize / 2, // top
 			toPos.x + toNodeSize / 2, // right
-			toPos.y + toNodeSize / 2 + (gparam.btextoEmbaixoIcone? gparam.tamanhoFonte*2 : 0), // bottom
+			toPos.y + toNodeSize / 2 + dyToRotulo, // bottom
 			// segment:
 			toPos.x, toPos.y, fromPos.x, fromPos.y)
 			|| toPos;
-
+			
 		var data = 'M' + from.x + ',' + from.y + 'L' + to.x + ',' + to.y;
 		linkUI.attr("d", data);
 		var elemento = document.getElementById('link_label_'+linkUI.attr('id'));
@@ -2069,7 +2072,7 @@ function exportaArquivoServidor(arquivo) {
 } //.function exportaArquivoServidor
 
 //function menu_exportaJSONServidor(bSoSelecionados, bMostraAlerta, idArquivoServidor, setNos, nomeNovaAba) {
-function menu_exportaJSONServidor(bSoSelecionados) {
+function menu_exportaJSONServidor(bSoSelecionados, bReescreveNoLink) {
 	//abre nova aba exportando dados para o servidor
 	//bExportaParaArquivoJson true, o arquivo será salvo no servidor como json, se false vai para o banco de dados local
 	//se setNos especificado, usa esses itens para exportar
@@ -2082,13 +2085,22 @@ function menu_exportaJSONServidor(bSoSelecionados) {
 		alertify.error('Não há itens para exportar.');
 		return;
 	}
-
-	idArquivoServidor =  prompt('Digite um começo para o nome do arquivo a ser carregado no servidor. Serão adicionados caracteres aleatórios para dificultar o acesso a outros usuários. Qualquer pessoa com o nome + caracteres aleatórios poderá abrir ou apagar o arquivo.', 'rede');
-	if (!idArquivoServidor) {
-		return;
+	var idArquivoServidor = '';
+	
+	var url = base + 'arquivos_json_upload/'
+	if (bReescreveNoLink) { //xxe
+		idArquivoServidor = String(window.location).split('/').pop();
+		if (!confirm('o arquivo ' + idArquivoServidor + ' será ATUALIZADO no servidor. A versão anterior não poderá ser recuperada. Deseja prosseguir?')) {
+			return;
+		}
+		url += String(window.location).split('/').pop() + '?reescreve=S';
+	} else {
+		idArquivoServidor =  prompt('Digite um começo para o nome do arquivo a ser carregado no servidor. Serão adicionados caracteres aleatórios para dificultar o acesso a outros usuários. Qualquer pessoa com o nome + caracteres aleatórios poderá abrir ou apagar o arquivo.', 'rede');
+		if (!idArquivoServidor) {
+			return;
+		}
+		url += encodeURIComponent(idArquivoServidor);
 	}
-	var url = base + 'arquivos_json_upload/' + encodeURIComponent(idArquivoServidor);
-
 	fazFetch(url, jsonDados); 
 	function fazFetch(url, jsonDados) {
 		document.body.style.cursor = 'wait';
@@ -2101,14 +2113,17 @@ function menu_exportaJSONServidor(bSoSelecionados) {
 			  }
 			  // Examine the text in the response
 			  response.json().then(function(data) {
-				//console.log(data);
 				document.body.style.cursor = 'default';
 				if (data.nomeArquivoServidor) {
-
-					alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.\nAtenção: QUALQUER PESSOA COM O LINK poderá ABRIR ou APAGAR o arquivo no servidor.');
-					var novaJanela=window.open(base + "grafico_no_servidor/" + data.nomeArquivoServidor);
+					if (!bReescreveNoLink) {
+						alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\n' + 'Será aberto uma janela com o link, que poderá ser compartilhado.\nAtenção: QUALQUER PESSOA COM O LINK poderá ABRIR ou APAGAR o arquivo no servidor. \nOs arquivos no servidor PODERÃO SER APAGADOS sem aviso prévio. Faça uma cópia local com a opção no menu Salvar/Abrir>Arquivo>Salvar Arquivo Json.');
+						var novaJanela=window.open(base + "grafico_no_servidor/" + data.nomeArquivoServidor);
+					} else {
+						alert('O arquivo foi carregado no servidor com o nome: ' + data.nomeArquivoServidor + '\nOs arquivos no servidor PODERÃO SER APAGADOS sem aviso prévio. Faça uma cópia local com a opção no menu Salvar/Abrir>Arquivo>Salvar Arquivo Json.');					
+					}
 				} else {
 					alertify.error('Aconteceu um erro. ' + data.mensagem);
+					alert('Aconteceu um erro. ' + data.mensagem);
 				}
 			  });
 			}
@@ -2117,6 +2132,7 @@ function menu_exportaJSONServidor(bSoSelecionados) {
 			document.body.style.cursor = 'default';
 			console.log('Fetch Error :-S', err);
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+			alert('Aconteceu um erro (Fetch error ' + err + ')');
 		  });
 	}
 	//return novaJanela; novaJanela só retorna null
@@ -4893,9 +4909,12 @@ function menu_input_cnpj(elemento) {
 //teclas Up, down, left e right servem somente para navegar árvore hierárquica
 function menu_teclaUp(bSemMensagem) { //segue direção da seta
 	var proximoNo = null;
+	
 	if (gparam.idNosSelecionados.size>1) {
-		proximoNo = [...gparam.idNosSelecionados][0];
-		selecionaNoid(proximoNo, false, false);
+		var lista = [...gparam.idNosSelecionados];
+		lista.unshift(lista.pop());
+		primeiroNoid = [...gparam.idNosSelecionados][0];
+		selecionaSet(new Set(lista), primeiroNoid);
 		return;
 	}
 
@@ -4909,17 +4928,17 @@ function menu_teclaUp(bSemMensagem) { //segue direção da seta
 	if (proximoNo) {
 		selecionaNoid(proximoNo, false, false);
 	} else if (!bSemMensagem) {
-			alertify.error('Não encontrou item anterior');
+		alertify.error('Não encontrou item anterior');
 	}
 } //.function menu_teclaUp
 
 function menu_teclaRight(bSemMensagem) { //segue direção contrária da seta?
 	var proximoNo = null;
 	if (gparam.idNosSelecionados.size>1) {
-		//var setIter = gparam.idNosSelecionados.values();
-		//proximoNo = setIter.next().value;
-		proximoNo = [...gparam.idNosSelecionados][0];
-		selecionaNoid(proximoNo, false, false);
+		var lista = [...gparam.idNosSelecionados];
+		lista.push(lista.shift());
+		primeiroNoid = [...gparam.idNosSelecionados][0];
+		selecionaSet(new Set(lista), primeiroNoid);
 		return;
 	}
 	var k = 0;
@@ -4946,8 +4965,10 @@ function menu_teclaRight(bSemMensagem) { //segue direção contrária da seta?
 function menu_teclaLeft(bSemMensagem) { //segue direção da seta
 	var proximoNo = null;
 	if (gparam.idNosSelecionados.size>1) {
-		proximoNo = [...gparam.idNosSelecionados][0];
-		selecionaNoid(proximoNo, false, false);
+		var lista = [...gparam.idNosSelecionados];
+		lista.unshift(lista.pop());
+		primeiroNoid = [...gparam.idNosSelecionados][0];
+		selecionaSet(new Set(lista), primeiroNoid);
 		return;
 	}
 
@@ -4965,10 +4986,21 @@ function menu_teclaLeft(bSemMensagem) { //segue direção da seta
 	}
 } //.function menu_teclaLeft
 
-function menu_teclaDown(bSemMensagem) { //segue direção da seta, se chega no final do ramo, volta e entra no ramo pela esquerda
+function menu_teclaDown(bSemMensagem) { 
+//segue direção da seta, se chega no final do ramo, volta e entra no ramo pela esquerda
+//se houver vários itens selecionados, move para visualizar o último (anterior) da seleção
+	/* //sintaxe antiga, antes desselecionada e só deixava o primeiro selecionado
 	if (gparam.idNosSelecionados.size>1) {
 		const lastValue = Array.from(gparam.idNosSelecionados).pop();
 		selecionaNoid(lastValue, false, false);
+		return;
+	}
+	*/
+	if (gparam.idNosSelecionados.size>1) {
+		var lista = [...gparam.idNosSelecionados];
+		lista.push(lista.shift());
+		primeiroNoid = [...gparam.idNosSelecionados][0];
+		selecionaSet(new Set(lista), primeiroNoid);
 		return;
 	}
 	var noInicial = gparam.idnoSelecionado;
@@ -6168,6 +6200,13 @@ function main() {
 		<li class="menu-item submenu">
 		<button type="button" class="menu-btn" title="Exporta/Importa/apaga arquivo JSON no servidor."> <i class="fa fa-file-export"></i> <span class="menu-text">no Servidor</span> </button>
 		<menu class="menu">	
+			{% if parametros.bgrafico_no_servidor %}
+			<li class="menu-item">
+			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false, true);" title="Salva as alterações no servidor preservando o mesmo link. Observação: os links no servidor poderão ser removidos sem aviso prévio... Para preservar as informações localmente, utilize a opção 'Salvar Arquivo Json'.">
+			<i class="fa fa-upload"></i><span class="menu-text">ATUALIZAR JSON no Servidor...</span>
+			</button>
+			</li>  
+			{% endif %}
 			<li class="menu-item">
 			<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_exportaJSONServidor(false)" title="Salva as informações da visualização no servidor e o link poderá ser compartilhado. Observação: os links no servidor poderão ser removidos sem aviso prévio... Para preservar as informações localmente, utilize a opção 'Salvar Arquivo Json'.">
 			<i class="fa fa-upload"></i><span class="menu-text">Exportar JSON ao Servidor...</span>
