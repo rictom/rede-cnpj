@@ -12,13 +12,12 @@ Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 A versão online com dados públicos funciona agora no site https://www.redecnpj.com. A versão online com acesso gratuito foi descontinuada em maio/2023.
 
 ## RedeCNPJ Demo Online:
-Uma versão demo, com base de dados incompleta está rodando em https://www.redecnpj.com.br/demo/. Nesta versão apenas o primeiro nome de sócio é exibido e algumas opções estão desabilitadas.
+Uma versão demo, com base de dados incompleta está rodando em https://www.redecnpj.com.br/demo/. Nesta versão apenas o primeiro nome de sócio é exibido e algumas opções estão desabilitadas. [Aqui](https://redecnpj.pythonanywhere.com/rede/) roda outra versão sem dados reais de empresas. 
 
 ## Versões Aplicativo:
 Para os usuários que não tem familiaridade com o Python, em [https://www.redecnpj.com.br/rede/aplicativo.html](https://www.redecnpj.com.br/rede/pag/aplicativo.html) é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ. Os aplicativos foram gerados a partir do código fonte deste repositório.<br>
 
-## Versão Online de teste:
-[Este site](https://redecnpj.pythonanywhere.com/rede/) está rodando com uma versão da RedeCNPJ com base de teste, sem dados reais de empresas. 
+
 
 ## Versão em python (execução local):
 É preciso ter instalado no computador:
