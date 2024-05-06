@@ -2867,9 +2867,12 @@ function menu_incluir1Camada(idin) {
 	if (gparam.camadaIdExpandido[idref]){ //se ícone já foi clicado, abre camada seguinte.
 		camada = gparam.camadaIdExpandido[idref] + 1;
 	}
-	menu_incluirCamada(idin, camada);
 	gparam.camadaIdExpandido = {}; //reseta, expansão gradativa só de 1 item por vez.
-	gparam.camadaIdExpandido[idref]=camada;
+	menu_incluirCamada(idin, camada);
+	//if ((tipo=='cnpj')&&(graph.getNode(idref))) { //verifica se nó existe para evitar inconsistência quando busca item inexistente na base local
+	if (graph.getNode(idref)) { //verifica se nó existe para evitar inconsistência quando busca item inexistente na base local
+		gparam.camadaIdExpandido[idref]=camada;
+	}
 } //.function menu_incluir1Camada
 
 function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
