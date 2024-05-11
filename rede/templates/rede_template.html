@@ -1598,6 +1598,22 @@ function menu_excluirNosSelecionados(bSemConfirmar) {
 	);
 } //.function menu_excluirNosSelecionados
 
+function menu_excluirTudo(bNaoPergunta) {
+	var setNos = new Set();
+	graph.forEachNode( function(node) { 
+		setNos.add(node.id);
+	});
+	if (!bNaoPergunta) {
+		if (!confirm('Deseja Excluir todos os '+ setNos.size +  ' itens? Não será possível reverter a exclusão.')) {
+			return;
+		}
+	}
+	for (let n of setNos) {
+		removeIdNo(n);
+	}			
+	alertify.success(setNos.size + ' itens foram excluídos.');
+} //.function menu_excluirTudo
+
 function menu_excluirTudo() {
 	var setNos = new Set();
 	graph.forEachNode( function(node) { 
@@ -2802,7 +2818,11 @@ function menu_incluirCamada(idin, camada, tipo, bNaoConfirma) {
 			document.body.style.cursor = 'default';
 			console.log('Fetch Error :-S', err);
 			alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
-		  });
+		  }).finally( function() {
+			if (document.activeElement.id=="input_cnpj") {
+				document.getElementById("botao_inserir").focus();
+			}		  
+		  });;
 	}
 	function dialogoParametrosLink() {
 		//https://stackoverflow.com/questions/30712759/multiple-input-boxes-in-alertifyjs-prompt-dialog
@@ -5730,11 +5750,12 @@ function main() {
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i></button>
 
 		{% if not parametros.mobile %}
+			<button class='botaosuperior' type="button" onclick="javascript:menu_inserirDesfazer();" title='Desfaz última inserção de itens (CTRL+Z)'><i class="fa fa-undo"></i></button>
 			<input type="text" id="input_cnpj" name="input_cnpj" size="18" value='' onkeydown='menu_input_cnpj(this)' 
-				onfocusin="ativaAtalhos(false)" onfocusout="ativaAtalhos(true);" onClick="this.select();"
+				onfocusin="ativaAtalhos(false)" onfocusout="ativaAtalhos(true);" 
 				title='Digite {% if parametros.bBaseReceita %} CNPJ, Razão Social, Nome Fantasia, CPF de sócio ou Nome de sócio {% endif %}e pressione Enter. Os nomes podem ter acentuação ou estar com letras minúsculas, pois o texto é convertido em maiúsculas sem acentuação. CNPJS e CPFs podem ter pontos, traços ou barras. Para buscar por Unidade Gestora, coloque UG_NNNNNN, onde NNNNNN é o código da UG. A busca por endereço, por telefone ou por email ainda não foi implementada.'>
 		{% endif %}
-		<button class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
+		<button id='botao_inserir' class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(event.shiftKey);" title='Exibir Dados do Item (D). SHIFT+Click ou SHIFT+D abre os dados de CNPJ em nova aba.'><i class="fa fa-newspaper"></i></button>
 
 		{% if not parametros.mobile %}
@@ -5750,7 +5771,8 @@ function main() {
 
 			<!--button id="drop_area"  ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  title="Arraste para esta tela uma coluna de CNPJs, um arquivo tipo json ou o botão DRAG de outra aba" disabled>DROP</button> -->
 			<button class='botaosuperior' onclick="javascript:menu_colaClip();"  title="(CTRL+V) COLA itens da Área de Transferência da RedeCNPJ de outra aba"><i class="fa fa-paste"></i></button>
-			<button id="drag_area"  ondragstart="drag_handler(event);" draggable="true" onclick="javascript:menu_copiaClip();" ondblclick="javascript:menu_copiaItensParaOutraAba(event.shiftKey, true);" title="COPY: CLICK SIMPLES para copiar para a Área de Transferência da RedeCNPJ (CTRL+C), para ser colada em outra aba. Dê CLICK DUPLO para COPIAR os itens selecionados para NOVA ABA já aberta por SHIFT+DUPLO CLICK, tecla A ou SHIFT+A; SHIFT+DUPLO CLICK copia os itens para uma NOVA ABA; DRAG: Arraste este botão para outra Aba de Rede para copiar os itens selecionados."><b>COPY/DRAG</b><!-- drag_area--> <!--i class="fa fa-hand-holding-water"></i--></button>
+			<button id="drag_area"  ondragstart="drag_handler(event);" draggable="true" onclick="javascript:menu_copiaClip();" ondblclick="javascript:menu_copiaItensParaOutraAba(event.shiftKey, true);" title="COPY: CLICK SIMPLES para copiar para a Área de Transferência da RedeCNPJ (CTRL+C), para ser colada em outra aba. Dê CLICK DUPLO para COPIAR os itens selecionados para NOVA ABA já aberta por SHIFT+DUPLO CLICK, tecla A ou SHIFT+A; SHIFT+DUPLO CLICK copia os itens para uma NOVA ABA; DRAG: Arraste este botão para outra Aba de Rede para copiar os itens selecionados."><i class="fa fa-copy"></i>/<i class="fa fa-hand-rock" aria-hidden="true"></i></button>
+			<button id='botao_excluir_tudo' class='botaosuperior' onclick="javascript:menu_excluirTudo();"  title="Apaga TODOS os itens da tela. Para apagar apenas os itens selecionados, pressione a tecla DELETE. Para desfazer a última inserção, pressione CTRL+Z."><i class="fa fa-trash"></i></button>
 		{% endif %}
 	</div>
 
