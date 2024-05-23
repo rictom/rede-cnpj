@@ -1705,7 +1705,7 @@ def dadosParaExportar(dados):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         dfe=pd.read_sql_query(queryempresas, con)
         dfe['razao_social'] =  dfe['razao_social'].apply(lambda t: cpf_cnpj.removeCPFFinal(t))
-        dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital/100:,.2f}".replace(',','@').replace('.',',').replace('@','.') if capital else '')  
+        dfe['capital_social'] = dfe['capital_social'].apply(lambda capital: f"{capital:,.2f}".replace(',','@').replace('.',',').replace('@','.') if capital else '')  
         dfe['matriz_filial'] = dfe['matriz_filial'].apply(lambda x:'Matriz' if x=='1' else 'Filial')
         dfe['data_inicio_atividades'] = dfe['data_inicio_atividades'].apply(ajustaData)
         dfe['situacao_cadastral'] = dfe['situacao_cadastral'].apply(lambda x: gdic.dicSituacaoCadastral.get(x,'') if x else '')
