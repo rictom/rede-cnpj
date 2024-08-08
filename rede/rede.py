@@ -710,4 +710,4 @@ if __name__ == '__main__':
             pyi_splash.close()
         except:
             pass
-    app.run(host='0.0.0.0',debug=True, use_reloader=True, port=config.par.porta_flask)
+    app.run(host='0.0.0.0',debug=True, use_reloader=True, port=porta)
