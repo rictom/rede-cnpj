@@ -39,7 +39,7 @@ def soCaracteres(data):
     if data is None:
         return ''
     t=''.join(x for x in unicodedata.normalize('NFKD', data) if x in string.printable)
-    return re.sub('\W',' ',t)
+    return re.sub(r'\W',' ',t)
 
 dicAbreviaturas = {
         "A":"AREA",
@@ -230,9 +230,9 @@ dicAbreviaturas = {
         "TEN":"TENENTE",
     }
 
-regex1 = re.compile('([0-9]+)[.]([0-9]+)')
-regex2 = re.compile('([A-Z])(\d)')
-regex3 = re.compile('(\d)([A-Z])')
+regex1 = re.compile(r'([0-9]+)[.]([0-9]+)')
+regex2 = re.compile(r'([A-Z])(\d)')
+regex3 = re.compile(r'(\d)([A-Z])')
 tremovenumerosespacos = str.maketrans(string.ascii_letters,string.ascii_letters,string.digits+' ')
 
 def normalizaEndereco(enderecoIn, ignoraEnderecoSoComNumeros = True, ignoraEnderecoSemNumeros = True):
@@ -240,13 +240,13 @@ def normalizaEndereco(enderecoIn, ignoraEnderecoSoComNumeros = True, ignoraEnder
        como R, AV. No final, ordena o resultado'''
     #junta números com ponto, por exemplo, 3.222 fica 3222
     if 1:
-        enderecoAux = re.sub('([0-9]+)[.]([0-9]+)', '\\1\\2', enderecoIn).upper() #remove ponto de número
-        enderecoAux = re.sub('([A-Z])(\d)', '\\1 \\2', enderecoAux) #separa letra de dígito
-        enderecoAux = re.sub('(\d)([A-Z])', '\\1 \\2', enderecoAux) #separa digito de letra
+        enderecoAux = re.sub(r'([0-9]+)[.]([0-9]+)', '\\1\\2', enderecoIn).upper() #remove ponto de número
+        enderecoAux = re.sub(r'([A-Z])(\d)', '\\1 \\2', enderecoAux) #separa letra de dígito
+        enderecoAux = re.sub(r'(\d)([A-Z])', '\\1 \\2', enderecoAux) #separa digito de letra
     else: #fazendo compile fica mais lento!
-        enderecoAux = regex1.sub('\\1\\2', enderecoIn).upper() #remove ponto de número
-        enderecoAux = regex2.sub('\\1 \\2', enderecoAux) #separa letra de dígito
-        enderecoAux = regex3.sub('\\1 \\2', enderecoAux) #separa digito de letra        
+        enderecoAux = regex1.sub(r'\\1\\2', enderecoIn).upper() #remove ponto de número
+        enderecoAux = regex2.sub(r'\\1 \\2', enderecoAux) #separa letra de dígito
+        enderecoAux = regex3.sub(r'\\1 \\2', enderecoAux) #separa digito de letra        
     
     #enderecoAux = ' ' + enderecoAux.upper() + ' '
     enderecoAux = " %s " %(soCaracteres(enderecoAux))
