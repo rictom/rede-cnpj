@@ -21,10 +21,12 @@ from datetime import datetime
 #from flask import jsonify
 from orjson import dumps as jsonify #orjson é muito mais rápido que jsonify
 
-nome_modulo_relacionamento = config.config['BASE'].get('modulo_relacionamento', 'rede_sqlite_cnpj').strip()
-print(f'Carregando {nome_modulo_relacionamento}')
-rede_relacionamentos = importlib.import_module(nome_modulo_relacionamento)
-print(f'Utilizando {nome_modulo_relacionamento} como rede_relacionamentos.')
+#nome_modulo_relacionamento = config.config['BASE'].get('modulo_relacionamento', 'rede_sqlite_cnpj').strip()
+#print(f'Carregando {nome_modulo_relacionamento}')
+#rede_relacionamentos = importlib.import_module(nome_modulo_relacionamento)
+#print(f'Utilizando {nome_modulo_relacionamento} como rede_relacionamentos.')
+import rede_sqlite_cnpj as rede_relacionamentos
+
 
 # sys.path.append('busca') #pasta com rotinas de busca
 # sys.path.append('i2') #rotina do i2 chart reader
@@ -691,15 +693,21 @@ def imagensNaPastaF(bRetornaLista=True):
         return dic
 #.def imagensNaPastaF
    
-if __name__ == '__main__':
+if __name__ == '__main__':        
+    base = '/rede'  
     import webbrowser, platform
-    if platform.system()=='Windows': 
-        webbrowser.open(f'http://127.0.0.1:{config.par.porta_flask}/rede', new=0, autoraise=True) 
-    app.run(host='0.0.0.0',debug=True, use_reloader=False, port=config.par.porta_flask)
-            #ssl_context=('certificado/rede_selfsigned.crf', 'certificado/rede_selfsigned.key'))
-    try: #fecha splash na versão .exe
-        import pyi_splash
-        pyi_splash.update_text('UI Loaded ...')
-        pyi_splash.close()
-    except:
-        pass
+    porta = config.par.porta_flask
+    if platform.system()=='Darwin' and porta==5000: #MacOS, a porta 5000 já é usada por outra aplicação
+        porta = 5100
+    url = f'http://127.0.0.1:{porta}' + base
+    print('A redecnpj deve ser acessada no navegador pelo endereço ' + url)
+    if platform.system() in ('Windows', 'Darwin'): 
+        #webbrowser.open('https://www.oarcanjo.net/site/doe/')
+        webbrowser.open(url, new=0, autoraise=True) 
+        try: #fecha splash na versão .exe gerado pelo pyinstaller
+            import pyi_splash
+            pyi_splash.update_text('UI Loaded ...')
+            pyi_splash.close()
+        except:
+            pass
+    app.run(host='0.0.0.0',debug=True, use_reloader=True, port=config.par.porta_flask)
