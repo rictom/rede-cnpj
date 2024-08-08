@@ -264,7 +264,7 @@ def separaEntrada(listaIds=None):
                         limite = 1
                 except ValueError:
                     limite = 1
-            soDigitos = ''.join(re.findall('\d', str(i)))
+            soDigitos = ''.join(re.findall(r'\d', str(i)))
             if len(soDigitos)==14:
                 lista.add('PJ_'+soDigitos)
             elif len(soDigitos)==8:
@@ -273,16 +273,16 @@ def separaEntrada(listaIds=None):
             elif len(soDigitos)==11:
                 scpfs = busca_cpf(soDigitos, limite)
                 lista.update(scpfs)
-            elif re.search('\*\*\*\d\d\d\d\d\d\*\*',str(i)):
+            elif re.search(r'\*\*\*\d\d\d\d\d\d\*\*',str(i)):
                 scpfs = busca_cpf(str(i), limite) 
                 lista.update(scpfs)
                 pass #fazer verificação por CPF??
             #elif not soDigitos and i.strip():
-            elif re.findall('[a-zA-Z]', str(i)) and i.strip(): #se tiver pelo menos uma letra, busca por nome
+            elif re.findall(r'[a-zA-Z]', str(i)) and i.strip(): #se tiver pelo menos uma letra, busca por nome
                 #cnpjsaux, cpfnomesaux = buscaPorNome(i, limite=limite)
                 cidsaux = buscaPorNome(i, limite)
                 lista.update(cidsaux) 
-            elif not re.findall('\D',str(i).replace('.','').replace('-','')): #só tem digitos, tenta acrescentar zeros à esquerda
+            elif not re.findall(r'\D',str(i).replace('.','').replace('-','')): #só tem digitos, tenta acrescentar zeros à esquerda
                 if cpf_cnpj.validar_cpf(i):
                     scpfs = busca_cpf(cpf_cnpj.validar_cpf(i), limite)
                     lista.update(scpfs)                    
@@ -1059,8 +1059,8 @@ def dadosDosNosCNPJs(nosaux, camadasIds, tmp, con, dicGrupo=None):
             logradouro = ', '.join([k['logradouro'].strip(), k['numero'].strip()] )
             if not logradouro.startswith(k['tipo_logradouro'].strip()):
                 logradouro = k['tipo_logradouro'].strip() + ' ' + logradouro
-            logradouro = re.sub("\s\s+", " ", logradouro)
-            logradouro_complemento = re.sub("\s\s+", " ", logradouro_complemento)
+            logradouro = re.sub(r"\s\s+", " ", logradouro)
+            logradouro_complemento = re.sub(r"\s\s+", " ", logradouro_complemento)
             no = {'id': cnpj2id(k['cnpj']), 
                   'descricao': cpf_cnpj.removeCPFFinal(k['razao_social']), #xxx gambiarra, remove cpf no final de razao social de empresario individual
                   'nome_fantasia': k['nome_fantasia'], 
@@ -1400,7 +1400,7 @@ def jsonDadosReceita(cnpjlista, bsocios=False):
             listaaux.append(k['bairro']) #se for empresa no exterior, o bairro as vezes aparece como municipio
         listalogradouro = [j.strip() for j in listaaux if j.strip()]
         logradouro = ', '.join(listalogradouro)
-        logradouro = re.sub("\s\s+", " ", logradouro)
+        logradouro = re.sub(r"\s\s+", " ", logradouro)
         #d['cnpj'] = f"{d['cnpj']} - {'Matriz' if d['matriz_filial']=='1' else 'Filial'}"       
         d['matriz_filial'] = 'Matriz' if d['matriz_filial']=='1' else 'Filial'
         d['data_inicio_atividades'] = ajustaData(d['data_inicio_atividades'])

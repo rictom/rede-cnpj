@@ -7,7 +7,7 @@ def validar_cpf(cpf):
     Valida CPFs, retornando apenas a string de números válida.
     se tiver menos de 11 algarismos, preenche
     """
-    cpf = ''.join(re.findall('\d', str(cpf)))
+    cpf = ''.join(re.findall(r'\d', str(cpf)))
     
     if not cpf:
         return ''
@@ -47,7 +47,7 @@ def validar_cnpj(cnpj):
     Valida CNPJs, retornando apenas a string de números válida.
     """
     
-    cnpj = ''.join(re.findall('\d', str(cnpj)))
+    cnpj = ''.join(re.findall(r'\d', str(cnpj)))
     
     if not cnpj:
         return ''
@@ -64,7 +64,7 @@ def validar_cnpj(cnpj):
         cnpj += '000100'
     cnpj = cnpj.zfill(14)
     
-    cnpj = ''.join(re.findall('\d', str(cnpj)))
+    cnpj = ''.join(re.findall(r'\d', str(cnpj)))
 
     
     # Pega apenas os 12 primeiros dígitos do CNPJ e gera os 2 dígitos que faltam
@@ -93,7 +93,7 @@ def cnpj_formatado(cnpj):
     return f"{cnpj[:2]}.{cnpj[2:5]}.{cnpj[5:8]}/{cnpj[8:12]}-{cnpj[12:]}"
 #.def cnpj_formatado(cnpj):
 
-exprTerminaCPF = re.compile('.*\d{11}$')
+exprTerminaCPF = re.compile(r'.*\d{11}$')
 def removeCPFFinal(nomeIn):
     if exprTerminaCPF.search(nomeIn):
         return nomeIn[:-11].strip()
