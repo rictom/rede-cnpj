@@ -5718,8 +5718,8 @@ function main() {
 <!-- overflow:hidden para não aparecer barra de rolagem -->
 <!--div id="block_container"-->
 	<div id='div_botoes'>
-		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Abre Menu com opções'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
-		<button class='botaosuperior' id='btn_menu' type="button" onclick="window.open(base+'grafico_no_servidor/rede_cnpj_diagrama.json');" title='Abre diagrama clicável com orientações e vídeos de uso da ferramenta.'>
+		<button class='botaosuperior' id='btn_menu' type="button" onclick="javascript:menu_botao(event);" title='Clique para Abrir o Menu com opções.  &#13;&#13;Teclas de Atalho:&#13;A: Abrir itens selecionados em nova Aba;&#13;SHIFT+A: Abrir nova Aba vazia;&#13;1 a 9: Abrir Camadas;&#13;I: Inserir CNPJ;&#13;SHIFT+I: Buscar por Endereço, Telefone ou Email;&#13;CTRL+Z: Desfazer inserção;&#13;D: Exibir Dados de empresa;&#13;SHIFT+D: Dados de empresa em nova aba;&#13;U: Criar item que não seja PF/PJ;&#13;SHIFT+U: Criar item e ligar aos selecionados;&#13;CTRL+U: Criar item depois do primeiro e agrupa restantes;&#13;P: Pinar (fixar) o item na posição;&#13;SHIFT+P: Desafixar item;&#13;E: Editar texto do item e colar imagem;&#13;F: Procurar (Find) item na tela;&#13;C: Colorir;&#13;SHIFT+C: Descolorir;&#13;N: Alterar modo de exibição dos rótulos;&#13;SHIFT+N: Modo de exibição do rótulo das ligações;&#13;L: Ligar itens selecionados;&#13;SHIFT+L: Remover ligação;&#13;K: Liga itens em fila;&#13;J: Selecionar itens adJacentes;&#13;G: Buscar no Google;&#13;SHIFT+G: Abrir Google Maps;&#13;H: Gráfico com Google;&#13;B: Abrir Abas com Buscas no Google, Bing, etc;&#13;'><i class="fa fa-bars"></i></button> <!-- tirei o texto Menu -->
+		<button class='botaosuperior' id='btn_diagrama' type="button" onclick="window.open(base+'grafico_no_servidor/rede_cnpj_diagrama.json');" title='Abre diagrama clicável com orientações e vídeos de uso da ferramenta.'>
 			{% if parametros.mobile %}
 				<img src="/static/imagem/favicon.ico" alt="MapRoad"/>
 			{% else %}
