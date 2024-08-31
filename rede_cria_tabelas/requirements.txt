@@ -1,0 +1,8 @@
+pandas
+sqlalchemy
+dask
+dask-expr
+beautifulsoup4
+requests
+wget
+parfive

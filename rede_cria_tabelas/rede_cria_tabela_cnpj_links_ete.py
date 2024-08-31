@@ -19,9 +19,9 @@ rodaSo1bloco=False
 caminhobase = '' #alterar caminho
 caminhoarquivolog = 'logimportarenderecos.txt' 
 
-camDbSqliteBaseCompleta = r"cnpj.db" #aqui precisa ser a tabela completa
+camDbSqliteBaseCompleta = r"dados-publicos/cnpj.db" #aqui precisa ser a tabela completa
 
-camDBSaida = 'cnpj_links_ete.db'
+camDBSaida = 'dados-publicos/cnpj_links_ete.db'
 
 bMemoria = False #se tiver menos de 16GB de RAM, colocar bMemoria=False #na memoria, 1h11m, no hd, 1h17m
 
