@@ -46,16 +46,23 @@ para executar a rede-cnpj<br>
  
   
  ## USAR A BASE COMPLETA DE CNPJS: <br>
- - As instruções para gerar a base completa de CNPJs estão na página https://github.com/rictom/cnpj-sqlite <br>
- - Copie o arquivo cnpj.db para a pasta rede/bases: <br>
+ - As instruções para gerar a base completa de CNPJs estão na página https://github.com/rictom/cnpj-sqlite, mas para facilitar o uso, o código foi replicado na neste projeto.<br>
+ - Posicione o console na pasta rede_cria_tabelas. Use cd .. ou cd rede_cria_tabelas .<br>
+ - A pasta rede_cria_tabelas contém os scripts para baixar os arquivos zip do site de Dados Abertos, gerar a base completa de empresas e as tabelas utilizadas na redeCNPJ.<br>
+ - a) para baixar os arquivos zip do site de Dados Abertos, rode o comando <b>python dados_cnpj_baixa.py</b> . Após o processo, deverá haver 37 arquivos .zip na pasta dados-publicos-zip. <br>
+ - b) para criar a base de empresas cnpj.db, rode o comando <b>python dados_cnpj_para_sqlite.py</b> . Isso irá criar um arquivo cnpj.db na pasta dados-publicos em torno de 30GB.<br>
+ - c) para criar a tabela de vínculos, execute o comando <b>python rede_cria_tabela_rede.db.py</b> . Ao final, deverá haver os arquivos rede.db e rede_search.db na pasta dados-publicos.<br>
+ - d) para criar a tabela de vínculos de endereços, rode o comando <b>python rede_cria_tabela_cnpj_links_ete.py</b> . Isto irá gerar o arquivo cnpj_links_ete.db.<br>
 
- - A partir da versão 1.0, é preciso gerar um arquivo rede.db e rede_search.db. Para isso, posicione o console na pasta bases e rode o comando <b>python rede_cria_tabela_rede.db.py</b>. Obs: Se o computador este tiver pouca memória RAM, a rotina poderá dar erro de "database or disk full"<br>
- - Para utilizar a base completa na rede-cnpj, abra o arquivo o rede.ini no Bloco de Notas:<br>
-<b>base_rede = bases/rede.db<br>
-base_rede_search = bases/rede_search.db<br>
- base_receita = bases/cnpj.db<br></b>
+<br>
+ - Depois de seguir as orientações a) até d), mova os arquivos cnpj.db, rede.db, rede_search.db, cnpj_links_ete.db da pasta <b>rede_cria_tabelas/dados-publicos</b> para a <b>rede/bases</b>. Os arquivos restantes dentro das pastas dados-publicos e dados-publicos-zip poderão ser apagados.<br>
+<br>
+ - Observação: O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
 
- - Altere também a mensagem_advertencia para não causar confusão. Tire o # do primeiro mensagem_advertencia e coloque #  no segundo mensagem_advertencia. <br>
+ - Para uso na redeCNPJ, os arquivos podem ser posicionados em outros locais, alterando-se o arquivo o rede.ini no Bloco de Notas. Por exemplo, se quiser colocar em um disco externo, faça algo como:<br>
+<b>base_rede=D:/arquivos_grandes/rede.db</b><br>
+
+ - No arquivo rede.ini, altere também a mensagem_advertencia para não causar confusão. Tire o # do primeiro mensagem_advertencia e coloque #  no segundo mensagem_advertencia. <br>
    ![image](https://user-images.githubusercontent.com/71139693/179335724-39085411-4caf-4ee5-ac5b-275ff195a8a8.png)
  - Altere o parâmetro referencia_bd que será exibido na parte superior da tela da redeCNPJ e coloque a data da base de CNPJs, por exemplo:<br>
    <b>referencia_bd=CNPJ(11/02/2023)</b><br>
@@ -65,15 +72,9 @@ base_rede_search = bases/rede_search.db<br>
 ![image](https://user-images.githubusercontent.com/71139693/179335747-16939bf1-0f02-4329-849d-d41677f05920.png)
 
  - Agora o projeto está rodando localmente com a base completa de cnpjs.<br>
-  
- ## Para visualizar os links de endereços, telefones e e-mails
- - Gere o arquivo cnpj_links_ete.db pelo comando <b>python rede_cria_tabela_cnpj_links_ete.py</b><br>
- - Obs: O arquivo cnpj_links_ete.db é opcional, a redeCNPJ funciona mesmo sem este arquivo, que tem os vínculos entre empresas com mesmo endereço, telefone ou email.
 
 
- - Altere o arquivo de configuração rede.ini<br>
- <b>base_endereco_normalizado = cnpj_links_ete.db.</b><br>
- Salve o rede.ini e reinicie o projeto.<br>
+ - Os scripts para criação das tabelas estão disponíveis como aplicativo Windows no link https://www.redecnpj.com.br/rede/pag/aplicativo.html<br>
 
 
   
