@@ -19,7 +19,7 @@ Para os usuários que não tem familiaridade com o Python, em [https://www.redec
 
 ## Versão em python (execução local):
 É preciso ter instalado no computador:
-- python <b>versão 3.9</b> ou posterior.<br> 
+- python <b>versão 3.9</b> a <b>3.12</b>.<br> 
 - 100GB de espaço livre, para utilizar a base de CNPJs em sqlite.
 
 Faça um clone do código deste projeto.<br>
