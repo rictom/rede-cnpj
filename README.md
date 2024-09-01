@@ -17,8 +17,6 @@ Uma versão demo, com base de dados incompleta está rodando em https://www.rede
 ## Versões Aplicativo:
 Para os usuários que não tem familiaridade com o Python, em [https://www.redecnpj.com.br/rede/aplicativo.html](https://www.redecnpj.com.br/rede/pag/aplicativo.html) é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ. Os aplicativos foram gerados a partir do código fonte deste repositório.<br>
 
-
-
 ## Versão em python (execução local):
 É preciso ter instalado no computador:
 - python <b>versão 3.9</b> ou posterior.<br> 
@@ -169,6 +167,8 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+<b>versão 1.2 (agosto/2024)</b>
+- Scripts para gerar as tabelas com dados completos em rede_criar_tabelas<br>
 
 <b>versão 1.1 (fevereiro/2024)</b>
 - Removido a dependência de sqlalchemy<=2.0, evitando erro se a biblioteca sqlalchemy for atualizada;<br>
