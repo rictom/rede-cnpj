@@ -24,26 +24,36 @@ Para os usuários que não tem familiaridade com o Python, em [https://www.redec
 - python <b>versão 3.9</b> ou posterior.<br> 
 - 100GB de espaço livre, para utilizar a base de CNPJs em sqlite.
 
-Faça um clone do código deste projeto.
+Faça um clone do código deste projeto.<br>
+O recomendado é trabalhar em um ambiente virtual. Siga orientações como em https://docs.python.org/3/library/venv.html<br>
 Use o comando<br>
-pip install -r requirements.txt<br>
+<b>pip install -r requirements.txt</b><br>
 para instalar as bibliotecas utilizadas.<br><br>
 Para iniciar o script, em um console digite<br>
-python rede.py<br>
+<b>python rede.py</b><br>
 A rotina abrirá o endereço http://127.0.0.1:5000/rede/ no navegador padrão.
 As opções por linha de comando são exibidas fazendo python rede.py -h<br>
 A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que são amostras dos bancos de dados para testar o funcionamento da rotina.<br> 
-Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ## Como utilizar o Banco de dados completo de CNPJs com a versão em Python:
-O projeto https://github.com/rictom/cnpj-sqlite contém o código para a conversão dos arquivos zipados do site da Receita para o formato SQLITE, gerando o arquivo <b>cnpj.db</b> com a base completa.<br>
 
-Observação: Para rodar o projeto localmente com a base completa, é necessário ter os arquivos cnpj.db, rede.db e rede_search.db. O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
-O código foi ajustado para o formato disponibilizado pela Receita Federal a partir de 2021.<br> 
-Altere o arquivo de configuração rede.ini, mudando as linhas de configuração para<br>
-<b>base_rede = bases/rede.db</b><br>
-<b>base_rede_search = bases/rede_search.db</b><br>
-<b>base_receita = bases/cnpj.db</b><br>
+A pasta <b>rede_cria_tabelas</b> contém os scripts para baixar os arquivos zip do site de Dados Abertos, gerar a base completa de empresas e as tabelas utilizadas na redeCNPJ.<br>
+a) para baixar os arquivos zip do site de Dados Abertos, rode o comando:<br>
+<b>python dados_cnpj_baixa.py</b><br>
+b) para criar a base de empresas <b>cnpj.db</b>, rode o comando:<br>
+<b>python dados_cnpj_para_sqlite.py</b><br>
+c) para criar a tabela de vínculos <b>rede.db</b> utilizada na redeCNPJ, rode o comando:<br>
+<b>python rede_cria_tabela_rede.db.py</b><br>
+d) para criar a tabela de vínculos <b>cnpj_links_ete.db</b> de endereços, emails e telefones cnpj_links_ete.db utilizada na redeCNPJ, rode o comando:<br>
+<b>python rede_cria_tabela_cnpj_links_ete.py</b><br>
+<br>
+Ao final, mova os arquivos cnpj.db, rede.db, rede_search.db, cnpj_links_ete.db da pasta <b>rede_cria_tabelas/dados-publicos</b> para a <b>rede/bases</b>. Os arquivos restantes nas pastas dados-publicos e dados-publicos-zip poderão ser apagados.<br>
+<br>
+Observação: O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
+Veja o projeto https://github.com/rictom/cnpj-sqlite para ver informações sobre o código para baixar os arquivos com dados abertose e converter para sqlite.<br>
+
+O código foi ajustado para o formato disponibilizado pela Receita Federal a partir de 2021, testado em agosto de 2024.<br> 
+Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
 
 ### Diagrama da RedeCNPJ na RedeCNPJ<br>
 ![image](https://user-images.githubusercontent.com/71139693/235322145-30fe1956-76f7-438c-825a-9552b5a7004f.png)<br>
