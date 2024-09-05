@@ -645,6 +645,31 @@ elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
             return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-C'})
     #.def serve_busca_google síncrono sem chaves
 
+@app.route('/rede/informacao/dados_publicos_cnpj_disponivel', methods = ['GET'])
+@limiter.limit(limiter_padrao)
+def serve_dados_publicos_disponivel():
+    from bs4 import BeautifulSoup
+    import requests
+    ano_mes_do_banco_sendo_usado = ''
+    ultima_referencia = ''
+    try:
+        #url_dados_abertos = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/'
+        url_dados_abertos = 'https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/'
+        soup_pagina_dados_abertos = BeautifulSoup(requests.get(url_dados_abertos).text, 'lxml')
+        daux = rede_relacionamentos.referenciaF('cnpj').get('data_referencia','').split('/')
+        ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
+        if rede_relacionamentos.referenciaF('cnpj').get('cnpj_qtde',0)<6*10**7:
+            ano_mes_do_banco_sendo_usado = '' #base de teste porque tem poucos registros
+        else:
+            ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
+
+        ultima_referencia = sorted([link.get('href') for link in soup_pagina_dados_abertos.find_all('a') if link.get('href').startswith('20')])[-1]
+    except Exception as e:
+        print('exception: ', e)
+        return jsonify({'mensagem':'Aconteceu algum erro. Não foi possível verificar a página ' + url_dados_abertos})
+    return jsonify({'ano_mes_sendo_usado':ano_mes_do_banco_sendo_usado, 'ano_mes_disponivel':ultima_referencia.removesuffix('/'), 'url':url_dados_abertos+ultima_referencia})
+#.def serve_dados_publicos_disponivel
+
 def caminhoArquivoLocal(nomeArquivo):
     nomeSplit = os.path.split(nomeArquivo)
     if not nomeSplit[0]: #sem caminho inteiro
