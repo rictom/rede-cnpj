@@ -5077,6 +5077,43 @@ function menu_teclaDown(bSemMensagem) {
 	}
 } //.function menu_teclaDown
 
+function menu_verificar_atualizacao_cnpj() {
+	document.body.style.cursor = 'wait';
+	var url = base + 'informacao/dados_publicos_cnpj_disponivel';
+	fetch(url, {method: 'get', headers: {"Content-type": "application/json"}, cache: "no-store"}) // mode: 'cors',
+	  .then(
+		function(response) {
+		  if (response.status !== 200) {
+			mensagemErroHttp(response);
+			return;
+		  }
+		  response.json().then(function(data) {
+			document.body.style.cursor = 'default';
+			//alert(JSON.stringify(data));
+			if (data.mensagem) {
+				alert(data.mensagem);
+				return;
+			}
+			if (!data.ano_mes_sendo_usado) {
+				alert('A RedeCNPJ está utilizando uma base de teste. Dados completos, com referência ' + data.ano_mes_disponivel + ', estão disponíveis em ' + data.url);
+				window.open(data.url);			
+			} else if (data.ano_mes_disponivel==data.ano_mes_sendo_usado) {
+				alert('A base na RedeCNPJ, referência ' + data.ano_mes_sendo_usado +' é a última disponível em ' + data.url);
+			} else if (data.ano_mes_disponivel>data.ano_mes_sendo_usado) {
+				alert('A base na RedeCNPJ, referência ' + data.ano_mes_sendo_usado +', está desatualizada. Em ' + data.url + ' há dados mais recentes de ' + data.ano_mes_disponivel);
+				window.open(data.url);
+				alert('Utilize o aplicativo rede_cria_tabelas.exe para atualizar as bases.')
+			}
+		  });
+		}
+	  )
+	  .catch(function(err) {
+		document.body.style.cursor = 'default';
+		console.log('Fetch Error:', err);
+		alertify.error('Aconteceu um erro (Fetch error ' + err + ')');
+	  });
+}//.function menu_verificar_atualizacao_cnpj
+
 function menu_configurar_nodeSize() {
 	var parametro = prompt('Digite o tamanho do ícone.', gparam.nodeSize);
 	if (!parametro) {
@@ -6380,6 +6417,11 @@ function main() {
 		<span class="menu-text">Tamanho do Ícone</span> 
 		</button>
 		</li>
+		<li class="menu-item">
+		<button type="button" class="menu-btn" onclick="menuOnClick(); javascript:menu_verificar_atualizacao_cnpj();"> 
+		<span class="menu-text">Verificar atualização da base cnpj</span> 
+		</button>
+		</li>		
 	</menu>
 	</li>	
 	{% if parametros.bBaseReceita %}
