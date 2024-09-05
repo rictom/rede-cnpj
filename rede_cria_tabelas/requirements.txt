@@ -4,5 +4,6 @@ dask
 dask-expr
 beautifulsoup4
 requests
+bs4
 wget
 parfive
