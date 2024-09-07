@@ -29,6 +29,8 @@ if os.path.exists(cam):
     input(f'O arquivo {cam} já existe. Apague-o primeiro e rode este script novamente.')
     sys.exit()
 
+bApagaDescompactadosAposUso = True
+
 arquivos_zip = list(glob.glob(os.path.join(pasta_compactados,r'*.zip')))
 
 if len(arquivos_zip) != 37:
@@ -57,7 +59,9 @@ def carregaTabelaCodigo(extensaoArquivo, nomeTabela):
     dtab = pd.read_csv(arquivo, dtype=str, sep=';', encoding='latin1', header=None, names=['codigo','descricao'])
     dtab.to_sql(nomeTabela, engine, if_exists='replace', index=None)
     engine.execute(f'CREATE INDEX idx_{nomeTabela} ON {nomeTabela}(codigo);')
-
+    if bApagaDescompactadosAposUso:
+        os.remove(arquivo)
+	    
 carregaTabelaCodigo('.CNAECSV','cnae')
 carregaTabelaCodigo('.MOTICSV', 'motivo')
 carregaTabelaCodigo('.MUNICCSV', 'municipio')
@@ -147,6 +151,8 @@ def carregaTipo(nome_tabela, tipo, colunas):
         #dask possibilita usar curinga no nome de arquivo, por ex: 
         #ddf = dd.read_csv(pasta_saida+r'\*' + tipo, sep=';', header=None, names=colunas ...
         ddf.to_sql(nome_tabela, engine_url, index=None, if_exists='append', dtype=sqlalchemy.sql.sqltypes.TEXT)
+	if bApagaDescompactadosAposUso:
+            os.remove(arq)
         print('fim parcial...', time.asctime())
 
 carregaTipo('empresas', '.EMPRECSV', colunas_empresas)
