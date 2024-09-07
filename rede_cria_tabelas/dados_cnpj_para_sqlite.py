@@ -55,11 +55,12 @@ engine_url = f'sqlite:///{cam}'
 #carrega tabelas pequenas e indexa
 def carregaTabelaCodigo(extensaoArquivo, nomeTabela):
     arquivo = list(glob.glob(os.path.join(pasta_saida, '*' + extensaoArquivo)))[0]
-    print('carregando tabela '+arquivo)
+    print('carregando arquivo ' + arquivo + ' na tabela ' + nomeTabela)
     dtab = pd.read_csv(arquivo, dtype=str, sep=';', encoding='latin1', header=None, names=['codigo','descricao'])
     dtab.to_sql(nomeTabela, engine, if_exists='replace', index=None)
     engine.execute(f'CREATE INDEX idx_{nomeTabela} ON {nomeTabela}(codigo);')
     if bApagaDescompactadosAposUso:
+        print('apagando arquivo '+arquivo)
         os.remove(arquivo)
 	    
 carregaTabelaCodigo('.CNAECSV','cnae')
@@ -145,13 +146,14 @@ def carregaTipo(nome_tabela, tipo, colunas):
     #usando dask, bem mais rápido que pandas
     arquivos = list(glob.glob(os.path.join(pasta_saida, '*' + tipo)))
     for arq in arquivos:
-        print(f'carregando: {arq=}')
+        print(f'carregando: {arq=} em {nome_tabela}')
         print('lendo csv ...', time.asctime())
         ddf = dd.read_csv(arq, sep=';', header=None, names=colunas, encoding='latin1', dtype=str, na_filter=None)
         #dask possibilita usar curinga no nome de arquivo, por ex: 
         #ddf = dd.read_csv(pasta_saida+r'\*' + tipo, sep=';', header=None, names=colunas ...
         ddf.to_sql(nome_tabela, engine_url, index=None, if_exists='append', dtype=sqlalchemy.sql.sqltypes.TEXT)
-	if bApagaDescompactadosAposUso:
+        if bApagaDescompactadosAposUso:
+            print(f'apagando o arquivo {arq=}')
             os.remove(arq)
         print('fim parcial...', time.asctime())
 
