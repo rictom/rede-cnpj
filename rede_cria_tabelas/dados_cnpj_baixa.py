@@ -14,11 +14,42 @@ import requests, wget, os, sys, time, glob, parfive
 #url_dados_abertos = 'https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/'
 url_dados_abertos = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/'
 
-pasta_compactados = r"dados-publicos-zip" #local dos arquivos zipados da Receita
+pasta_zip = r"dados-publicos-zip" #local dos arquivos zipados da Receita
+pasta_cnpj = 'dados-publicos'
+
+
+def requisitos():
+    #se pastas não existirem, cria automaticamente
+    if not os.path.isdir(pasta_cnpj):
+        os.mkdir(pasta_cnpj)
+    if not os.path.isdir(pasta_zip):
+        os.mkdir(pasta_zip)
+        
+    arquivos_existentes = list(glob.glob(pasta_cnpj +'/*.*')) + list(glob.glob(pasta_zip + '/*.*'))
+    if len(arquivos_existentes):
+        #eg.msgbox("Este programa baixa arquivos csv.zip de dados abertos da Receita Federal e converte para uso na RedeCNPJ aplicativo.\nIMPORTANTE: Para prosseguir, as pastas 'dados-publicos' e 'dados-publicos-zip', devem estar vazias, senão poderá haver inconsistências (juntar dados de meses distintos).\n",'Criar Bases RedeCNPJ')
+        #if eg.ynbox('Deseja apagar os arquivos das pastas ' + pasta_cnpj + ' e ' + pasta_zip + '?\nNÃO SERÁ POSSÍVEL REVERTER!!!!\n' + '\n'.join(arquivos_existentes) + '\nATENÇÃO: SE FOR EXECUTAR APENAS ALGUMA PARTE DO PROGRAMA, NÃO SELECIONE ESTA OPÇÃO, APAGUE MANUALMENTE.','Criar Bases RedeCNPJ', ['SIM-APAGAR', 'NÃO']):
+        r = input('Deseja apagar os arquivos das pastas ' + pasta_cnpj + ' e ' + pasta_zip + '?\n' + '\n'.join(arquivos_existentes) + '\nATENÇÃO: SE FOR EXECUTAR APENAS ALGUMA PARTE DO PROGRAMA, NÃO SELECIONE ESTA OPÇÃO, APAGUE MANUALMENTE. \nNÃO SERÁ POSSÍVEL REVERTER!!!!\nDeseja prosseguir e apagar os arquivos (y/n)??')
+        if r and r.upper()=='Y':
+            for arq in arquivos_existentes:
+                    print('Apagando arquivo ' + arq)
+                    os.remove(arq)
+        else:
+            print('Parando... Apague os arquivos ' + pasta_cnpj + ' e ' + pasta_zip +' e tente novamente')
+            input('Pressione Enter')
+            sys.exit(1)
+    # else:
+    #     eg.msgbox("Este programa baixa arquivos csv.zip de dados abertos da Receita Federal e converte para uso na RedeCNPJ aplicativo.",'Criar Bases RedeCNPJ')
+
+    # if len(glob.glob(os.path.join(pasta_zip,'*.zip'))):
+    #     print(f'Há arquivos zip na pasta {pasta_zip}. Apague ou mova esses arquivos zip e tente novamente')
+    #     input('Pressione Enter')
+    #     sys.exit(1)
+requisitos()
 
 print(time.asctime(), f'Início de {sys.argv[0]}:')
 
-soup_pagina_dados_abertos = BeautifulSoup(requests.get(url_dados_abertos).text)
+soup_pagina_dados_abertos = BeautifulSoup(requests.get(url_dados_abertos).text, features="lxml")
 try:
     ultima_referencia = sorted([link.get('href') for link in soup_pagina_dados_abertos.find_all('a') if link.get('href').startswith('20')])[-1]
 except:
@@ -30,7 +61,7 @@ except:
 url = url_dados_abertos + ultima_referencia
 # page = requests.get(url)    
 # data = page.text
-soup = BeautifulSoup(requests.get(url).text, 'lxml')
+soup = BeautifulSoup(requests.get(url).text, features="lxml")
 lista = []
 print('Relação de Arquivos em ' + url)
 for link in soup.find_all('a'):
@@ -44,23 +75,18 @@ for link in soup.find_all('a'):
             lista.append(cam)
 
 if __name__ == '__main__':        
-    resp = input(f'Deseja baixar os arquivos acima para a pasta {pasta_compactados} (y/n)?')
+    resp = input(f'Deseja baixar os arquivos acima para a pasta {pasta_zip} (y/n)?')
     if resp.lower()!='y' and resp.lower()!='s':
         sys.exit()
         
-def requisitos():
-    if len(glob.glob(os.path.join(pasta_compactados,'*.zip'))):
-        print(f'Há arquivos zip na pasta {pasta_compactados}. Apague ou mova esses arquivos zip e tente novamente')
-        input('Pressione Enter')
-        sys.exit(1)
-requisitos()
+
 
 print(time.asctime(), 'Início do Download dos arquivos...')
 
 if True: #baixa usando parfive, download em paralelo
     downloader = parfive.Downloader()
     for url in lista:
-        downloader.enqueue_file(url, path=pasta_compactados, filename=os.path.split(url)[1])
+        downloader.enqueue_file(url, path=pasta_zip, filename=os.path.split(url)[1])
     downloader.download()
 else: #baixar sequencial, rotina antiga
     def bar_progress(current, total, width=80):
@@ -77,11 +103,11 @@ else: #baixar sequencial, rotina antiga
       
     for k, url in enumerate(lista):
         print('\n' + time.asctime() + f' - item {k}: ' + url)
-        wget.download(url, out=os.path.join(pasta_compactados, os.path.split(url)[1]), bar=bar_progress)
+        wget.download(url, out=os.path.join(pasta_zip, os.path.split(url)[1]), bar=bar_progress)
 
         
 print('\n\n'+ time.asctime(), f' Finalizou {sys.argv[0]}!!!')
-print(f"Baixou {len(glob.glob(os.path.join(pasta_compactados,'*.zip')))} arquivos.")
+print(f"Baixou {len(glob.glob(os.path.join(pasta_zip,'*.zip')))} arquivos.")
 if __name__ == '__main__':
     input('Pressione Enter')
 
