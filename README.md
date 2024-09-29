@@ -42,7 +42,7 @@ b) para criar a base de empresas <b>cnpj.db</b>, rode o comando:<br>
 <b>python dados_cnpj_para_sqlite.py</b><br>
 c) para criar a tabela de vínculos <b>rede.db</b> utilizada na redeCNPJ, rode o comando:<br>
 <b>python rede_cria_tabela_rede.db.py</b><br>
-d) para criar a tabela de vínculos <b>cnpj_links_ete.db</b> de endereços, emails e telefones cnpj_links_ete.db utilizada na redeCNPJ, rode o comando:<br>
+d) para criar a tabela de vínculos <b>cnpj_links_ete.db</b> de endereços, de emails e de telefones utilizada na redeCNPJ, rode o comando:<br>
 <b>python rede_cria_tabela_cnpj_links_ete.py</b><br>
 <br>
 Ao final, mova os arquivos cnpj.db, rede.db, rede_search.db, cnpj_links_ete.db da pasta <b>rede_cria_tabelas/dados-publicos</b> para a <b>rede/bases</b>. Os arquivos restantes nas pastas dados-publicos e dados-publicos-zip poderão ser apagados.<br>
