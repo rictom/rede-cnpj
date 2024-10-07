@@ -48,7 +48,7 @@ d) para criar a tabela de vínculos <b>cnpj_links_ete.db</b> de endereços, de e
 Ao final, mova os arquivos cnpj.db, rede.db, rede_search.db, cnpj_links_ete.db da pasta <b>rede_cria_tabelas/dados-publicos</b> para a <b>rede/bases</b>. Os arquivos restantes nas pastas dados-publicos e dados-publicos-zip poderão ser apagados.<br>
 <br>
 Observação: O cnpj_links_ete.db é opcional, somente se quiser visualizar vinculos por endereços, telefones ou email em comum.<br>
-Veja o projeto https://github.com/rictom/cnpj-sqlite para ver informações sobre o código para baixar os arquivos com dados abertose e converter para sqlite.<br>
+Veja o projeto https://github.com/rictom/cnpj-sqlite para ver informações sobre o código para baixar os arquivos com dados abertos e converter para sqlite.<br>
 
 O código foi ajustado para o formato disponibilizado pela Receita Federal a partir de 2021, testado em agosto de 2024.<br> 
 Orientações detalhadas para instalação em Windows no link https://github.com/rictom/rede-cnpj/blob/master/doc/instalacao_windows.md<br>
