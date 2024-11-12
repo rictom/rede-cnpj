@@ -653,8 +653,7 @@ def serve_dados_publicos_disponivel():
     ano_mes_do_banco_sendo_usado = ''
     ultima_referencia = ''
     try:
-        #url_dados_abertos = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/'
-        url_dados_abertos = 'https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/'
+        url_dados_abertos = 'https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/'
         soup_pagina_dados_abertos = BeautifulSoup(requests.get(url_dados_abertos).text, 'lxml')
         daux = rede_relacionamentos.referenciaF('cnpj').get('data_referencia','').split('/')
         ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
