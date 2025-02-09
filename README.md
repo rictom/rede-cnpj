@@ -1,11 +1,10 @@
 # RedeCNPJ - Visualização de dados públicos de CNPJ
 
-Ferramenta para observar relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela Receita Federal.<br>
+Ferramenta para observar de forma gráfico os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela Receita Federal.<br>
 
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)<br>
 
-A rotina possibilita visualizar de forma gráfica os relacionamentos entre empresas e sócios, a partir da base de dados públicos de cnpj da Receita Federal. <br>
 Foi testada nos navegadores Firefox, Edge e Chrome. <br>
 
 ## RedeCNPJ.com Online:
