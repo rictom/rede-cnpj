@@ -5,7 +5,7 @@ Ferramenta para observar de forma gráfica os relacionamentos entre empresas e s
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)<br>
 
-Foi testada nos navegadores Firefox, Edge e Chrome. <br>
+Foi testada nos navegadores Firefox, Edge, Chrome e Safari. <br>
 
 ## RedeCNPJ.com Online:
 A versão online com dados públicos funciona agora no site https://www.redecnpj.com. A versão online com acesso gratuito foi descontinuada em maio/2023.
