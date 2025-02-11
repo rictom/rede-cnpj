@@ -1288,6 +1288,8 @@ def camadaLink(listaIds=None, conCNPJ=None, camada=1, numeroItens=15,
 
 def cnae_secundariaF(codigos):
     t = ''
+    if not codigos:
+        return ''
     for c in codigos.split(','):
         if c:
             t += f"{c}-{gdic.dicCnae.get(c,'')}; "
