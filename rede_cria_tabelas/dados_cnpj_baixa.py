@@ -11,13 +11,12 @@ from bs4 import BeautifulSoup
 import requests, wget, os, sys, time, glob, parfive
 
 #url = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/2024-08/' #padrão a partir de agosto/2024
-#url_dados_abertos = 'https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/' #funcionou até 20/10/2024
-#url_dados_abertos = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/' #funcionou até 20/10/2024
+#url_dados_abertos = 'https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/'
+#url_dados_abertos = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/'
 url_dados_abertos = 'https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/'
 
 pasta_zip = r"dados-publicos-zip" #local dos arquivos zipados da Receita
 pasta_cnpj = 'dados-publicos'
-
 
 def requisitos():
     #se pastas não existirem, cria automaticamente
@@ -85,7 +84,9 @@ if __name__ == '__main__':
 print(time.asctime(), 'Início do Download dos arquivos...')
 
 if True: #baixa usando parfive, download em paralelo
-    downloader = parfive.Downloader()
+    #downloader = parfive.Downloader()
+    headers = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Windows; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36", "Accept": "*/*"}
+    downloader = parfive.Downloader(max_conn=5, max_splits=1, config=parfive.SessionConfig(headers=headers))
     for url in lista:
         downloader.enqueue_file(url, path=pasta_zip, filename=os.path.split(url)[1])
     downloader.download()
