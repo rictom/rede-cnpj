@@ -7,3 +7,4 @@ requests
 bs4
 wget
 parfive
+lxml
