@@ -71,6 +71,7 @@ var gparam = {};
 	gparam.inicioToque = 0;
 	gparam.mobile = gparam.inicio.mobile;
 	gparam.safari = false;
+	gparam.macos = /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform); 
 	gparam.eventclick = 'click'; //no safari ='touchend'
 	//gparam.bRotulosCompletos = true;
 	gparam.kTipoRotulo = 0; //rotulo completo,
@@ -503,6 +504,10 @@ function iconeF(idno) {
 	return imagem;
 } //function iconeF
 
+function teclaCtrlF(event) {
+	return gparam.macos ?  event.metaKey: event.ctrlKey;
+}
+
 graphics.node(function(node) {
 	// This time it's a group of elements: http://www.w3.org/TR/SVG/struct.html#Groups
 	let ui = Viva.Graph.svg('g');
@@ -624,7 +629,7 @@ graphics.node(function(node) {
 				return;
 			}
 
-			if (!event.ctrlKey) {
+			if (!teclaCtrlF(event)) {
 				event.preventDefault();				
 				selecionaNoid(node.id, event.shiftKey);
 				//pinarNoTemp(node.id, 500); //pausar layout é melhor que só pinar o nó
@@ -913,11 +918,19 @@ gparam.AreaSelecaoRetangular = {
 	Setup:function() {
 		/*seleção retangular */
 		var multiSelectOverlay;
+		gparam.whichCTRLKey = 17;
+		if (gparam.macos) {
+		    {% if parametros.firefox %}
+				gparam.whichCTRLKey = 224;
+			{% else %}
+				gparam.whichCTRLKey = 91;
+			{% endif %}
+		}
 		document.addEventListener('keydown', function(e) {
-			if (e.which === 17 && !multiSelectOverlay) { // ctrl key
+			if (e.which === gparam.whichCTRLKey && !multiSelectOverlay) { // ctrl key
 				multiSelectOverlay = gparam.AreaSelecaoRetangular.startMultiSelect(graph, gparam.renderer, gparam.layout);
 			}
-			if (e.which != 17 && multiSelectOverlay) { // pressionou outro botão (corrige problema quando se pressiona CTRL+botão para outro comando, que o tipo de cursor não mudava para o padrão
+			if (e.which != gparam.whichCTRLKey && multiSelectOverlay) { // pressionou outro botão (corrige problema quando se pressiona CTRL+botão para outro comando, que o tipo de cursor não mudava para o padrão
 				multiSelectOverlay.destroy();
 				multiSelectOverlay = null;
 			}
@@ -5364,22 +5377,20 @@ function ativaAtalhos(bcaptura) {
 function evento_teclasDown(e) {
 	function testa(keyIn, pressShift, pressCtrl) {
 		//não dá para usar alt key, porque isso abre o menu do navegador
-		if (keyIn!=e.code) {
+		//if ((keyIn==e.code) && (pressShift==e.shiftKey) && (pressCtrl==e.ctrlKey)) {
+		if ((keyIn==e.code) && (pressShift==e.shiftKey) && (pressCtrl==teclaCtrlF(e))) {
+			return true;
+		} else {
 			return false;
-		} else if (pressShift!=e.shiftKey) {
-			return false;
-		} else if (pressCtrl!=e.ctrlKey) {
-			return false;
-		} 
-		return true;
-	}
+		}
+	} //.function testa
 	if ((e.code.startsWith('Digit') && (e.code.length==6)) || (e.code.startsWith('Numpad') && (e.code.length==7) && (e.getModifierState('NumLock')))){
 		var ns = e.code.substr(-1);
 		var tipo = 'cnpj';
-		if (e.shiftKey && !e.ctrlKey) {
+		if (e.shiftKey && !teclaCtrlF(e)) {
 			tipo = 'links';
 		//} else if (!e.shiftKey && e.ctrlKey) {
-		} else if (e.ctrlKey) {
+		} else if (teclaCtrlF(e)) {
 				tipo = 'caminhos';	
 		}
 		if (('0' <= ns) && (ns <='9')) {
@@ -5780,9 +5791,9 @@ function main() {
 			<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(true, true);" title='Ativar Leiaute (Barra de Espaço)'><i class="fa fa-play"></i></button>
 			<button class='botaosuperior' type="button" onclick="javascript:menu_rendererAtivarParar(false, true);" title='Parar Leiaute (Barra de Espaço)'><i class="fa fa-stop"></i></button>
 		{% endif %}
-		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, event.ctrlKey);" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'><i class="fa fa-search-plus"></i></button>
+		<button class='botaosuperior' type="button" onclick="javascript:menu_zoomin(event.shiftKey, teclaCtrlF(event));" title='Aumenta visualização. A roda do mouse também faz isso. Pressionando SHIFT+click aumenta apenas o tamanho das ligações.'><i class="fa fa-search-plus"></i></button>
 		{% if not parametros.mobile %}
-			<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, event.ctrlKey);" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_zoomout(event.shiftKey, teclaCtrlF(event));" title='Diminui visualização.  A roda do mouse também faz isso. Pressionando SHIFT+click diminui apenas o tamanho das ligações.'><i class="fa fa-search-minus"></i></button>
 		{% endif %}
 		<button class='botaosuperior' type="button" onclick="gparam.renderer.reset();" title='Reinicia escala de visualização'><i class="fa fa-compress"></i></button>
 
@@ -5792,7 +5803,7 @@ function main() {
 				onfocusin="ativaAtalhos(false)" onfocusout="ativaAtalhos(true);" 
 				title='Digite {% if parametros.bBaseReceita %} CNPJ, Razão Social, Nome Fantasia, CPF de sócio ou Nome de sócio {% endif %}e pressione Enter. Os nomes podem ter acentuação ou estar com letras minúsculas, pois o texto é convertido em maiúsculas sem acentuação. CNPJS e CPFs podem ter pontos, traços ou barras. Para buscar por Unidade Gestora, coloque UG_NNNNNN, onde NNNNNN é o código da UG. A busca por endereço, por telefone ou por email ainda não foi implementada.'>
 		{% endif %}
-		<button id='botao_inserir' class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, event.ctrlKey);" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
+		<button id='botao_inserir' class='botaosuperior' type="button" onclick="javascript:menu_inserir(null, event.shiftKey, teclaCtrlF(event));" title='Inserir{% if parametros.bBaseReceita %} CNPJ ou CPF do Banco de Dados {% endif %}(Tecla I)'><i class="fa fa-user-plus"></i></button>
 		<button class='botaosuperior' type="button" onclick="javascript:menu_dados(event.shiftKey);" title='Exibir Dados do Item (D). SHIFT+Click ou SHIFT+D abre os dados de CNPJ em nova aba.'><i class="fa fa-newspaper"></i></button>
 
 		{% if not parametros.mobile %}
