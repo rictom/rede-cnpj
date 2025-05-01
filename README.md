@@ -147,12 +147,13 @@ Os comandos valem para o último nó selecionado ou nós selecionados, que ficam
 Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão ou para Expansão de vínculos.
 Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrastar arquivos csv ou json.
 
-
-
 ## Fonte dos dados:
 
 #### Base de CNPJ
-Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj ou https://dadosabertos.rfb.gov.br/CNPJ/ (http://200.152.38.155/CNPJ/).<br>
+Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj ou https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/ (link a partir de 28/10/2024.)<br>
+
+## Como gerar listas de empresas a partir de parâmetros:
+A partir da base em sqlite cnpj.db, o projeto https://github.com/rictom/cnpj_consulta gera listas a partir de parâmetros como UF, Município ou CNAE e exporta os dados de empresas para Excel. 
 
 ## Bibliotecas e outros projetos utilizados:
 Biblioteca em javascript para visualização:<br>
@@ -166,6 +167,9 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+<b>versão 1.2.1 (março/2025)</b>
+- Correção para utilizar tecla Command ao invés de CTRL no MacOS.<br>
+
 <b>versão 1.2 (agosto/2024)</b>
 - Scripts para gerar as tabelas com dados completos em rede_criar_tabelas<br>
 
