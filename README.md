@@ -167,7 +167,7 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
-<b>versão 1.2.1 (março/2025)</b>
+<b>versão 1.5 (abril/2025)</b>
 - Correção para utilizar tecla Command ao invés de CTRL no MacOS.<br>
 
 <b>versão 1.2 (agosto/2024)</b>
