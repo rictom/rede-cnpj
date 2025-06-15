@@ -13,7 +13,8 @@ import requests, wget, os, sys, time, glob, parfive
 #url = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/2024-08/' #padrão a partir de agosto/2024
 #url_dados_abertos = 'https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj/'
 #url_dados_abertos = 'http://200.152.38.155/CNPJ/dados_abertos_cnpj/'
-url_dados_abertos = 'https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/'
+#url_dados_abertos = 'https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/'
+url_dados_abertos = 'https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/'
 
 pasta_zip = r"dados-publicos-zip" #local dos arquivos zipados da Receita
 pasta_cnpj = 'dados-publicos'
