@@ -727,7 +727,8 @@ if __name__ == '__main__':
     print('A redecnpj deve ser acessada no navegador pelo endereço ' + url)
     if platform.system() in ('Windows', 'Darwin'): 
         #webbrowser.open('https://www.oarcanjo.net/site/doe/')
-        webbrowser.open(url, new=0, autoraise=True) 
+        if not os.environ.get("WERKZEUG_RUN_MAIN"):
+            webbrowser.open(url, new=0, autoraise=True) 
         try: #fecha splash na versão .exe gerado pelo pyinstaller
             import pyi_splash
             pyi_splash.update_text('UI Loaded ...')
