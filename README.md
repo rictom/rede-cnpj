@@ -167,6 +167,9 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+<b>versão 1.6 (outubro/2025)</b>
+- Utiliza duckduckgo na rotina de busca.<br>
+
 <b>versão 1.5 (abril/2025)</b>
 - Correção para utilizar tecla Command ao invés de CTRL no MacOS.<br>
 
