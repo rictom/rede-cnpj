@@ -16,3 +16,4 @@ asgiref
 #para mapa
 folium
 orjson
+ddgs
