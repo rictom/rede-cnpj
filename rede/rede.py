@@ -36,7 +36,7 @@ import rede_sqlite_cnpj as rede_relacionamentos
 # from busca import rede_google, mapa
 # from i2 import rede_i2
 
-from modulos.busca import rede_google, mapa
+from modulos.busca import rede_busca as rede_google, mapa
 from modulos.i2 import rede_i2
 
 try: #define alguma atividade quando é chamado por /rede/envia_json, função serve_envia_json_acao
