@@ -144,7 +144,7 @@ engine.execute(sql)
 
 def carregaTipo(nome_tabela, tipo, colunas):
     #usando dask, bem mais rápido que pandas
-    arquivos = list(glob.glob(os.path.join(pasta_saida, '*' + tipo)))
+    arquivos = sorted(list(glob.glob(os.path.join(pasta_saida, '*' + tipo))))
     for arq in arquivos:
         print(f'carregando: {arq=} em {nome_tabela}')
         print('lendo csv ...', time.asctime())
