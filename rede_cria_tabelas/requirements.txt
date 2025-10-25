@@ -9,3 +9,4 @@ wget
 parfive
 lxml
 pyarrow
+psutil
