@@ -1,11 +1,11 @@
 # RedeCNPJ - Visualização de dados públicos de CNPJ
 
-Ferramenta para observar de forma gráfica os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela [Receita Federal](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj).<br>
+Ferramenta para observar de forma gráfica os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela [Receita Federal](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj). Os scripts possibilitam baixar os dados públicos, gerar o banco de dados local em sqlite e abrir o aplicativo que faz a visualização no navegador.<br>
 
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)<br>
 
-Foi testada nos navegadores Firefox, Edge, Chrome e Safari. <br>
+A rotina foi testada nos navegadores Firefox, Edge, Chrome e Safari. <br>
 
 ## RedeCNPJ.com Online:
 A versão online com dados públicos funciona agora no site https://www.redecnpj.com. A versão online com acesso gratuito foi descontinuada em maio/2023.
@@ -13,8 +13,8 @@ A versão online com dados públicos funciona agora no site https://www.redecnpj
 ## RedeCNPJ Demo Online:
 Uma versão demo, com base de dados incompleta está rodando em https://www.redecnpj.com.br/demo/. Nesta versão apenas o primeiro nome de sócio é exibido e algumas opções estão desabilitadas. 
 
-## Versões Aplicativo:
-Para os usuários que não tem familiaridade com o Python, em [https://www.redecnpj.com.br/rede/aplicativo.html](https://www.redecnpj.com.br/rede/pag/aplicativo.html) é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato para uso na RedeCNPJ. Os aplicativos foram gerados a partir do código fonte deste repositório. O procedimento de geração das tabelas levam várias horas e deve ser repetido mensalmente. Utilizar a versão online https://www.redecnpj.com evitará esse transtorno.<br>
+## Versão Aplicativo:
+Para os usuários que não tem familiaridade com o Python, em [https://www.redecnpj.com.br/rede/aplicativo.html](https://www.redecnpj.com.br/rede/pag/aplicativo.html) é possível obter gratuitamente a versão "aplicativo" da RedeCNPJ e outro programa para Windows ou para MacOS que baixa os arquivos de dados abertos do site da Receita Federal e converte para o formato da RedeCNPJ. Desta maneira, será possível fazer consultas com a base pública completa de empresas utilizando arquivos locais no formato sqlite. Os aplicativos foram gerados a partir do código fonte deste repositório. O procedimento de geração das tabelas levam várias horas e deve ser repetido mensalmente se quiser mantê-las atualizadas. Utilizar a versão online https://www.redecnpj.com evitará esse transtorno.<br>
 
 ## Versão em python (execução local):
 É preciso ter instalado no computador:
