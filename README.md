@@ -1,6 +1,6 @@
 # RedeCNPJ - Visualização de dados públicos de CNPJ
 
-Ferramenta para observar de forma gráfica os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela [Receita Federal](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj). Os scripts possibilitam baixar os dados públicos, gerar o banco de dados local em sqlite e abrir o aplicativo que faz a visualização no navegador.<br>
+Ferramenta para observar de forma gráfica os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela [Receita Federal](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj). Os scripts possibilitam baixar os dados públicos, gerar o banco de dados local em sqlite e abrir o aplicativo que faz a visualização no navegador. <b>O código não foi feito por IA!!!</b><br>
 
 ### Vídeo no youtube<br>
 [![youtube](http://img.youtube.com/vi/nxz9Drhqn_I/0.jpg)](https://youtu.be/nxz9Drhqn_I)<br>
