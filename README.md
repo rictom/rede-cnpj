@@ -168,6 +168,9 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+<b>versão 1.7 (novembro/2025)</b>
+- Opção tecla B faz busca editável em diversos sites de pesquisa: google, bing, duckduckgo, yandex, brave, reclameaqui, jusbrasil, escavador, facebook, instagram, internet archive.<br>
+
 <b>versão 1.6 (outubro/2025)</b>
 - Utiliza duckduckgo na rotina de busca.<br>
 
