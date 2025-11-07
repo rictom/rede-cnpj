@@ -3078,44 +3078,85 @@ function menu_links_google(bAbrePalavrasChaves) {
 	}
 } //.function menu_links_google
 
+
+function fidNoSelecionado() {
+	return gparam.idnoSelecionado?gparam.idnoSelecionado:'';
+}
+
 function menu_abreBuscasEmSites() {
-	menu_buscaEmSite('https://www.reclameaqui.com.br/busca/?q=', null, true);
-	menu_buscaEmSite('http://portaldatransparencia.gov.br/busca?termo=');
-	menu_buscaEmSite('https://www.jusbrasil.com.br/busca?q=');	
-	menu_buscaEmSite('https://www.escavador.com/busca?q=');	
-	menu_buscaEmSite('https://duckduckgo.com/?q=');	
-	menu_buscaEmSite('https://www.bing.com/search?q=');
+	var parametroIn = '';
+	if (fidNoSelecionado()) {
+		parametroIn = graph.getNode(fidNoSelecionado()).data.descricao.replaceAll('&', ' ');
+	}
+	var parametroIn = prompt('Digite os termos de busca. Serão abertas abas com busca nos sites: google, bing, duckduckgo, yandex, brave, perplexity, chatgpt, youtube, tiktok, escavador, jusbrasil, portal da transparência, reclameaqui, linkedin, internet archive. Coloque os termos entre as aspas para correspondência exata:', '"' + parametroIn + '"' );
+	if (!parametroIn) {
+		return;
+	}
+	menu_buscaEmSite('https://archive.org/search?sin=TXT&query=', null, true, parametroIn);
+	menu_buscaEmSite('https://www.linkedin.com/search/results/all/?keywords=',null, true, parametroIn);
+	menu_buscaEmSite('https://www.reclameaqui.com.br/busca/?q=', null, true, parametroIn);
+	menu_buscaEmSite('http://portaldatransparencia.gov.br/busca?termo=', null, true, parametroIn);
+	menu_buscaEmSite('https://www.jusbrasil.com.br/busca?q=', null, true, parametroIn);	
+	menu_buscaEmSite('https://www.escavador.com/busca?q=', null, true, parametroIn);	
+	menu_buscaEmSite('https://www.google.com/search?q=site:instagram.com+', null, true, parametroIn);
+	menu_buscaEmSite('https://www.google.com/search?q=site:facebook.com+', null, true, parametroIn);
+	menu_buscaEmSite('https://www.tiktok.com/search?q=', false, true, parametroIn);
+	menu_buscaEmSite('https://www.youtube.com/results?search_query=', false, true, parametroIn);
+	menu_buscaEmSite('https://chat.openai.com/?model=gpt-4o&q=', false, true, parametroIn);
+	menu_buscaEmSite('https://www.perplexity.ai/search?q=', false, true, parametroIn);
+	menu_buscaEmSite('https://search.brave.com/search?q=', null, true, parametroIn);
+	menu_buscaEmSite('https://yandex.com/search/?text=', null, true, parametroIn);
+	menu_buscaEmSite('https://duckduckgo.com/?q=', null, true, parametroIn);	
+	menu_buscaEmSite('https://www.bing.com/search?q=', null, true, parametroIn);
+	menu_buscaEmSite('https://www.google.com/search?q=intext:', null, true, parametroIn);
 	menu_GoogleMaps(false);
-	menu_buscaEmSite('https://www.google.com/search?q=', 'N');
+	menu_buscaEmSite('https://www.google.com/search?q=', null, true, parametroIn);
 } //.function menu_abreBuscasEmSites
 
-function menu_buscaEmSite(siteUrl, perguntaParametroAdicionalGoogle, bsemaspas){
+function menu_buscaEmSite(siteUrl, perguntaParametroAdicionalGoogle, bsemaspas, parametroIn){
 	//perguntaParametroAdicionalGoogle=null, padrão; se =='S' pergunta parametro adicional para google, se =='N' adiciona gparam.termoBuscaGoogle
+	if (fidNoSelecionado().startsWith('EN_') && siteUrl.includes('google')) {
+		menu_GoogleMaps(false);
+		return;
+	}
 	if (perguntaParametroAdicionalGoogle=='S') {
-		let resp = prompt('Insira termo a ser adicionado nas próximas buscas do Google pela tecla G:\nObservação: Houve uma alteração na tecla de atalho, para exibir links do google, utilize a tecla H. ', gparam.termoBuscaGoogle);
+		let resp = prompt('Insira termo a ser adicionado nas próximas buscas do Google pela tecla G:', gparam.termoBuscaGoogle);
 		if (resp===null) return;
 		gparam.termoBuscaGoogle = resp;
 	}
 	var parametroAdicional = '';
-	//var parametro = replaceAll(graph.getNode(gparam.idnoSelecionado).data.descricao,'&', ' ');
-	var parametro = graph.getNode(gparam.idnoSelecionado).data.descricao.replaceAll('&', ' ');
+	//var parametro = replaceAll(graph.getNode(fidNoSelecionado()).data.descricao,'&', ' ');
+	var parametro = '';
+	if (parametroIn) {
+		parametro = parametroIn;
+	} else if (fidNoSelecionado()) {
+		parametro = graph.getNode(fidNoSelecionado()).data.descricao.replaceAll('&', ' ');
+	}
 	if (perguntaParametroAdicionalGoogle) {
 		parametroAdicional = perguntaParametroAdicionalGoogle ? '+' + gparam.termoBuscaGoogle: '';
 	}
-	if (!parametro) {
-		parametro = graph.getNode(gparam.idnoSelecionado).data.id.substr(3);
+	if (!parametro && fidNoSelecionado()) {
+		parametro = graph.getNode(fidNoSelecionado()).data.id.substr(3);
 	}
-	if (bsemaspas) {
+	if (bsemaspas) { //} | (parametro.indexOf('"')!=-1)) {
 		var strUrl = siteUrl + parametro.replaceAll(' ','+') + parametroAdicional;		
-	} else {
+	} else  {
 		var strUrl = siteUrl + '"' + parametro + '"' + parametroAdicional;
 	}
-	window.open(strUrl).focus();
+	var wnew = window.open(strUrl);
+	if (wnew) {
+		wnew.focus();
+	} else {
+		alert('O sistema precisa abrir uma nova janela. Desative o bloqueador de popus para este site.');
+	}
 } //.function menu_buscaEmSite
 
 function menu_GoogleMaps(bMostraMensagem) {
-	var data = graph.getNode(gparam.idnoSelecionado).data;
-	if (data.logradouro) {
+	var data;
+	if (fidNoSelecionado()) {
+		data = graph.getNode(gparam.idnoSelecionado).data;
+	}
+	if (data && data.logradouro) {
 		var strUrl = 'https://www.google.com.br/maps/place/' + data.logradouro + ',' + data.municipio + '/' + data.uf;
 		var novaJanela=window.open(strUrl);
 		novaJanela.focus();
@@ -3123,6 +3164,7 @@ function menu_GoogleMaps(bMostraMensagem) {
 		alertify.error('Não há endereço cadastrado.');
 	}
 } //.function menu_GoogleMaps
+
 
 function menu_abrirNovaAba(idno, bNosSelecionados) {
 	var novaJanela=null;
