@@ -62,7 +62,7 @@ A roda do mouse expande ou diminui o tamanho da exibição.<br>
 Fazendo click duplo em um ícone, a rotina expande as ligações. Por exemplo, clique duplo no ícone de uma pessoa, exibirá todas as empresas que esta é sócia. Clique duplo em um ícone de CNPJ, exibirá todos os sócios da empresa.<br>
 <img width="491" height="498" alt="image" src="https://github.com/user-attachments/assets/9b781665-c987-4771-92db-6319c5bc603b" /><br>
 Apertando SHIFT e CLICK no mouse, é possível selecionar mais de um ícone. <br>
-Pressionando CTRL e arrastando na tela, adiciona a seleção os itens da área.
+Pressionando CTRL e arrastando na tela, os itens da área são adicionanos à seleção .
 Clicar no botão do meio do mouse (roda) faz aparecer janela para editar uma Nota, que aparece numa terceira linha abaixo do ícone.
 
 Outras opções da rede estão no menu contextual do mouse (botão direito), sendo configuradas teclas de atalho correspondentes aos comandos:
