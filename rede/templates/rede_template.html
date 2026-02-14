@@ -786,7 +786,7 @@ function filtraTextoLigacao(texto) {
 	//remove texto do link para o gráfico ficar mais limpo
 	var palavras = [];
 	for (let k of texto.split(';')){
-		var pedaco = (k.search(':')!=-1) ? k.split(':')[0] : k
+		var pedaco = (k.indexOf(':')!=-1) ? k.split(':')[0] : k
 		//if (['endereço','telefone','end','tel','email','link'].includes(pedaco.trim())) {
 		if (['endereço','telefone','end','tel','email','google','chave'].includes(pedaco.trim())) {
 			continue;
@@ -1108,7 +1108,7 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 	var idNosLocalizados= new Set(); 
 	var primeiroNoid = null;
 	texto = texto.trim().replace(/\n/g,';').replace(/\t/g,';');
-	if (texto.search(' ')>=0) {
+	if (texto.indexOf(' ')>=0) {
 		let bEspaco = confirm('O texto a procurar tem espaço(s). Utiliza espaço como separador?');
 		if (bEspaco) {
 			texto = texto.replace(/\s/g,';')
@@ -1118,8 +1118,8 @@ function localizaNo(texto, bFiltroNosSelecionados) { //retorna n. de nos localiz
 		for (let taux of texto.toUpperCase().split(';')) { //usa ; como separador para busca de mais de um termo
 			let t = taux.trim();
 			if (!t) continue;
-			if ((node.id.toUpperCase().search(t)!= -1) || (node.data.descricao.toUpperCase().search(t)!=-1)
-				|| (node.data.nota.toUpperCase().search(t)!= -1)) {
+			if ((node.id.toUpperCase().indexOf(t)!= -1) || (node.data.descricao.toUpperCase().indexOf(t)!=-1)
+				|| (node.data.nota.toUpperCase().indexOf(t)!= -1)) {
 				if ((!bFiltroNosSelecionados) || ((bFiltroNosSelecionados) && (gparam.idNosSelecionados.has(node.id)))) {
 					idNosLocalizados.add(node.id);
 					if (!primeiroNoid) {
@@ -2947,7 +2947,7 @@ function menu_inserir(textoDefault, teclaShift, teclaCtrl) {
 					var cn = cnpjs.trim().toUpperCase();
 					var cnaux = cn.replaceAll('.', '').replaceAll('-', '').replaceAll('/',''); //cn.replace(/\./g, '').replace(/\-/g, '');
 					//console.log(cnaux);
-					if ((cn.search(';')==-1) && isNumeric(cnaux.replaceAll(' ','').replaceAll(',',''))) { //se só tiver digitos, considera espaço como separador
+					if ((cn.indexOf(';')==-1) && isNumeric(cnaux.replaceAll(' ','').replaceAll(',',''))) { //se só tiver digitos, considera espaço como separador
 						cn = cn.replaceAll(' ',';').replaceAll(',',';');
 					}					
 					if (1) { //(cn) { 
@@ -3005,7 +3005,7 @@ function menu_links_google(bAbrePalavrasChaves) {
 		}
 	}
 	//var url = base + 'busca_google/' + gparam.paginaBuscaGoogle[termos]  + '/' + encodeURIComponent(termos) ; 
-	if (termos.search('@')!=-1) {
+	if (termos.indexOf('@')!=-1) {
 		kpalavras = parseInt(termos.split('@')[1]);
 		if (kpalavras) {
 			termos = termos.split('@')[0];
