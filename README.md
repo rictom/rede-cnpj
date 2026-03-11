@@ -2,7 +2,7 @@
 
 Ferramenta para observar de forma gráfica os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela [Receita Federal](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj). Os scripts possibilitam baixar os dados públicos, gerar o banco de dados local em sqlite e abrir o aplicativo que faz a visualização no navegador. <b>O código não foi feito por IA!!!</b><br>
 <br><br>
-**AVISO IMPORTANTE: Ao final de janeiro/2026, a RFB alterou o layout da página, nome e caminho dos arquivos, por isso o script que baixa os arquivos csv.zip parou de funcionar!!! Baixe os arquivos manualmente e aguarde uma atualização.**<br>
+**AVISO IMPORTANTE: Ao final de janeiro/2026, a RFB alterou o layout da página e caminho dos arquivos. O script para baixar arquivos foi atualizado em março/2026, baseado na rotina do projeto [cnpj-data-pipeline](https://github.com/caiopizzol/cnpj-data-pipeline).**<br>
 
 
 ### Vídeo no youtube<br>
@@ -39,7 +39,7 @@ A pasta contém os arquivos <b>rede_teste.db</b> e <b>cnpj_teste.db</b>, que sã
 
 A pasta <b>rede_cria_tabelas</b> contém os scripts para baixar os arquivos zip do site de Dados Abertos, gerar a base completa de empresas e as tabelas utilizadas na redeCNPJ.<br>
 a) para baixar os arquivos zip do site de Dados Abertos, rode o comando:<br>
-<b>python dados_cnpj_baixa.py - ATENÇÃO: Este script não está funcionando. Baixe os arquivos manualmente, siga as orientações em https://github.com/rictom/cnpj-sqlite</b><br>
+<b>python dados_cnpj_baixa.py</b><br>
 b) para criar a base de empresas <b>cnpj.db</b>, rode o comando:<br>
 <b>python dados_cnpj_para_sqlite.py</b><br>
 c) para criar a tabela de vínculos <b>rede.db</b> utilizada na redeCNPJ, rode o comando:<br>
@@ -171,6 +171,10 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+
+<b>versão 1.8 (março/2026)</b>
+- Atualização do script para baixar arquivos, baseado na rotina do projeto [cnpj-data-pipeline](https://github.com/caiopizzol/cnpj-data-pipeline).
+
 <b>versão 1.7 (novembro/2025)</b>
 - Opção tecla B faz busca editável em diversos sites de pesquisa: google, bing, duckduckgo, yandex, brave, reclameaqui, jusbrasil, escavador, facebook, instagram, internet archive.<br>
 
