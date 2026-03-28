@@ -154,7 +154,7 @@ Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrasta
 ## Fonte dos dados:
 
 #### Base de CNPJ
-Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj ou https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/ (link a partir de 28/10/2024.)<br>
+Está disponível em https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj<br>
 
 ## Como gerar listas de empresas a partir de parâmetros:
 A partir da base em sqlite cnpj.db, o projeto https://github.com/rictom/cnpj_consulta gera listas a partir de parâmetros como UF, Município ou CNAE e exporta os dados de empresas para Excel. 
