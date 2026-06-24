@@ -180,36 +180,37 @@ def executaSequencia(camDB, sqlsequencia):
 executaSequencia(camDBrede, sqlsequencia=sql_ligacao)
 
 
+#alteração, a tabela id_search passa a ter duas colunas (id, descricao)
 sql_search= '''
 ----------------------------------------------
-------indexa full text pela tabela de ligação (substitui versão anterior que fazia por colunas da tabela empresas, estabelecimentos e socios)
+------indexa full text pela tabela de ligação
 -----------------------------------------------
 
 DROP TABLE if exists id_search;
-CREATE virtual TABLE id_search using fts5 (id_descricao);
+CREATE virtual TABLE id_search using fts5 (id, descricao);
 
 insert into id_search
 --select distinct id_descricao
-select id_descricao
+select id, descricao
 from ( 
-select 'PJ_' || te.cnpj ||'-' || t.razao_social  as id_descricao
+select 'PJ_' || te.cnpj as id, t.razao_social as descricao
 from cnpj.estabelecimento te 
 left join cnpj.empresas t on t.cnpj_basico=te.cnpj_basico
 where te.matriz_filial is '1'
 UNION ALL
-select 'PJ_' || te.cnpj ||'-' || te.nome_fantasia  as id_descricao 
+select 'PJ_' || te.cnpj as id,  te.nome_fantasia  as descricao 
 from cnpj.estabelecimento te 
 -- where trim(te.nome_fantasia) <>'' --incluir este where faz que ignore cnpj filial sem nome fantasia, o que faz falta na hora de busca filiais por cnpj básico
 UNION ALL
-select  id1  as id_descricao
+select  id1  as id, '' as descricao
 from rede.ligacao
 where substr(id1,1,3)<>'PJ_'
 UNION ALL
-select  id2 as id_descricao
+select  id2 as id, '' as descricao
 from  rede.ligacao
 where substr(id2,1,3)<>'PJ_'
 ) as tunion
-group by id_descricao --talvez group by seja mais rápido que distinct
+group by id, descricao --talvez group by seja mais rápido que distinct
 ;
 
 '''
