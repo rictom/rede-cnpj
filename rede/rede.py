@@ -6,7 +6,7 @@ https://github.com/rictom/rede-cnpj
 
 """
 #http://pythonclub.com.br/what-the-flask-pt-1-introducao-ao-desenvolvimento-web-com-python.html
-from flask import Flask, request, render_template, send_from_directory, send_file, Response, abort
+from flask import Flask, request, render_template, send_from_directory, send_file, Response, abort, redirect
 from requests.utils import unquote
 #https://medium.com/analytics-vidhya/how-to-rate-limit-routes-in-flask-61c6c791961b
 import flask_limiter #pip install Flask-Limiter
@@ -14,28 +14,21 @@ from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 import os, sys, json, secrets, io, glob, pathlib, unicodedata, string, importlib, time
 from functools import lru_cache
-import rede_config as config
 import pandas as pd
 from datetime import datetime
 
 #from flask import jsonify
 from orjson import dumps as jsonify #orjson é muito mais rápido que jsonify
 
-#nome_modulo_relacionamento = config.config['BASE'].get('modulo_relacionamento', 'rede_sqlite_cnpj').strip()
-#print(f'Carregando {nome_modulo_relacionamento}')
-#rede_relacionamentos = importlib.import_module(nome_modulo_relacionamento)
-#print(f'Utilizando {nome_modulo_relacionamento} como rede_relacionamentos.')
+#ajuste para usar pyinstaller
+print('os.getcwd', os.getcwd())
+if getattr(sys, 'frozen', False):
+     application_path = os.path.dirname(sys.executable)
+     os.chdir(application_path)
+     print('application_path', application_path)
+
+import rede_config as config
 import rede_sqlite_cnpj as rede_relacionamentos
-
-
-# sys.path.append('busca') #pasta com rotinas de busca
-# sys.path.append('i2') #rotina do i2 chart reader
-# import rede_google, mapa, rede_i2
-#import rede_i2
-
-# from busca import rede_google, mapa
-# from i2 import rede_i2
-
 from modulos.busca import rede_busca as rede_google, mapa
 from modulos.i2 import rede_i2
 
@@ -47,6 +40,9 @@ except:
 #rede_relacionamentos.gtabelaTempComPrefixo=False
 
 app = Flask("rede")
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+base =  config.config['LOGIN'].get('subdomain', '/rede/').strip()
+print('base', base)
 #app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False #pretty print torna jsonify lento
 #app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_PATH'] = 100000000
@@ -62,8 +58,10 @@ limiter_google = config.config['ETC'].get('limiter_google', '4/minute').strip()
 limiter_arquivos = config.config['ETC'].get('limiter_arquivos', '2/minute').strip() 
 bConsultaGoogle = config.config['ETC'].getboolean('busca_google',False)
 bConsultaChaves = config.config['ETC'].getboolean('busca_chaves',False)
+bDemo = config.config['INICIO'].getboolean('demo',False)
 ggeocode_max  = config.config['ETC'].getint('geocode_max', 15) 
 api_key_validas = [k.strip() for k in config.config['API'].get('api_keys', '').split(',')]
+email = config.config['LOGIN'].get('email')
 #https://blog.cambridgespark.com/python-context-manager-3d53a4d6f017
 gp = {}
 gp['camadaMaxima'] = 10
@@ -100,9 +98,9 @@ if False: #bloqueia em rede_sqlite_cnpj.py
 # def raiz():
 #     return redirect("/rede/", code = 302)
 
-@app.route("/rede/",  methods=['GET','POST'])
-@app.route("/rede/grafico/<int:camada>/<cpfcnpj>")
-@app.route("/rede/grafico_no_servidor/<idArquivoServidor>")
+@app.route(base,  methods=['GET','POST'])
+@app.route(base + 'grafico/<int:camada>/<cpfcnpj>')
+@app.route(base + 'grafico_no_servidor/<idArquivoServidor>')
 @limiter.limit(limiter_padrao)
 def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
     mensagemInicial = ''
@@ -178,8 +176,12 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
             return
         mensagemInicial=''
         bbMenuInserirInicial = False
-            
-    paramsInicial = {'cpfcnpj':cpfcnpj, 
+    url_base = request.url_root.removesuffix('/') + base
+    referenciaBD = rede_relacionamentos.referenciaF()['referencia_bd'] + '; ' + config.referenciaBD
+    paramsInicial = {'base':base,
+                     'url_base':url_base,
+                     'email':email,
+                     'cpfcnpj':cpfcnpj, 
                      'camada':camada,
                      'mensagem':mensagemInicial,
                      'bMenuInserirInicial': bbMenuInserirInicial, #config.par.bMenuInserirInicial,
@@ -192,8 +194,8 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'bBaseFullTextSearch': 1 if config.config['BASE'].get('base_receita_fulltext','') else 0,
                      'bBaseLocal': 1 if config.config['BASE'].get('base_local','') else 0,
                      'btextoEmbaixoIcone':config.par.btextoEmbaixoIcone,
-                     'referenciaBD':config.referenciaBD,
-                     'referenciaBDCurto':config.referenciaBD.split(',')[0],
+                     'referenciaBD':referenciaBD,
+                     'referenciaBDCurto':referenciaBD.split(';')[0],
                      'geocode_max':ggeocode_max,
                      'bbusca_chaves': config.config['ETC'].getboolean('busca_chaves', False),
                      'mobile':any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android']),
@@ -202,7 +204,8 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
                      'usuarioLocal': usuarioLocal(),
                      #'janelaPai': janelaPai,
                      'itensFlag':gp['itensFlag'], #['situacao_fiscal', 'pep', 'ceis', 'cepim', 'cnep', 'acordo_leniência', 'ceaf', 'pgfn-fgts', 'pgfn-sida','pgfn-prev'];
-                     'bgrafico_no_servidor': ('/rede/grafico_no_servidor/' + idArquivoServidor) == request.path 
+                     'bgrafico_no_servidor': ('/rede/grafico_no_servidor/' + idArquivoServidor) == request.path,
+                     'demo': bDemo
  }
     #print(paramsInicial)
     config.par.idArquivoServidor='' #apagar para a segunda chamada da url não dar o mesmo resultado.
@@ -213,7 +216,7 @@ def serve_html_pagina(cpfcnpj='', camada=0, idArquivoServidor=''):
 
 #@lru_cache #isto pode dar inconsistência com parametros via post??
 #@app.route('/rede/grafojson/cnpj/<int:camada>/<cpfcnpj>', methods=['GET','POST'])
-@app.route('/rede/grafojson/<tipo>/<int:camada>/<cpfcnpj>', methods=['POST',]) #methods=['GET','POST'])
+@app.route(base + 'grafojson/<tipo>/<int:camada>/<cpfcnpj>', methods=['POST',]) #methods=['GET','POST'])
 @limiter.limit(limiter_padrao)
 def serve_rede_json_cnpj(tipo, camada=1, cpfcnpj=''):
     # if request.remote_addr in ('xxx'):
@@ -230,7 +233,8 @@ def serve_rede_json_cnpj(tipo, camada=1, cpfcnpj=''):
     #cpfcnpj = cpfcnpj.upper().strip() #upper dá inconsistência com email, que está minusculo na base
     listaIds = []
     if request.method == 'POST':
-        listaIds = request.get_json()
+        bodyJson = request.get_json()
+        listaIds = bodyJson.get('listaIds', [])
     elif request.method == 'GET': #este caso não está sendo usado, só pra debug
         cpfcnpj = cpfcnpj.strip()
         listaIds = [cpfcnpj,]
@@ -253,7 +257,7 @@ def serve_rede_json_cnpj(tipo, camada=1, cpfcnpj=''):
     return r
 #.def serve_rede_json_cnpj
 
-@app.route('/rede/grafojson/links/<int:camada>/<int:numeroItens>/<int:valorMinimo>/<int:valorMaximo>/<cpfcnpj>',  methods=['GET','POST'])
+@app.route(base + 'grafojson/links/<int:camada>/<int:numeroItens>/<int:valorMinimo>/<int:valorMaximo>/<cpfcnpj>',  methods=['GET','POST'])
 @limiter.limit(limiter_padrao)
 def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, valorMaximo=0):
     camada = min(gp['camadaMaxima'], int(camada))
@@ -275,7 +279,7 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
 #.def serve_rede_json_links
 
 #@lru_cache #isto pode dar inconsistência com parametros via post??
-@app.route('/rede/dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST']) 
+@app.route(base + 'dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST']) 
 @limiter.limit(limiter_dados)
 def serve_dados_detalhes(cpfcnpj):
     if request.method == 'GET':
@@ -295,7 +299,8 @@ def serve_dados_detalhes(cpfcnpj):
             uwsgi.unlock()    
 #.def serve_dados_detalhes
 
-@app.route('/rede/consulta_cnpj/', methods=['GET', 'POST']) #precisa manter com / no final para manter compatibilidade com robots
+@app.route(base + 'consulta_cnpj', methods=['GET', 'POST']) 
+@app.route(base + 'consulta_cnpj/', methods=['GET', 'POST']) 
 @limiter.limit(limiter_dados)
 def serve_dados_html():
     try: 
@@ -309,7 +314,7 @@ def serve_dados_html():
 #.def serve_dados_detalhes
 
 if config.config['API'].getboolean('api_cnpj', False):
-    @app.route('/rede/api/<tipo>/<cnpj>', methods=['GET', 'POST']) 
+    @app.route(base + 'api/<tipo>/<cnpj>', methods=['GET', 'POST']) 
     @limiter.limit(limiter_dados)
     def serve_dados_api(tipo, cnpj):
         try: 
@@ -323,7 +328,7 @@ if config.config['API'].getboolean('api_cnpj', False):
     #.def serve_dados_detalhes
     
 if config.config['API'].getboolean('api_caminhos', False):
-    @app.route('/rede/api/caminhos', methods=['GET', 'POST']) 
+    @app.route(base + 'api/caminhos', methods=['GET', 'POST']) 
     @limiter.limit(limiter_dados)
     def serve_api_caminhos():
         try: 
@@ -348,115 +353,8 @@ if config.config['API'].getboolean('api_caminhos', False):
                 uwsgi.unlock()    
     #.def serve_api_caminhos
 
-#https://www.techcoil.com/blog/serve-static-files-python-3-flask/
 
-# rotina antiga, para servir imagens - nginx não estava servindo imagens por erro de permissão na pasta
-# em windows, o flask (por padrão) já serve esses arquivos em static e as imagens. 
-# no linux, configurar o nginx para servir imagens. Configurar a pasta imagem com a permissão chmod 755 
-# static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'static')
-# @app.route('/rede/static/<path:arquivopath>') #, methods=['GET'])
-# def serve_dir_directory_index(arquivopath):
-#     print('servindo static: ' + arquivopath)
-#     return send_from_directory(static_file_dir, arquivopath)
-
-#local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'arquivos')
-local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos)
-
-@app.route('/rede/arquivos_json/<arquivopath>', methods=['GET','POST','DELETE'])
-@limiter.limit(limiter_padrao)
-def serve_arquivos_json(arquivopath):
-    #paramApagar = request.args.get('apagar', default = '', type = str)
-    filename = secure_filename(arquivopath)
-    #parametros = request.get_json()
-    extensao = os.path.splitext(filename)[1]
-    if not extensao:
-        filename += '.json'
-        extensao = '.json'
-    #if extensao =='.json':
-    if extensao in ('.json', '.csv', '.xlsx', '.pdf'):
-        #if filename.startswith('temporario') or parametros.get('apagar','')=='sim': #se for temporário, apaga depois de copiar dados para stream
-        if filename.startswith('_temporario') or request.method=='DELETE': #se for temporário, apaga depois de copiar dados para stream
-            return_data = io.BytesIO()
-            caminho = os.path.join(local_file_dir,filename)
-            if not os.path.exists(caminho):
-                return Response("Arquivo não localizado", status=400)
-            with open(caminho, 'rb') as fo:
-                return_data.write(fo.read())
-            return_data.seek(0)
-            if filename not in ['rede_cnpj_diagrama.json',] and extensao=='.json':
-                os.remove(caminho)
-            return send_file(return_data, mimetype='application/json', download_name=arquivopath)            
-        else:
-            return send_from_directory(local_file_dir, filename)
-    else:
-        return Response("Solicitação não autorizada", status=400)
-#.def serve_arquivos_json
-
-@app.route('/rede/arquivos_json_upload/<nomeArquivo>', methods=['POST'])
-@limiter.limit(limiter_padrao)
-def serve_arquivos_json_upload(nomeArquivo):
-    '''
-        2024-03-09 permite salvar arquivo se estiver no padrao nome.secrets_tokenhex().json
-    '''
-    cam = ''
-    tamanhoToken = 10
-    nomeArquivo = unquote(nomeArquivo)
-    filename = secure_filename(nomeArquivo)
-    if len(request.get_json())>100000:
-        #return jsonify({'mensagem':{'lateral':'', 'popup':'O arquivo é muito grande e não foi salvo', 'confirmar':''}})
-        return jsonify({'mensagem':'O arquivo é muito grande e não foi salvo'})
-    nosLigacoes = request.get_json()
-    breescreve = (request.args.get('reescreve', default='', type=str)=='S')
-    if breescreve:
-        if not usuarioLocal():
-            #verifica se nome já tem hex_digits
-            pnome = filename.split('.')
-            if len(pnome)>=3 and pnome[-1]=='json' and len(pnome[-2])==2*tamanhoToken and set(pnome[-2]).issubset(string.hexdigits):
-                breescreve = True
-            else:
-                breescreve = False
-                return jsonify({'mensagem': 'O arquivo ' + filename + ' não foi encontrado no servidor.'})
-        if breescreve:     
-                #nome tem token_hex, pode ser nome de arquivo válido
-                camTeste = os.path.join(local_file_dir, filename)  
-                if os.path.exists(camTeste):
-                    cam = camTeste 
-                else:
-                    return jsonify({'mensagem': 'O arquivo ' + filename + ' não foi encontrado no servidor.'})
-    if not cam:
-        if usuarioLocal():
-            cam = nomeArquivoNovo(os.path.join(local_file_dir, filename + '.json'))
-            filename = os.path.split(cam)[1]
-        else:
-            filename += '.'+secrets.token_hex(tamanhoToken) + '.json'
-            cam = os.path.join(local_file_dir, filename)  
-    with open(cam, 'w') as outfile:
-        json.dump(nosLigacoes, outfile)
-    return jsonify({'nomeArquivoServidor':filename})
-#.def serve_arquivos_json_upload
-
-@app.route('/rede/arquivo_upload/', methods=['POST'])
-@limiter.limit(limiter_padrao)
-def serve_arquivos_upload():
-    if not config.par.bArquivosDownload:
-        return jsonify({'nomeArquivoServidor':'', 'mensagem':'salvamento de arquivo não autorizado'})
-        #return Response("Solicitação não autorizada", status=400)
-    f = request.files['arquivo']
-    if pathlib.Path(f.filename).suffix not in kExtensaoDeArquivosPermitidos:
-        return jsonify({'mensagem':'extensão de arquivo não permitido'})
-    filename = secure_filename(f.filename)
-    if not usuarioLocal():
-        #filename += '.'+secrets.token_hex(10) + '.json'
-        #cam = os.path.join(local_file_dir, filename)           
-        return jsonify({'nomeArquivoServidor':'', 'mensagem':'salvamento de arquivo não autorizado'})
-    else:
-        cam = nomeArquivoNovo(os.path.join(local_file_dir, filename))
-        filename = os.path.split(cam)[1]
-    f.save(cam)
-    return jsonify({'nomeArquivoServidor':filename})
-#.def serve_arquivos_upload
-
-@app.route('/rede/json_para_base/<comentario>', methods=['POST'])
+@app.route(base + 'json_para_base/<comentario>', methods=['POST'])
 @limiter.limit(limiter_padrao)
 def serve_arquivos_json_upload_para_base(comentario=''):
     comentario = unquote(comentario)
@@ -470,7 +368,7 @@ def serve_arquivos_json_upload_para_base(comentario=''):
     return jsonify({'retorno':'ok'})
 #.def serve_arquivos_json_upload_para_base
 
-@app.route('/rede/envia_json/<acao>', methods=['POST'])
+@app.route(base + 'envia_json/<acao>', methods=['POST'])
 @limiter.limit(limiter_padrao)
 def serve_envia_json_acao(acao=''):
     if not usuarioLocal():
@@ -499,10 +397,12 @@ def serve_envia_json_acao(acao=''):
 #         return send_file(arquivopath) #, as_attachment=True)
 
       
-@app.route('/rede/dadosemarquivo/<formato>', methods = ['POST'])
+@app.route(base + 'dadosemarquivo/<formato>', methods = ['POST'])
 @limiter.limit(limiter_arquivos)
 def serve_dadosEmArquivo(formato='xlsx'):
     #dados = json.loads(request.form['dadosJSON']) #formato anterior
+    if bDemo:
+        return jsonify({'mensagem':'Opção não disponível na versão DEMO.'}), 401 #XXX
     try: 
         if gUwsgiLock:
             uwsgi.lock()
@@ -528,7 +428,7 @@ def serve_dadosEmArquivo(formato='xlsx'):
             uwsgi.unlock() 
 #.def serve_dadosEmArquivo
 
-@app.route('/rede/mapa', methods = ['POST'])
+@app.route(base + 'mapa', methods = ['POST'])
 @limiter.limit(limiter_padrao)
 def serve_mapa():
     dados = request.form.get('data')
@@ -560,7 +460,7 @@ def serve_mapa():
 # #.def serve_form_download
     
 #@app.route('/rede/abrir_arquivo/', methods = ['POST'])
-@app.route('/rede/abrir_arquivo', methods = ['POST'])
+@app.route(base + 'abrir_arquivo', methods = ['POST'])
 @limiter.limit(limiter_padrao)
 #def serve_abrirArquivoLocal(nomeArquivo=''):
 def serve_abrirArquivoLocal():
@@ -597,7 +497,7 @@ def serve_abrirArquivoLocal():
 #.def serve_abrirArquivoLocal
 
 if bConsultaChaves: 
-    @app.route('/rede/busca_google', methods=['GET', 'POST'])
+    @app.route(base + 'busca_google', methods=['GET', 'POST'])
     @limiter.limit(limiter_google)
     async def serve_busca_google_chave():
         pagina = request.args.get('pag', default = 1, type = int)
@@ -626,7 +526,7 @@ if bConsultaChaves:
             return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-A'})
     #.def serve_busca_google assíncrono com chaves
 elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
-    @app.route('/rede/busca_google', methods=['GET', 'POST'])
+    @app.route(base + 'busca_google', methods=['GET', 'POST'])
     @limiter.limit(limiter_google)
     def serve_busca_google():
         # if not bConsultaGoogle:# and not usuarioLocal():
@@ -645,7 +545,7 @@ elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
             return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-C'})
     #.def serve_busca_google síncrono sem chaves
 
-@app.route('/rede/informacao/dados_publicos_cnpj_disponivel', methods = ['GET'])
+@app.route(base + 'informacao/dados_publicos_cnpj_disponivel', methods = ['GET'])
 @limiter.limit(limiter_padrao)
 def serve_dados_publicos_disponivel():
     from bs4 import BeautifulSoup
@@ -716,9 +616,205 @@ def imagensNaPastaF(bRetornaLista=True):
     else:
         return dic
 #.def imagensNaPastaF
-   
-if __name__ == '__main__':        
-    base = '/rede'  
+
+#https://www.techcoil.com/blog/serve-static-files-python-3-flask/
+
+
+
+#local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'arquivos')
+local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos)
+
+
+@app.route(base + 'arquivos_json_upload/<nomeArquivo>', methods=['POST'])
+@limiter.limit(limiter_padrao)
+def serve_arquivos_json_upload(nomeArquivo):
+    '''
+        2024-03-09 permite salvar arquivo se estiver no padrao nome.secrets_tokenhex().json
+    '''
+    if bDemo:
+        return jsonify({'mensagem':'Opção não disponível na versão DEMO.'})
+    cam = ''
+    tamanhoToken = 10
+    nomeArquivo = unquote(nomeArquivo)
+    filename = secure_filename(nomeArquivo)
+    if len(request.get_json())>100000:
+        #return jsonify({'mensagem':{'lateral':'', 'popup':'O arquivo é muito grande e não foi salvo', 'confirmar':''}})
+        return jsonify({'mensagem':'O arquivo é muito grande e não foi salvo'})
+    nosLigacoes = request.get_json()
+    breescreve = (request.args.get('reescreve', default='', type=str)=='S')
+    if breescreve:
+        if not usuarioLocal():
+            #verifica se nome já tem hex_digits
+            pnome = filename.split('.')
+            if len(pnome)>=3 and pnome[-1]=='json' and len(pnome[-2])==2*tamanhoToken and set(pnome[-2]).issubset(string.hexdigits):
+                breescreve = True
+            else:
+                breescreve = False
+                return jsonify({'mensagem': 'O arquivo ' + filename + ' não foi encontrado no servidor.'})
+        if breescreve:     
+                #nome tem token_hex, pode ser nome de arquivo válido
+                camTeste = os.path.join(local_file_dir, filename)  
+                if os.path.exists(camTeste):
+                    cam = camTeste 
+                else:
+                    return jsonify({'mensagem': 'O arquivo ' + filename + ' não foi encontrado no servidor.'})
+    if not cam:
+        if usuarioLocal():
+            cam = nomeArquivoNovo(os.path.join(local_file_dir, filename + '.json'))
+            filename = os.path.split(cam)[1]
+        else:
+            filename += '.'+secrets.token_hex(tamanhoToken) + '.json'
+            cam = os.path.join(local_file_dir, filename)  
+    with open(cam, 'w') as outfile:
+        json.dump(nosLigacoes, outfile)
+    return jsonify({'nomeArquivoServidor':filename})
+#.def serve_arquivos_json_upload
+
+@app.route(base + 'arquivo_upload/', methods=['POST'])
+@limiter.limit(limiter_padrao)
+def serve_arquivos_upload():
+    if bDemo:
+        return jsonify({'mensagem':'Opção não disponível na versão DEMO.'})
+    if not config.par.bArquivosDownload:
+        return jsonify({'nomeArquivoServidor':'', 'mensagem':'salvamento de arquivo não autorizado'})
+        #return Response("Solicitação não autorizada", status=400)
+    f = request.files['arquivo']
+    if pathlib.Path(f.filename).suffix not in kExtensaoDeArquivosPermitidos:
+        return jsonify({'mensagem':'extensão de arquivo não permitido'})
+    filename = secure_filename(f.filename)
+    if not usuarioLocal():
+        #filename += '.'+secrets.token_hex(10) + '.json'
+        #cam = os.path.join(local_file_dir, filename)           
+        return jsonify({'nomeArquivoServidor':'', 'mensagem':'salvamento de arquivo não autorizado'})
+    else:
+        cam = nomeArquivoNovo(os.path.join(local_file_dir, filename))
+        filename = os.path.split(cam)[1]
+    f.save(cam)
+    return jsonify({'nomeArquivoServidor':filename})
+#.def serve_arquivos_upload
+
+#---------------------------------------------------------------------------
+#servir arquivos
+local_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), config.par.pasta_arquivos) #=arquivos
+local_file_dir_baixar = os.path.join(local_file_dir, 'arquivos_baixar')
+kpasta_arquivos_fixos = 'arquivos_fixos' 
+
+def serve_arquivos_json_base(arquivopath, local_file_dirIn):
+    #paramApagar = request.args.get('apagar', default = '', type = str)
+    filename = secure_filename(arquivopath)
+    #parametros = request.get_json()
+    extensao = os.path.splitext(filename)[1]
+    if not extensao:
+        filename += '.json'
+        extensao = '.json'
+    #if extensao =='.json':
+    caminho = os.path.join(local_file_dirIn, filename)
+    if extensao in ('.json', '.csv', '.xlsx', '.pdf', '.zip'):
+        #if filename.startswith('temporario') or parametros.get('apagar','')=='sim': #se for temporário, apaga depois de copiar dados para stream
+        if filename.startswith('_temporario') or request.method=='DELETE': #se for temporário, apaga depois de copiar dados para stream
+            return_data = io.BytesIO()
+            
+            if not os.path.exists(caminho):
+                return Response("Arquivo não localizado", status=400)
+            with open(caminho, 'rb') as fo:
+                return_data.write(fo.read())
+            return_data.seek(0)
+            #if filename not in klista_arquivos_fixos and extensao=='.json':
+            if extensao=='.json':
+                os.remove(caminho)
+            return send_file(return_data, mimetype='application/json', download_name=arquivopath)            
+        else:
+            
+            if os.path.exists(caminho):
+                return send_from_directory(local_file_dirIn, filename)
+            else: #caminho na pasta fixa
+                caminho = os.path.join(local_file_dirIn, kpasta_arquivos_fixos, filename)
+                if os.path.exists(caminho):
+                    return send_from_directory(os.path.join(local_file_dirIn, kpasta_arquivos_fixos), filename)
+            return Response("Arquivo não localizado", status=400)
+            
+    else:
+        return Response("Solicitação não autorizada", status=400)
+#.def serve_arquivos_json_base
+
+@app.route(base + 'arquivos_json/<arquivopath>', methods=['GET','POST'] if bDemo else ['GET','POST','DELETE'])
+#@limiter.limit(limiter_padrao, key_func = limiter_keyfunc)
+@limiter.limit(limiter_padrao)
+def serve_arquivos_json(arquivopath):
+    return serve_arquivos_json_base(arquivopath, local_file_dirIn=local_file_dir)
+
+def serve_pagina_base(nome_pagina:str):
+    nome_pagina = secure_filename(nome_pagina)
+    nome_pagina = nome_pagina.removesuffix('.html')
+    if nome_pagina in ('sobre','rede_aviso', 'adquirir', 'aplicativo', 'ajuda'):
+        bmobile = any(word in request.headers.get('User-Agent','') for word in ['Mobile','Opera Mini','Android'])
+        return render_template(nome_pagina + '.html',  email=email, bmobile=bmobile, demo=bDemo)
+    #return redirect(base + 'pag/sobre')
+    return abort(401,  description='Página inexistente')
+
+limiter_login = '5/minute'
+
+@app.route('/')
+def serve_rede1():
+    #return redirect('/rede/pag/rede_aviso.html')
+    return redirect(base)
+
+@app.route(base + 'pag/<nome_pagina>')
+@limiter.limit(limiter_login)
+def serve_pagina_r(nome_pagina:str):
+    return serve_pagina_base(nome_pagina=nome_pagina)
+
+@app.route(base + 'baixar_arquivo/<arquivopath>', methods=['GET',])
+@app.route(base + 'pag/baixar_arquivo/<arquivopath>', methods=['GET',])
+@limiter.limit('1/second;5/minute;10/hour;20/day')
+def baixar_arquivo_r(arquivopath):
+    return serve_arquivos_json_base(arquivopath, local_file_dirIn=local_file_dir_baixar)
+
+#--------------DEMO-------------
+
+if bDemo and base!='/rede/':
+    @app.route('/rede/')
+    @limiter.limit(limiter_login)
+    def serve_rede2():
+        return redirect(base)
+    
+    @app.route('/rede/aviso')
+    @limiter.limit(limiter_login)
+    def serve_rede3():
+        return redirect(base + 'pag/rede_aviso.html')
+        #return serve_pagina_base('rede_aviso')
+        
+    # @app.route('/rede/grafico_no_servidor/<arquivo>')
+    # @limiter.limit(limiter_login)
+    # def serve_rede4(arquivo):
+    #     #return redirect("https://rictom.pythonanywhere.com/rede/grafico_no_servidor/rede_cnpj_diagrama.json")
+    #     return redirect(base + "grafico_no_servidor/rede_cnpj_diagrama.json")
+
+    @app.route('/rede/pag/<nome_pagina>')
+    @limiter.limit(limiter_login)
+    def serve_pagina_r1(nome_pagina:str):
+        return redirect(base + f'pag/{nome_pagina}')
+    
+    @app.route('/rede/baixar_arquivo/<arquivopath>', methods=['GET',])
+    @app.route('/rede/pag/baixar_arquivo/<arquivopath>', methods=['GET',])
+    @limiter.limit('1/second;5/minute;10/hour;20/day')
+    def baixar_arquivo_r1(arquivopath:str):
+        return redirect(base + f'pag/baixar_arquivo/{arquivopath}')
+
+
+
+baseRFB = {}
+baseRFB['anoMes'] = config.config['RFB'].get('anoMes', '').strip() 
+baseRFB['urlBaseArquivosDoMes'] = config.config['RFB'].get('urlBaseArquivosDoMes', '').strip() 
+baseRFB['urlPaginaDownloadMeses'] = config.config['RFB'].get('urlPaginaDownloadMeses', '').strip() 
+
+@app.route(base + 'caminho_base_cnpj', methods=['GET',])
+@limiter.limit('1/second;5/minute;10/hour;20/day')
+def serve_caminho_atualizar_base():
+    return jsonify({'anoMes':baseRFB['anoMes'], 'urlBaseArquivosDoMes':baseRFB['urlBaseArquivosDoMes'], 'urlPaginaDownloadMeses':baseRFB['urlPaginaDownloadMeses']})
+
+
+if __name__ == '__main__':          
     import webbrowser, platform
     porta = config.par.porta_flask
     if platform.system()=='Darwin' and porta==5000: #MacOS, a porta 5000 já é usada por outra aplicação

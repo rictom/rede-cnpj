@@ -95,6 +95,8 @@ def cnpj_formatado(cnpj):
 
 exprTerminaCPF = re.compile(r'.*\d{11}$')
 def removeCPFFinal(nomeIn):
+    if not nomeIn:
+        return ''
     if exprTerminaCPF.search(nomeIn):
         return nomeIn[:-11].strip()
     else:
