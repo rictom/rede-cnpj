@@ -171,7 +171,11 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+<b>versão 26.06 (junho/2026)</b>
+- Alteração no layout da tabela de busca rede_search.db;
+- Diversas alterações e novas opções;
 
+ 
 <b>versão 1.8 (março/2026)</b>
 - Atualização do script para baixar arquivos, baseado na rotina do projeto [cnpj-data-pipeline](https://github.com/caiopizzol/cnpj-data-pipeline).
 
