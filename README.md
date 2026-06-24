@@ -173,9 +173,11 @@ https://fontawesome.com<br>
 ## Histórico de versões
 <b>versão 26.06 (junho/2026)</b>
 - Alteração no layout da tabela de busca rede_search.db;
-- Diversas alterações e novas opções;
+-	Possibilidade de enriquecer o gráfico com dados fornecidos pelo usuário;
+- Customização do tamanho do ícone;
+- Opção para agrupar itens;
+- Criação de mapas mentais simples a partir de texto da área de transferência;
 
- 
 <b>versão 1.8 (março/2026)</b>
 - Atualização do script para baixar arquivos, baseado na rotina do projeto [cnpj-data-pipeline](https://github.com/caiopizzol/cnpj-data-pipeline).
 
