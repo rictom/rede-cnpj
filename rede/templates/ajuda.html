@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>RedeCNPJ</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta charset="utf-8" />
+<meta name="description" content="Visualização Gráfica de Empresas e de Sócios com dados abertos da Receita Federal do Brasil. Graphic visualization of companies and partners with open data from the Federal Revenue of Brazil."/>
+<meta name="keywords" content="CNPJ, Dados Abertos, Receita Federal, OSINT"/>
+<meta name="author" content="https://github.com/rictom/rede-cnpj"/>
+
+
+<!-- 
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" /> 
+<meta name="viewport" content="width=device-width, user-scalable=no" / -->
+
+<meta property="og:title" content="Rede CNPJ" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.redecnpj.com" />
+<meta property="og:image" content="https://www.redecnpj.com/static/imagem/favicon.png"/>
+<!-- <meta property="og:image" content=""/> --->
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css"/>
+
+<link rel="icon" href="/static/imagem/favicon.ico?v=2" type="imagem/x-icon"/>
+<!-- google fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300&display=swap" rel="stylesheet" --> 
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet"> 
+<link rel="stylesheet" href="/static/menu/font-awesome_5.14.0_css_all.min.css"/>
+
+<style>
+
+
+* {
+  box-sizing: border-box;
+  /* font-family: 'Josefin Sans', sans-serif; */
+  font-family: 'Montserrat', sans-serif;
+}
+
+.row {
+  display: flex; /* equal height of the children */
+}
+
+/* Create three unequal columns that floats next to each other */
+.column {
+  float: left;
+}
+
+.left, .right {
+  width: 25%;
+}
+
+.middle {
+
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+h2 {text-align: center;}
+
+table {
+border-collapse: collapse;
+}
+th, td {
+border: 1px solid black;
+padding: 10px;
+text-align: left;
+}
+
+</style>
+<!-- google ads script -->
+
+<!--
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5410090554067443" crossorigin="anonymous"></script>
+-->
+		 
+
+
+
+</head>
+<body id='corpo'> 
+
+<h2 class="blue-text"  style="background-color: #d8f5ff;"><a href="https://www.redecnpj.com">RedeCNPJ</a> <a href=mailto:{{email}}?subject=RedeCNPJ title='Envie comentários e sugestões para o email {{email}}.'><i class="fa fa-envelope" aria-hidden="true"></i></a></h2>
+
+<div class="row">
+
+	  <!-- div class="column left" style="background-color:#d0d3d4 ;" --> 
+	{% if not bmobile %}
+
+	{% endif %}
+	
+ <div class="column middle">
+	<!--
+	<p><font color="red"><b>Novidade:</b></font> Versão 2.0 do Aplicativo para baixar e converter a <a href="https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj" title="clique para abrir a página da Receita Federal no Portal de Dados Abertos" target='_blank'>Base de Dados Abertos de Empresas</a>.</p>
+	-->
+{%if demo %}
+<h2>Sobre a versão DEMO da RedeCNPJ:</h2>
+<p>A versão DEMO utiliza uma base de dados de empresas incompleta, sem dados de MEIS ou empresários individuais. Também não exibe nomes completos de sócios.</p>
+<p>Para utilizar a versão mais completa, visite o site <a href="https://www.redecnpj.com">RedeCNPJ.com</a>.</p>
+<p>O código fonte está disponível <a href="https://github.com/rictom/rede-cnpj">Github</a>, com orientações de como baixar as bases públicas e rodar o aplicativo localmente.</p>
+<br>
+<p><span style="color:red"><b>Atenção: Algumas opções a seguir não estão disponíveis na versão DEMO ou na versão Github ou aplicativo .</b></span>
+{% else %}
+<h2>Validade da Senha:</h2>
+<p>Deixe o cursor sobre o Botão <b>SAIR</b> no canto superior direito da tela da RedeCNPJ para saber a validade da senha.</p>
+<p>Clique em <a href="{{ base }}pag/adquirir.html">Adquirir</a> para aumentar a validade da senha. O tempo adquirido será adicionado à vigência atual.</p>
+{% endif %}
+
+<h2>Busca de empresas/sócios:</h2>
+<p>Ao se abrir a RedeCNPJ aparece uma janela de busca. Ela pode ser aberta a qualquer momento pressionando-se a <span style="color:red"><b>Tecla I</b></span> ou clicando no ícone <i class="fa fa-user-plus"></i> na barra superior da tela. Podem ser feitas buscas por:</p>
+<li><b>CNPJ completo</b>, com ou sem pontos e hífens, por exemplo: 12345678901234, 12.345.678-9012/34.</li>
+<li><b>Radical do CNPJ</b>, por exemplo: 87654321, 87.654.321. Por padrão a busca por CNPJ raiz retorna 10 filiais.</li>
+<li><b>Radical do CNPJ</b> seguido de jogo da velha (<b>#</b>) para exibir filiais: 87654321#20 para exibir matriz e 20 filiais.</li>
+<li><b>Razão Social</b> da empresa ou <b>Nome Fantasia</b>, podendo ser completo ou incompleto ou em letras minúsculas ou maiúsculas. Por padrão são exibidos 10 itens que satisfaçam o texto. Se desejar exibir mais itens, use #. Por exemplo, Imobiliaria#20 para exibir vinte registros com o termo imobiliária. A acentuação é removida antes de se fazer a busca.</li>
+<li><b>Vários CNPJs</b> separados por espaço ou ponto e vírgula (;), por exemplo: 12345678901234; 43210987654321. Pode-se copiar uma lista do Excel e colar no campo para busca de vários CNPJs.</li>
+<li><b>Nome de sócio</b>, completo ou incompleto, com ou sem acentuação ou em letras minúsculas ou maiúsculas. Por padrão são exibidos 10 resultados, use jogo da velha (<b>#</b>) para exibir mais resultados, por exemplo JOSE DA SILVA#20 para vinte resultados.</li>
+<li><b>CPF</b>, por exemplo 12345678901 ou 123.456.789-01. Ressalta-se que a base de dados pública não contém CPFs completos, apenas seis dígitos. A busca por 123.456.789-01 vai retornar sócios com CPFs que tenham 456.789 no meio, por exemplo 111.456.789-11 ou 222.456.789-22. O CPF será exibido na tela como ***456789**.</li>
+<li><b>CPF parcial</b>, com 6 dígitos do meio do CPF, como em ***456789**, ***.456.789-**, 456.789 ou 456789</li>
+<li><b>Nome e CPF parcial</b>, por exemplo <b>José da silva 456789</b> exibiria as pessoas com nome José da Silva e CPF ***456789**</li>
+<li><b>Começo de Nome</b>. A busca por nome apresenta resultados fora de ordem. Por exemplo, pesquisar JOSÉ MARIA apresentará resultados como JOSÉ MARIA, MARIA JOSÉ ou JOSÉ CONCEIÇÃO MARIA. Se desejar busca apenas pelos nomes que começam com JOSÉ MARIA, faça a busca com asterisco (*) no final, com o texto JOSÉ MARIA*</li>
+<li><b>Começo e fim de Nome</b>. Por exemplo, para pesquisar JOSÉ*SILVA  apresentará resultados como JOSÉ DA SILVA, JOSÉ CONCEIÇÃO SILVA. Use no final jogo da velha #20 para exibir vinte resultados.</li>
+<li>Podem ser colocados vários CNPJs na caixa de busca, desde que estejam separados por espaços, por vírgulas ou por ponto-e-vírgulas; neste caso não misture códigos de CNPJs com nomes de sócios ou de empresas.</li>
+<li><span style="color:red"> Novo!: </span>Para buscar CNPJs no meio de texto, utilize a opção CTRL+SHIFT+I.</li>
+
+<h2>Operações Básicas com o mouse:</h2>
+<li>Apertando <b>SHIFT</b> antes de clicar, é possível selecionar mais de um ícone.</li>
+<li>Pressionando <b>CTRL</b> e arrastando na tela, seleciona os itens de uma área retangular. Para adicionar itens à seleção, pressione <b>CTRL+SHIFT</b> e arraste o cursor.</li>
+<li>A <b>roda</b> do mouse expande ou diminui o tamanho da exibição.</li>
+<li>Clicar na <b>roda</b> do mouse faz aparecer janela para editar uma Nota, que aparece em uma terceira linha abaixo do ícone.</li>
+<li><b>Click duplo</b> em um ícone expande as ligações. Por exemplo, clique duplo no ícone de uma pessoa, exibirá todas as empresas que esta é sócia. Clique duplo em um ícone de CNPJ, exibirá todos os sócios da empresa. Cliques duplos sucessivos vão expandindo mais níveis, o mesmo pode ser feito pressionando a <b>Tecla 1</b> ou Teclas <b>2</b> a <b>9</b>. Observação: o click duplo em uma Filial de empresa fará a ligação com a Matriz, mas um click duplo na Matriz não exibe as filiais. Para exibir as ligações da Matriz com suas filiais, selecione o ícone da empresa e clique no botão <b>F</b> na barra superior</li>
+
+<h2>Botões no topo da tela:</h2>
+<li><i class="fa fa-bars"></i> Abre o Menu de Opções;</li>
+<li><img src="/static/imagem/favicon.ico" alt="MapRoad" class='botaosuperior' width="12" height="12"/> Abre um gráfico com links de utilização da RedeCNPJ</li>
+<li><b>RedeCNPJ</b>: exibe a página com informações;</li>
+<!--
+<li><b>Dados Abertos</b>: abre a página de dados públicos abertos da Receita Federal do Brasil;</li>
+-->
+<li><b>CNPJ</b>: exibe a data de referência das bases abertas;</li>
+<li><i class="fa fa-plus-square""></i> <span style="color:red"> Novo!:</span> Abre nova aba vazia da RedeCNPJ;</li>
+<li><i class="fa fa-folder-open"></i> Abre o último gráfico salvo com o botão seguinte;</li>
+<li><i class="fa fa-save"></i> Salva o gráfico para visualizar depois;</li>
+<li><i class="fa fa-paste"></i> Cola itens de outra aba da RedeCNPJ copiados pelo botão seguinte;</li>
+<li><i class="fa fa-copy"></i></b> Copia os itens para área de transferência, para ser colada em outra tela da RedeCNPJ. Também copia arrastando-se o botão para outra tela da RedeCNPJ;</li>
+<li><i class="fa fa-play"></i> Ativa o leiaute;</li>
+<li><i class="fa fa-stop"></i> Desativa o leiaute, os ícones param de se mexer na tela;</li>
+<li><i class="fa fa-map-pin"></i><span style="color:red"> Novo!:</span> Pinar/Fixar os itens selecionados;</li>
+<li><i class="fa fa-search-plus"></i> Aumenta o tamanho dos ícones; SHIFT+LUPA aumenta o tamanho das ligações;</li>
+<li><i class="fa fa-search-minus"></i> Diminui o tamanho dos ícones; SHIFT+LUPA diminui o tamanho das ligações</li>
+<li><i class="fa fa-compress"></i> Reinicia o tamanho dos ícones;</li>
+<li><i class="fa fa-undo"></i> Desfaz última inserção de itens (CTRL+Z);</li>
+<li><i class="fa fa-user-plus"></i> Abre a janela para inserir CNPJ/CPF no gráfico;</li>
+<li><i class="fa fa-eye"></i> Exibe dados do item selecionado;</li>
+<li><i class="fa fa-newspaper"></i> Exibe dados do item selecionado em nova aba;</li>
+<li><i class="fa fa-layer-group"></i> Expande os vínculos dos itens selecionados em um nível;</li>
+<li><b>F </b> <span style="color:red"> Novo!:</span> Exibe 100 filiais ou sócios das empresas selecionadas;</li>
+<li><i class="fa fa-object-group"></i> Reunir/Desagrupar Itens;</li>
+
+<li><i class="fa fa-file-excel"></i> Gera planilha em Excel com os dados das empresas;</li>
+<li><i class="fab fa-google"></i><span style="color:red"> Novo!:</span> Busca no Google (Tecla G), SHIFT+Click abre Google Maps, CTRL+Click faz buscas nos sites do Google, Bing, etc;</li>
+<li><i class="fa fa-globe"></i> Abre um mapa com os endereços das empresas;</li>
+
+<li><i class="fa fa-trash"></i> Apaga todos os itens da tela;</li>
+<li><b>SAIR</b>: Sair do Sistema. Colocando o cursor sobre este botão, é exibido o nome do usuário e a validade da senha.</li>
+
+
+<h2>Teclas/Opções do Menu:</h2>
+<p>As opções estão no <b>Menu</b> no canto superior esquerdo da tela ou pelo Menu contextual</b> (botão direito do mouse), sendo configuradas teclas de atalho correspondentes aos comandos:
+
+<h3>SubMenu Incluir:</h3>
+	<li><b>TECLAS de 1 a 9 - Incluir Camadas de Sócios </b> - Inserir camadas correspondente ao número sobre os itens selecionados;</li>
+	<li><b>SHIFT + TECLAS de 1 a 9- Incluir Outras Ligações</b> - Inserir camadas correspondente a ligações com valores, como dados do TSE de doadores/pagamentos das eleições 2022, recebimento por favorecido pelo Governo Federal com dados do Portal da Transparência da CGU ou pagamentos de municípios paulistas com dados do TCE/SP;</li>
+	<li><b>F - Filiais</b> da PJ;</li>
+
+	<li><b>I - Inserir</b> CNPJ, Razão Social ou Nome de Sócio. Poderão ser colocados vários CNPJs ao mesmo tempo, separados por ponto e vírgula (;).</li>
+	<li><b>SHIFT+I - Inserir PJ</b> a partir de <b>Endereço, Telefone ou Email.</b>;</li>
+	<li> <span style="color:red"> Novo!:</span> <b>CTRL+SHIFT+I - Inserir PJ em Texto</b>. Extrai CNPJs de texto e insere as empresas no gráfico;</li>
+	<li><b>U - Criar item novo</b> (que não seja PF ou PJ);</li>
+
+
+<h3>SubMenu Editar:</h3>
+
+	<li><b>E - Editar Item</b> - Abre janela para editar Descrição, Nota, Ícone ou tamanho da imagem;</li>
+
+	<li> <span style="color:red"> Novo!:</span> <b>SHIFT+E - Editar Campos de Item</b> - Abre janela para editar campos de um ou mais itens para enriquecer dados;</li>
+
+	<li><b>Editar Nota</b> - Permite editar uma anotação, o mesmo que clicar no botão do meio do mouse;</li>
+
+	<li><b>Altera o nome da aba</b>;</li>
+
+	<li><b>C - Colorir</b> os itens selecionados;</li>
+
+	<li><b>Selecionar Cor</b></li>	
+	
+	<li><b>Alterar Ícone</b> - Altera ícones a partir de lista de ícones no servidor;</li>
+
+	<li><b>Alterar Ícone para Imagem/Favicon</b> - Altera ícones dos itens selecionados a partir de link ou nome de imagem;</li>
+
+	<li><b>Alterar Tamanho</b> - Altera ícones/imagens dos itens selecionados (Tecla T aumenta e SHIFT+T diminui o tamanho);</li>
+
+	<li><b>CTRL+A - Seleciona todos</b> os itens;</li>
+
+	<li><b>CTRL+SHIFT+A - Inverte</b> seleção;</li>
+	
+	<li><b>A - Gráfico em Nova Aba</b> - Abre aba com os itens selecionados;</li>
+
+	<li><b>Q - Quebrar o gráfico em abas</b> - Divide o gráfico em partes menores, mantendo as ligações;</li>
+
+
+<h3>SubMenu Visualização:</h3>
+
+	<h4>SubMenu Visualização > Fixar:</h4>
+	<li><b>P - Fixar (Pinar)</b> os itens na posição;</li>
+
+	<li><b>SHIFT+P - Desafixar</b> os itens;</li>
+
+	<li><b>CTRL+P</b> - Fixa um item em cada grupo conexo (para evitar que o gráfico se expanda indefinidamente);</li>
+	
+	<h4>SubMenu Visualização > Rótulos:</h4>
+
+		<li><b>N - Rótulo</b> - Exibe apenas o primeiro nome;</li>
+
+		<li><b>Embaralha Texto</b> - Altera o texto dos itens para não permitir identificação;</li>
+
+		<li><b>SHIFT+N - Oculta/exibe</b> texto da ligação;</li>
+
+		<li><b>M -Alterna posição</b> do texto para baixo ou para o lado do ícone;</li>
+	
+	<h4></h4>
+
+	<li><b>Abre OpenStreetMap</b> - Abre Mapa com os endereços de empresas;</li>
+
+
+	<li><b>D – Abre um popup</b> com dados;</li>
+
+	<li><b>SHIFT+D – Abre numa nova aba</b> com Dados;</li>
+
+	<li><b>CTRL+D – (Experimental) Abre numa nova aba</b> com Dados Históricos;</li>
+
+	<li><b>Escala Inicial</b> - Coloca a exibição sem zoom, na escala inicial.</li>
+
+	<li><b>Barra de Espaço - Parar/reiniciar</b> leiaute (se a tela tiver muitos itens, os comandos funcionam melhor se o leiaute estiver parado);</li>
+
+<h3>SubMenu - Filtrar/Localizar:</h3>
+
+	<h4>SubMenu - Filtrar/Localizar > Busca em sites:</h4>
+
+		<li><b>B - Abre abas</b> dos sites deste submenu: Google, Bing, etc, com o nome do item selecionado como parâmetro de busca;</li>
+
+		<li><b>G – Abre</b> o item numa aba do site Google;</li>
+
+		<li><b>SHIFT+G – Abre o endereço</b> no Google Maps (só CNPJs);</li>
+
+		<li><b>H ou CTRL+G - Raspa</b> a página do DuckDuckGo e coloca links;</li>
+
+		<li><b>SHIFT+H - Raspa</b> a página do DuckDuckGo e <b>busca palavras chave</b> nos links;</li>
+
+		<li><b>Jusbrasil</b> - Busca no site Jusbrasil;</li>
+
+		<li><b>Escavador</b> - Busco no site Escavador;</li>
+
+		<li><b>Portal da Transparência</b> - Busca no Portal da Transparência da CGU;</li>
+
+		<li><b>Bing</b> - Busca no Bing;</li>
+
+		<li><b>DuckDuckGo</b> - Busca no DuckDuckGo;</li>
+		
+		<li><b>Yandex</b> - Busca no Yandex;</li>
+		
+		<li><b>Brave</b> - Busca no Brave;</li>
+		
+		<li><b>Perplexity</b> - Busca no Perplexity AI;</li>
+		
+		<li><b>ChatGPT</b> - Busca no ChatGPT;</li>
+
+		<li><b>Reclame Aqui</b> - Busca no Reclame Aqui;</li>
+
+	<h4></h4>
+			
+	<li><b>CTRL+F - Localizar</b> - Localizar na Tela Nome, CNPJ ou CPF. Se encontrar mais de 1 item, pressione seta à direita ou à esquerda para centralizar nesses itens;</li>
+
+
+	<li><b>SHIFT+F - Localizar</b> apenas na seleção;</li>
+
+	<li><b>CTRL+SHIFT+F - Localiza</b> por campo (como cor do item);</li>
+
+	<li><b>J – Seleciona</b> itens adjacentes - Seleciona itens adjacentes aos selecionados;</li>
+	<li><b>CTRL+J – Seleciona</b> itens adjacentes de destino - Seleciona os itens adjacentes destino das setas dos selecionados;</li>
+	<li><b>CTRL+SHIFT+J – Seleciona</b> itens adjacentes de destino - Seleciona os itens adjacentes destino das setas dos selecionados;</li>
+
+	<li><b>Seleciona árvores</b> dos itens selecionados;</li>
+
+	<li><b>Itens com mais ligações</b> - Opção para selecionar os itens do gráfico com mais ligações;</li>
+
+	<li><b>Itens ligados</b> a coloridos;</li>
+
+	<li><b>Grupos com duas</b> cores;</li>
+
+	<li><b>Sobrenomes</b> - Liga os ícones de pessoas que tenham o mesmo Sobrenome;</li>
+	<li><b>PGDown</b> - Volta uma página de resultados;</li>
+	<li><b>PgUp</b> - Avança uma página de resultados;</li>
+	<li><b>R - Reunir/Desagrupar Itens</b> - Junta itens selecionados em um único item que depois poderá ser expandido;</li>
+
+
+
+<h3>SubMenu Ligar:</h3>
+
+	<li><b>U - Ligar para novo</b> item;</li>
+
+	<li><b>L - Ligar itens selecionados</b>, ligação tipo estrela (o primeiro ligado aos demais);</li>
+
+	<li><b>SHIFT+L - Remover ligação</b> entre itens selecionados;</li>
+
+	<li><b>Remover Ligacoes - Remove todas as ligações</b> dos itens selecionados;</li>
+
+	<li><b>K - Ligar itens selecionados</b>, ligação tipo fila (o primeiro ligado ao segundo, o segundo ao terceiro, etc);</li>
+	
+	<li><b>SHIFT+K - Inverte Sentido das Setas</b> entre os itens selecionados;</li>
+	
+<h3>SubMenu Salvar/Abrir:</h3>
+	<h4>SubMenu Salvar/Abrir > Arquivo:</h4>
+		<li><b>Salvar dados em Excel</b> - Arquivo com várias abas com os dados das empresas e de sócios;</li>
+
+		<li><b>Salvar em formato i2 Chart Reader.</b> O i2 Chart Reader pode ser baixado gratuitamente no <a href="https://i2group.com/chart-reader-request">site</a>;</li>
+
+		<li><b>Salvar imagem em formato SVG</b> - SVG é um formato de imagem escalável, pode ser aberto em editores de imagem ou no Firefox e no Chrome;</li>
+		
+		<li><b>Salvar imagem em formato PNG</b> - Esta rotina funciona apenas para gráficos pequenos;</li>
+
+		<li><b>Salvar Arquivo Json - salva dados do gráfico</b> no formato json, com informações dos itens e das ligações;</li>
+
+		<li><b>Abrir Arquivo Json</b> - Json é um arquivo de texto salvo pela opção anterior;</li>
+
+
+	<h4>Submenu Salvar/Abrir > no Servidor:</h4>
+	
+		<li><b>Exportar JSON ao Servidor</b> no formato json;</li>
+
+		<li><b>Importar JSON ao Servidor</b> no formato json;</li>
+
+		<li><b>Salvar Arquivo Json - salva dados do gráfico</b> no formato json;</li>
+	
+<h3>SubMenu Excluir</h3>
+	<li><b>CTRL+Z – Desfaz Inserção</b>;</li>
+	
+	<li><b>DEL – Excluir</b> itens selecionados.</li>
+
+	<li><b>SHIFT+DEL – Excluir todos</b> os itens.</li>
+
+	<li><b>Excluir Item mantendo Link</b>;</li>
+
+	<li><b>Simplifica Gráfico </b>- Remove itens nas bordas do gráfico que não tenham destaque;</li>
+
+	<li><b>Excluir itens isolados</b> - Remove itens sem ligação.</li>
+	
+	<li><b>Ligações com Texto...</b> - Remove ligações pelo texto ou parte do texto. Por exemplo, para remover ligações de ex-sócios, use para remover o texto ex- .</li>	
+	
+
+<h2>Outras operações com teclas:</h2>
+	<li><b>Seta para Acima, Abaixo, Esquerda, Direita</b> – Move os itens selecionados na direção respectiva da tecla. Pressione P para pinar os itens ou pare o layout com a barra de espaço se desejar que os itens fiquem nas novas posições;</li>
+	<li><b>SHIFT+Seta à Direita</b> – Roda itens da seleção no sentido anti-horário, em relação ao último selecionado;</li>
+	<li><b>SHIFT+Seta à Esquerda</b> – Roda itens da seleção no sentido horário;</li>
+	<li><b>CTRL+Seta à Direita ou à Esquerda</b> – Navega pelos itens selecionados, por exemplo, resultado da opção CTRL+F (Procurar no Gráfico);</li>
+  <li><b>CTRL+Seta para Cima ou para Baixo</b> – O mesmo que o item anterior;</li>
+
+	
+<p>Os comandos valem para o último item selecionado ou itens selecionados, que ficam em destaque com a animação no contorno ods ícones. Pressionando SHIFT e click, é possível selecionar mais de um ícone para fazer Exclusão ou para Expansão de vínculos. Pode-se arrastar células com listas de CNPJs do Excel para a janela, ou arrastar arquivos csv ou json.</p>
+
+<h2>Ícones:</h2>
+<p>Os seguintes ícones são exibidos, de acordo com a natureza jurídica da empresa:</p>
+	<li><img src="/static/imagem/icone-grafo-empresa.png" alt="empresa"  width="30" height="30"><b>Empresa</b></li>
+	<li><img src="/static/imagem/icone-grafo-empresa-publica.png" alt="empresa pública" width="30" height="30"><b>Empresa Pública</b> </li>
+	<li><img src="/static/imagem/icone-grafo-empresa-fundacao.png" alt="fundação" width="30" height="30"><b>Fundação ou entidade sem fins lucrativos</b></li>
+	<li><img src="/static/imagem/icone-grafo-empresa-estrangeira.png" alt="emrpesa estrangeira" width="30" height="30"><b>Empresa ou Entidade Estrangeira</b></li>
+	<li><img src="/static/imagem/icone-grafo-empresa-individual.png" alt="empresa individual" width="30" height="30"><b>Empresário Individual</b></li>
+	<li><img src="/static/imagem/icone-grafo-masculino.png" alt="sócio masculino" width="30" height="30"><b>Sócio</b> cujo primeiro nome acaba com <b>O</b></li>
+	<li><img src="/static/imagem/icone-grafo-feminino.png" alt="sócio feminino" width="30" height="30"><b>Sócio</b> cujo primeiro nome acaba com <b>A</b></li>
+	<li><img src="/static/imagem/icone-grafo-desconhecido.png" alt="sócio" width="30" height="30"><b>Sócio</b></li>
+	<li><img src="/static/imagem/icone-grafo-telefone.png" alt="sócio" width="20" height="20"><b>Telefone</b> em comum com outra empresa</li>
+	<li><img src="/static/imagem/icone-grafo-endereco.png" alt="sócio" width="20" height="20"><b>Endereço</b> em comum com outra empresa</li>
+	<li><img src="/static/imagem/icone-grafo-email.png" alt="sócio" width="20" height="20"><b> Email</b> em comum com outra empresa</li>
+	<li><img src="/static/imagem/flag_red.png" alt="flag" width="15" height="15">A <b>bandeira vermelha</b> aparece quando uma empresa tem registro em base de dados que mereça destaque, como dívida na PGFN. O nome dos marcadores podem ser editados na opção do Menu> Configurar> Marcadores que geram bandeira;</li>
+	<li>Se a empresa não estiver ativa e regular, a imagem do ícone aparecerá em cinza.</li>
+	<li>Uma bandeira cinza aparece se a empresa estiver em situação Suspensa ou Inapta e não Ativa.</li>
+
+
+<h2 id='novidades'><font color="red">Novidades:</font></h2>
+	<h3>Fevereiro/2026:</h3>
+	<li>Tecla V - Enriquecimento de dados. Melhorias nas opções de colagem e alteração ou adição de campos. Ver no <a href="https://www.youtube.com/watch?v=sJ__0fm-8A4">Youtube</a>;</li>
+	<li>Opção SHIFT+E para editar campos ou criar novos campos com informações;</li>
+	<li>Correção de erros na opção CTRL+F (localizar itens na tela).</li>
+
+	<h3>Novembro/2025:</h3>
+	<li>Tecla B abre dezenas de abas em sites de pesquisa parametrizadas como google, bing, duckduckgo, yandex, brave, reclameaqui, jusbrasil, escavador e internet archive;</li>
+	<li>Tecla V com opções de colagem de texto. como ligações entre cnpjs ou texto (o mesmo que opção SHIFT+V abaixo);</li>
+	<li>SHIFT+V cola texto da área de transferência como itens de Texto, como esboço de mapa mental. Ver no <a href="https://www.youtube.com/watch?v=gRjpa20l7IY">Youtube</a>. Os itens de texto usam um ícone de círculo e ID iniciando em TX__;</li>
+	<li>Setas do teclado movem os itens selecionados na tela;</li>
+	<li>Alteração: É possível arrastar vários itens selecionados ao mesmo tempo com o cursor;</li>
+	<li>Alteração: CTRL+Arrastar na tela só irá colocar como itens selecionados o que estiverem no retângulo. Para adicionar à seleção, pressione SHIFT+CTRL+Arrstar;</li>
+	<li>Tecla Home: Centraliza no item selecionado ou no item selecionado seguinte;</li>
+	<li>Tecla M para alterar posição do texto para baixo ou para o lado do ícone;</li>
+	<li>SHIFT+M para alterar tamanho do itens de texto selecionados (ID iniciando com TX_);</li>
+	<li>CTRL+SHIFT+M para alterar tamanho de todos os itens de texto (ID iniciando com TX_);</li>
+
+
+
+	<h3>Outubro/2025:</h3>
+	<li>Opção Tecla H exibe links de busca do DuckDuckGo;</li>
+	<li>Inclusão de ligação entre MEI e outras empresas.</li>
+
+	<h3>Julho/2025:</h3>
+	<li>Opção CTRL+SHIFT+I para inserir texto com CNPJs. A rotina irá detectar os CNPJs e ignorar o restante do texto;</li>
+	<li>Clicando em <b>Email</b> na janela de Dados de CNPJs faz busca de domínio no WHOIS da Fapesp.</li>
+
+	<h3>Junho/2025:</h3>
+	<li>Exibição no tooltip (balão) da quantidade de vínculos em endereço, telefone ou email;</li>
+  <li>Botão para Pinar/Fixar itens na barra superior;</li>
+  <li>Botão para criar aba vazia da RedeCNPJ;</li>
+  <li>Correção de erro quando se arrasta células do Excel para a tela;</li> 
+  <li>Botão para busca no Google.</li> 
+
+	<h3>Maio/2025:</h3>
+	<li>Informação de pagamentos de municípios para empresas em 2024 conforme base do TCESP na opção SHIFT+1.</li>
+
+	<h3>Abril/2025:</h3>
+	<li>Opção para gerar Excel a partir de CNPJs informados, sem precisar gerar o gráfico primeiro (tecla SHIFT+botão Excel na barra superior);</li>
+  <li>Tecla F exibe filiais (e sócios) dos itens selecionados. Use CTRL+F para localizar item na tela;</li>
+
+	<h3>Março/2025:</h3>
+	<li>Botão ao lado do CNPJ para exibir histórico na opção SHIFT+D;</li>
+	<li>Alteração na visualização de imagem na opção SHIFT+D - Exibir dados de CNPJ, utilizando, quando possível, imagem do gráfico.;</li>
+	<li>Melhoria na impressão da na opção SHIFT+D.</li>
+
+	<h3>Fevereiro/2025:</h3>
+	<li>Marcadores de registro de Autuações no IBAMA, imóveis na SPU, Cadastro de trabalho em Condições Análogas às de Escravo e Responsáveis inabilitados no TCU;</li>
+	<li>Correção de erro em busca por nome entre aspas, que não apresentava resultados.</li>
+
+	<h3>Janeiro/2025:</h3>
+	<li>Experimental (pode ser removido no futuro): Dados históricos cadastrais da base da SRF a partir de maio/2021, opção <b>CTRL+D</b>;</li>
+	<li>Busca em novos sites como TikTok, Facebook e Instagram, no menu Filtrar/Localizar> Busca em Sites ou Tecla B;</li>
+
+	<h3>Dezembro/2024:</h3>
+	<li>Busca em novos sites como Yandex, Brave, ChatGPT e Perplexity, no menu Filtrar/Localizar> Busca em Sites ou Tecla B;</li>
+	<li>Melhoria nos ícones da opção Reunir (Tecla R);</li>
+	<li>Melhoria no texto de ligação em imagem exportada SVG/PNG;</li>
+	<li>Permite arrastar células do Excel para a RedeCNPJ no MacOS;</li>
+	<li>Simplificação nas opções quando se arrasta para a tela da RedeCNPJ;</li>
+	<li>Dropando arquivo csv, gera gráfico do nome do arquivo com as colunas.</li>
+	
+	<h3>Novembro/2024:</h3>
+	<li>Opção <b>Editar>Copiar (CTRL+C)</b> - Copia texto com Identificador(es) e Nome(s) para a Área de Transferência;</li>
+	<li>Opção <b>Editar>Colar (CTRL+V)</b> - Cola itens de uma aba da RedeCNPJ para outra;</li>
+	<li>Menu Contextual resumido.</li>
+	
+	<h3>Junho/2024:</h3>
+	<li>Exibição de itens de forma gradativa se forem obtidos mais de 200 itens para inserir;</li>
+	<li>Opção no menu Configurar>Parâmetros do Gráfico>Quantidade de itens a inserir padrão - Altera a quantidade de 200 utilizado na funcionalidade acima; </li>
+	<li>Opção <b>Tecla R</b> para Reunir ou Desagrupar itens, também disponível na barra superior no botão <i class="fa fa-object-group"></i>;</li>
+	<li>Texto de ligação é editavel com clique duplo;</li>
+	<li>Botão F para exibir filiais de empresas;</li>
+	<li>Opção <b>Tecla SHIFT+J</b> para selecionar apenas de acordo com a direção das setas saindo; </li>
+	<li>Opção <b>Tecla CTRL+J</b> para selecionar apenas de acordo com a direção das setas entrando; </li>
+
+	<h3>Maio/2024:</h3>
+	<li>Exibição de ícones na página de dados de CNPJ (SHIFT+D);</li>
+	<li>Busca de CPFs nos padrões ***456789**, ***.456.789-**, 456.789 ou 456789</li>
+	<li>Ligações de ex-sócios com linhas tracejadas;</li>
+	<li>Opção Excluir itens de endereço, de telefone e de email.</li>
+	
+	<h3>Março/2024:</h3>
+	<li>Opção <b>Excluir>Ligações com EX-</b> para remover ligações com o termo ex-, por exemplo, ex-sócios.</li>
+	<li>Permite <b>ATUALIZAR</b> arquivo JSON salvo no servidor, com opção Salvar/Abrir> No Servidor> Atualizar JSON no Servidor;</li>
+	<li>Opções com teclas de direção para navegar por itens, SHIFT+Seta à Direita ou à Esquerda para rodar itens e CTRL+Setas para mover itens selecionados;</li>
+	<li>Novo <b>subMenu Editar</b> agrupando funções de edição de itens. </li>
+	<li><b>Tecla T</b> aumenta o tamanho do ícone selecionado e SHIFT+T diminui.</li>
+	<li>Opção para alterar tamanho de imagem (TECLA E). </li>
+
+	<h3>Fevereiro/2024:</h3>
+	<li><b>Alterar ícone</b> com imagem <b>(TECLA E)</b>. Veja orientações <a href="{{ base }}baixar_arquivo/Editar_foto_em_diagrama.pdf" target='_blank'>aqui</a>.<br>
+	<img src="/static/pag/ajuda_editar_foto.png" alt=""  width="500">
+	<li>Botão para desfazer última inserção;</li>
+	<li>Marcador de sócio de empresa que recebeu bolsa-família;</li>
+	<h3>Janeiro/2024:</h3>
+	<li>Opção no menu para exibir <b>filiais</b> de empresa: Incluir Camadas>Filiais;</li>
+	<li>Exibição de dados de adesão ao Simples;</li>
+	<li>Melhoria na opção Sobrenomes: clicando em um ícone, faz busca na base de sócios com o Sobrenome (equivale a buscar *Sobrenome#20).</li>
+	<h3>Novembro/2023:</h3>
+	<li><b>Busca por endereço, telefone ou email</b>, utilizando a opção SHIFT+I. <b>Observação</b>: no gráfico da RedeCNPJ, um ícone de endereço, de telefone ou email só aparece se o mesmo é compartilhado por mais de um CNPJ.</li>
+	<li><b>Aplicativo</b> para utilizar dados a partir de <b>planilhas</b> Excel em conjunto com a RedeCNPJ. Veja o <a href='{{ base }}/baixar_arquivo/Manual_rede_local.v1.1.pdf' target='_blank'>Manual</a>.</li>
+	<li>Opção para salvar imagem no formato PNG.</li>
+	<li>Informações de ex-socios de empresas a partir do ano de 2019.</li>
+	
+<h2>Bases de Dados Abertos:</h2>
+	<p>Todas as informações na <b>RedeCNPJ.com</b> são públicas, obtidas no formato de <b>dados abertos</b> em sites oficiais de transparência do Governo Federal:
+	<ol type="a">
+		<li>Empresas e sócios no cadastro CNPJ (Fonte: <a href="https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj" title="clique para abrir a página da Receita Federal no Portal de Dados Abertos">Receita Federal do Brasil</a>);</li>
+		<li>Doações e Despesas de campanha da Eleição 2022 (Fonte: site do TSE);</li>
+		<li>Fornecedores do Governo Federal (Fonte: Portal da Transparência da CGU);</li>
+		<li>Pessoas Expostas Politicamente (PEPs) (Fonte: Portal da Transparência da CGU);</li>
+		<li>Cadastro Nacional de Empresas Inidôneas (CEIS) (Fonte: Portal da Transparência da CGU);</li>
+		<li>Cadastro de Entidades Privadas Sem Fins Lucrativos Impedidas (CEPIM) (Fonte: Portal da Transparência da CGU);</li>
+		<li>Cadastro Nacional de Empresas Punidas (CNEP) (Fonte: Portal da Transparência da CGU);</li>
+		<li>Acordo De Leniência (Fonte: Portal da Transparência da CGU); </li>
+		<li>Cadastro de Expulsões da Administração Federal (CEAF) (Fonte: Portal da Transparência da CGU);</li>
+		<li>Servidores do Governo Federal (Fonte: Portal da Transparência da CGU);</li>
+		<li>PGFN (Fonte: site da PGFN);</li>
+		<li>RAIS 2021 - quantitativo de funcionários (Fonte: Planilha disponibilizada por pedido pela LAI);</li>
+		<li>ANAC - quantitativo de aeronaves por CNPJ (Fonte: site da ANAC).</li>
+	</ol>
+
+	<!--
+	<br>a) Valores de Doadores e Fornecedores de Candidatos da Eleição 2022 (Fonte: site do TSE);
+	<br>b) Valor de Pagamentos de Fornecedores do Governo Federal (Fonte: Portal da Transparência da CGU);
+	<br>c) Informação de pessoas no cadastro de Pessoas Expostas Politicamente (PEPs) (Fonte: Portal da Transparência da CGU);
+	<br>d) Informação se empresa está no Cadastro Nacional de Empresas Inidôneas (CEIS) (Fonte: Portal da Transparência da CGU);
+    <br>e) Informação se empresa está no Cadastro de Entidades Privadas Sem Fins Lucrativos Impedidas (CEPIM) (Fonte: Portal da Transparência da CGU);
+	<br>f) Informação se empresa está no Cadastro Nacional de Empresas Punidas (CNEP) (Fonte: Portal da Transparência da CGU);
+	<br>g) Informação se empresa celebrou Acordo De Leniência com a CGU (Fonte: Portal da Transparência da CGU); 
+	<br>h) Informação do Cadastro de Expulsões da Administração Federal (CEAF) (Fonte: Portal da Transparência da CGU);
+	<br>i) Informação se sócio consta do Cadastro de Servidores do Governo Federal (Fonte: Portal da Transparência da CGU);
+	<br>j) Valores no cadastro da PGFN no 1ºTri/2023, conforme dados abertos públicos (Fonte: site da PGFN);
+	<br>k) Quantidade de Funcionários por Empresa de acordo com dados no RAIS 2021 conforme planilhas de dados abertos (Fonte: Planilha disponibilizada por pedido pela LAI)
+	-->
+	</p>
+	<p>Algumas informações aparecerão na RedeCNPJ.com em um "tooltip" (balão) quando se deixa o cursor sobre o ícone de uma empresa, na opção visualizar dados do item ou na planilha Excel exportada. Os valores são aproximados, apenas indicadores sem detalhamento. Todos os dados devem ser conferidos com as fontes originais para elaboração de seus relatórios/documentos.</p>
+	<div style="text-align: center;"><img src="/static/pag/sobre_tooltip01.png" alt="" align></div>
+
+
+	<p>A <b>RedeCNPJ.com</b> é um projeto derivado da <a href="https://github.com/rictom/rede-cnpj" target="_blank" title="Clique para abrir a página do projeto no Github">RedeCNPJ</a> no Github. O site <a href="https://www.redecnpj.com.br/rede/aviso" target="_blank" title="Clique para abrir a página da redecnpj.com.br">redecnpj.com.br</a> disponibiliza gratuitamente a versão Aplicativo do Projeto RedeCNPJ e do Programa para baixar e converter as bases de CNPJs. A versão online paga tem mais informações públicas que a versão gratuita.</p>
+	<div align="center">
+	<a href=mailto:{{email}}?subject=RedeCNPJ title='Envie comentários e sugestões para o email {{email}}.'>Contato <i class="fa fa-envelope" aria-hidden="true"></i></a>
+	</div>
+	
+	{% if bmobile %}
+	{% else %}
+		<div align="center">
+		<img src="/static/pag/rede_fundo.jpg" alt=""  width="800">
+		</div>
+	{% endif %}
+	
+  <h5 align='right'>Atualizada em 20/11/2025</h2>
+  
+  </div> <!-- column middle -->
+
+	  <!--div class="column right" style="background-color:#d0d3d4;"> </div -->
+
+	  
+</div>
+
+
+</body>
+</html>

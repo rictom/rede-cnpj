@@ -164,8 +164,8 @@ function main() {
 					   <td>{{d.cnpj_cpf_socio}}</td>
 					   <td>{{d.nome_socio}}</td>
 					   <td>{{d.cod_qualificacao}}</td>
-					   <td>{{d.data_entrada_sociedade[-2:]}}/{{d.data_entrada_sociedade[4:6]}}/{{d.data_entrada_sociedade[:4]}}</td>
-					   <td>{{d.faixa_etaria}}</td>
+					   <td>{% if not demo %}{{d.data_entrada_sociedade[-2:]}}/{{d.data_entrada_sociedade[4:6]}}/{{d.data_entrada_sociedade[:4]}}{% else %}XXXXX{% endif%}</td>
+					   <td>{% if not demo %}{{d.faixa_etaria}}{% endif%}</td>
 					</tr>
 				{% endfor %}			
 				</table>
