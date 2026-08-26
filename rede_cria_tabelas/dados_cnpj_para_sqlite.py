@@ -169,8 +169,6 @@ ALTER TABLE empresas ADD COLUMN capital_social real;
 update  empresas
 set capital_social = cast( replace(capital_social_str,',', '.') as real);
 
-ALTER TABLE empresas DROP COLUMN capital_social_str;
-
 ALTER TABLE estabelecimento ADD COLUMN cnpj text;
 Update estabelecimento
 set cnpj = cnpj_basico||cnpj_ordem||cnpj_dv;
