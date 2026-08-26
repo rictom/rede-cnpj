@@ -20,7 +20,7 @@ import pandas as pd, sqlite3, sqlalchemy
 import glob, time, dask.dataframe as dd
 import os, sys, zipfile
 
-dataReferencia = 'xx/xx/2024' #input('Data de referência da base dd/mm/aaaa: ')
+dataReferencia = 'xx/xx/2026' #input('Data de referência da base dd/mm/aaaa: ')
 pasta_compactados = r"dados-publicos-zip" #local dos arquivos zipados da Receita
 pasta_saida = r"dados-publicos" #esta pasta deve estar vazia. 
 
@@ -184,11 +184,52 @@ CREATE  INDEX idx_estabelecimento_nomefantasia ON estabelecimento (nome_fantasia
 CREATE INDEX idx_socios_original_cnpj_basico
 ON socios_original(cnpj_basico);
 
+create table cnpj_base2matriz as 
+SELECT Distinct t.cnpj_basico, te.cnpj as cnpj
+from empresas t
+left join estabelecimento te on te.cnpj_basico = t.cnpj_basico
+where te.matriz_filial='1';;
+
+CREATE INDEX idx_cnpj_base2matriz
+ON cnpj_base2matriz(cnpj_basico);;
+
+/*
+-- a partir de ago/2026 está aparecendo apenas o radicial de cnpj do sócio na coluna cnpj_cpf_socio
+-- separando em duas partes, a que tiver cnpj é feito um join para obter o cnpj completo
 CREATE TABLE socios AS 
 SELECT te.cnpj as cnpj, ts.*
 from socios_original ts
 left join estabelecimento te on te.cnpj_basico = ts.cnpj_basico
 where te.matriz_filial='1';
+*/
+
+CREATE TABLE socios AS 
+SELECT te.cnpj as cnpj, ts.*
+from socios_original ts
+left join cnpj_base2matriz te on te.cnpj_basico = ts.cnpj_basico
+where ts.identificador_de_socio<>'1';
+
+insert into socios 
+SELECT te.cnpj as cnpj,
+ ts.cnpj_basico,
+    ts.identificador_de_socio,
+    ts.nome_socio,
+    tes.cnpj as cnpj_cpf_socio,
+    ts.qualificacao_socio,
+    ts.data_entrada_sociedade,
+    ts.pais,
+    ts.representante_legal,
+    ts.nome_representante,
+    ts.qualificacao_representante_legal,
+    ts.faixa_etaria
+from socios_original ts
+left join cnpj_base2matriz te on te.cnpj_basico = ts.cnpj_basico
+left join cnpj_base2matriz tes on tes.cnpj_basico = ts.cnpj_cpf_socio
+where ts.identificador_de_socio='1';
+
+ALTER TABLE empresas DROP COLUMN capital_social_str;
+ALTER TABLE estabelecimento DROP COLUMN cnpj_ordem;
+ALTER TABLE estabelecimento DROP COLUMN cnpj_dv;
 
 DROP TABLE IF EXISTS socios_original;
 
