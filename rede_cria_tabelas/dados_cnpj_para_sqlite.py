@@ -186,20 +186,13 @@ create table cnpj_base2matriz as
 SELECT Distinct t.cnpj_basico, te.cnpj as cnpj
 from empresas t
 left join estabelecimento te on te.cnpj_basico = t.cnpj_basico
-where te.matriz_filial='1';;
+where te.matriz_filial='1';
 
 CREATE INDEX idx_cnpj_base2matriz
-ON cnpj_base2matriz(cnpj_basico);;
+ON cnpj_base2matriz(cnpj_basico);
 
-/*
 -- a partir de ago/2026 está aparecendo apenas o radicial de cnpj do sócio na coluna cnpj_cpf_socio
 -- separando em duas partes, a que tiver cnpj é feito um join para obter o cnpj completo
-CREATE TABLE socios AS 
-SELECT te.cnpj as cnpj, ts.*
-from socios_original ts
-left join estabelecimento te on te.cnpj_basico = ts.cnpj_basico
-where te.matriz_filial='1';
-*/
 
 CREATE TABLE socios AS 
 SELECT te.cnpj as cnpj, ts.*
