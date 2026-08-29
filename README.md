@@ -171,6 +171,10 @@ https://www.flaticon.com<br>
 https://fontawesome.com<br>
 
 ## Histórico de versões
+
+<b>versão 26.08 (agosto/2026)</b>
+- Houve alteração no layout dos csvs de sócios. A coluna cnpj_cpf_socio só tem o radical de cnpj (8 dígitos) se o sócio for empresa. A rotina dados_cnpj_para_sqlite.py foi corrigida para trocar o radical de cnpj pelo cnpj completo da empresa matriz para manter o padrão anterior.
+
 <b>versão 26.06 (junho/2026)</b>
 - Alteração no layout da tabela de busca rede_search.db;
 -	Possibilidade de enriquecer o gráfico com dados fornecidos pelo usuário;
