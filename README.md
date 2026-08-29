@@ -2,7 +2,7 @@
 
 Ferramenta para observar de forma gráfica os relacionamentos entre empresas e sócios, a partir dos dados públicos disponibilizados pela [Receita Federal](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj). Os scripts possibilitam baixar os dados públicos, gerar o banco de dados local em sqlite e abrir o aplicativo que faz a visualização no navegador. <b>O código não foi feito por IA!!!</b><br>
 <br><br>
-**AVISO IMPORTANTE: Ao final de janeiro/2026, a RFB alterou o layout da página e caminho dos arquivos. O script para baixar arquivos foi atualizado em março/2026, baseado na rotina do projeto [cnpj-data-pipeline](https://github.com/caiopizzol/cnpj-data-pipeline).**<br>
+**AVISO IMPORTANTE: Em agosto/2026 houve alteração no padrão dos csvs de sócios. A coluna cnpj_cpf_socio só tem o radical de cnpj (8 dígitos) se o sócio for empresa. A rotina foi corrigida para trocar o radical de cnpj pelo cnpj completo da empresa matriz.**<br>
 
 
 ### Vídeo no youtube<br>
