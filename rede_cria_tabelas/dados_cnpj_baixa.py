@@ -35,7 +35,7 @@ def requisitos():
             sys.exit(1)
 #.def requisitos
 
-def consulta_base_webdap(share_token="YggdBLfdninEJX9", base_url="https://arquivos.receitafederal.gov.br/public.php/webdav"):
+def consulta_base_webdap(share_token="gn672Ad4CF8N6TK", base_url="https://arquivos.receitafederal.gov.br/public.php/webdav"):
     # código adaptado de github.com/caiopizzol/cnpj-data-pipeline/blob/main/downloader.py
     from xml.etree import ElementTree
     DAV_NS = {"d": "DAV:"} # WebDAV XML namespace
@@ -65,8 +65,12 @@ def consulta_base_webdap(share_token="YggdBLfdninEJX9", base_url="https://arquiv
         if match:
             files.append(match.group(1))
 
-    urlBaseArquivosDoMes = f'https://arquivos.receitafederal.gov.br/public.php/dav/files/{share_token}/{ultimoAnoMes}/' #para baixar usando requests sem webdav
-    urlPaginaDownloadMeses = f'https://arquivos.receitafederal.gov.br/index.php/s/{share_token}'
+    #urlBaseArquivosDoMes = f'https://arquivos.receitafederal.gov.br/public.php/dav/files/{share_token}/{ultimoAnoMes}/' #para baixar usando requests sem webdav
+    #urlPaginaDownloadMeses = f'https://arquivos.receitafederal.gov.br/index.php/s/{share_token}'
+    #novos links a partir de 2026-10-12
+    urlBaseArquivosDoMes = f'https://arquivos.receitafederal.gov.br/index.php/s/{share_token}?dir=/Dados/Cadastros/CNPJ/{ultimoAnoMes}/' #para baixar usando requests sem webdav
+    urlPaginaDownloadMeses = f'https://arquivos.receitafederal.gov.br/index.php/s/{share_token}?dir=/Dados/Cadastros/CNPJ'
+    
     #return {'ultimoAnoMes':ultimoAnoMes, 'arquivos':files}
     return {'anoMes':ultimoAnoMes, 'urlBaseArquivosDoMes':urlBaseArquivosDoMes, 'arquivos':files, 'urlPaginaDownloadMeses':urlPaginaDownloadMeses}
 #.def consulta_base_webdap
