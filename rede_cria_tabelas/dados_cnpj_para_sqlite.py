@@ -149,7 +149,7 @@ def carregaTipo(nome_tabela, tipo, colunas):
     for arq in arquivos:
         print(f'carregando: {arq=} em {nome_tabela}')
         print('lendo csv ...', time.asctime())
-        ddf = dd.read_csv(arq, sep=';', header=None, names=colunas, encoding='latin1', dtype=str, na_filter=None)
+        ddf = dd.read_csv(arq, sep=';', header=None, names=colunas, encoding='latin1', dtype=str, na_filter=False)
         #dask possibilita usar curinga no nome de arquivo, por ex: 
         #ddf = dd.read_csv(pasta_saida+r'\*' + tipo, sep=';', header=None, names=colunas ...
         ddf.to_sql(nome_tabela, engine_url, index=None, if_exists='append', dtype=sqlalchemy.sql.sqltypes.TEXT)
