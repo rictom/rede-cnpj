@@ -173,7 +173,7 @@ https://fontawesome.com<br>
 ## Histórico de versões
 
 <b>versão 26.11 (novembro/2026)</b>
-- Opção Experimental: gerar gráficos ou mapas mentais simples a partir de texto analisado por API do Gemini. É necessário informar sua própria chave de API. As imagens nos ícones são buscados da Wikipedia.
+- Opção Experimental: gerar gráficos ou mapas mentais simples a partir de texto analisado por API do Gemini. É necessário informar sua própria chave de API. As imagens nos ícones são obtidas na Wikipedia.
  <img width="849" height="592" alt="image" src="https://github.com/user-attachments/assets/b08cdee8-0859-4b3b-b0c0-e3969908b97e" />
 
 <b>versão 26.08 (agosto/2026)</b>
