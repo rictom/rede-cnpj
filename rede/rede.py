@@ -279,7 +279,7 @@ def serve_rede_json_links(cpfcnpj='', camada=1, numeroItens=15, valorMinimo=0, v
 #.def serve_rede_json_links
 
 #@lru_cache #isto pode dar inconsistência com parametros via post??
-@app.route(base + 'dadosjson/<cpfcnpj>', methods=['GET', 'POST']) # methods=['POST']) 
+@app.route(base + 'dadosjson/<cpfcnpj>', methods=['POST']) 
 @limiter.limit(limiter_dados)
 def serve_dados_detalhes(cpfcnpj):
     if request.method == 'GET':
@@ -312,6 +312,12 @@ def serve_dados_html():
         if gUwsgiLock:
             uwsgi.unlock()    
 #.def serve_dados_detalhes
+
+@app.route(base + 'texto_grafo.html', methods=['GET',]) #precisa manter com / no final para manter compatibilidade com robots
+@limiter.limit(limiter_dados)
+def serve_texto_grafo():
+    return render_template('grafo_texto_imagem.html') 
+#.def serve_texto_grafo
 
 if config.config['API'].getboolean('api_cnpj', False):
     @app.route(base + 'api/<tipo>/<cnpj>', methods=['GET', 'POST']) 
@@ -431,12 +437,19 @@ def serve_dadosEmArquivo(formato='xlsx'):
 @app.route(base + 'mapa', methods = ['POST'])
 @limiter.limit(limiter_padrao)
 def serve_mapa():
-    dados = request.form.get('data')
+    dados_request = request.form.get('data')
     try:
-        dados = json.loads(dados)['no']
+        dados_json = json.loads(dados_request) #['no']
     except Exception as err:
         print('erro em mapa:', err)
         return 
+    if 'no' in dados_json:
+        dados = dados_json['no']
+    elif 'lista_enderecos' in dados_json:
+        lista_enderecos = dados_json['lista_enderecos']
+        dados = mapa.lista2dados(lista_enderecos, ggeocode_max)
+    else:
+        return
     #mostraTooltip = not(request.args.get('mobile', default = 0, type = int) and True)
     mobile = any(word in request.headers.get('User-Agent') for word in ['Mobile','Opera Mini','Android'])
     outputStream = mapa.geraMapa(dados, ggeocode_max, mostraTooltip=not mobile)
@@ -545,29 +558,29 @@ elif bConsultaGoogle: #se for só consulta google, sem chaves, faz sem asyncio
             return jsonify({'no':[], 'ligacao':[], 'mensagem':'Servidor não foi configurado para esta ação-C'})
     #.def serve_busca_google síncrono sem chaves
 
-@app.route(base + 'informacao/dados_publicos_cnpj_disponivel', methods = ['GET'])
-@limiter.limit(limiter_padrao)
-def serve_dados_publicos_disponivel():
-    from bs4 import BeautifulSoup
-    import requests
-    ano_mes_do_banco_sendo_usado = ''
-    ultima_referencia = ''
-    try:
-        url_dados_abertos = 'https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/'
-        soup_pagina_dados_abertos = BeautifulSoup(requests.get(url_dados_abertos).text, 'lxml')
-        daux = rede_relacionamentos.referenciaF('cnpj').get('data_referencia','').split('/')
-        ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
-        if rede_relacionamentos.referenciaF('cnpj').get('cnpj_qtde',0)<6*10**7:
-            ano_mes_do_banco_sendo_usado = '' #base de teste porque tem poucos registros
-        else:
-            ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
+# @app.route(base + 'informacao/dados_publicos_cnpj_disponivel', methods = ['GET'])
+# @limiter.limit(limiter_padrao)
+# def serve_dados_publicos_disponivel():
+#     from bs4 import BeautifulSoup
+#     import requests
+#     ano_mes_do_banco_sendo_usado = ''
+#     ultima_referencia = ''
+#     try:
+#         url_dados_abertos = 'https://arquivos.receitafederal.gov.br/cnpj/dados_abertos_cnpj/'
+#         soup_pagina_dados_abertos = BeautifulSoup(requests.get(url_dados_abertos).text, 'lxml')
+#         daux = rede_relacionamentos.referenciaF('cnpj').get('data_referencia','').split('/')
+#         ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
+#         if rede_relacionamentos.referenciaF('cnpj').get('cnpj_qtde',0)<6*10**7:
+#             ano_mes_do_banco_sendo_usado = '' #base de teste porque tem poucos registros
+#         else:
+#             ano_mes_do_banco_sendo_usado = daux[-1] + '-' + daux[-2]
 
-        ultima_referencia = sorted([link.get('href') for link in soup_pagina_dados_abertos.find_all('a') if link.get('href').startswith('20')])[-1]
-    except Exception as e:
-        print('exception: ', e)
-        return jsonify({'mensagem':'Aconteceu algum erro. Não foi possível verificar a página ' + url_dados_abertos})
-    return jsonify({'ano_mes_sendo_usado':ano_mes_do_banco_sendo_usado, 'ano_mes_disponivel':ultima_referencia.removesuffix('/'), 'url':url_dados_abertos+ultima_referencia})
-#.def serve_dados_publicos_disponivel
+#         ultima_referencia = sorted([link.get('href') for link in soup_pagina_dados_abertos.find_all('a') if link.get('href').startswith('20')])[-1]
+#     except Exception as e:
+#         print('exception: ', e)
+#         return jsonify({'mensagem':'Aconteceu algum erro. Não foi possível verificar a página ' + url_dados_abertos})
+#     return jsonify({'ano_mes_sendo_usado':ano_mes_do_banco_sendo_usado, 'ano_mes_disponivel':ultima_referencia.removesuffix('/'), 'url':url_dados_abertos+ultima_referencia})
+# #.def serve_dados_publicos_disponivel
 
 def caminhoArquivoLocal(nomeArquivo):
     nomeSplit = os.path.split(nomeArquivo)
