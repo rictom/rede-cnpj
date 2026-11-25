@@ -174,7 +174,8 @@ https://fontawesome.com<br>
 
 <b>versão 26.11 (novembro/2026)</b>
 - Opção Experimental: gerar gráficos ou mapas mentais simples a partir de texto analisado por API do Gemini. É necessário informar sua própria chave de API. As imagens nos ícones são buscados da Wikipedia.
- 
+ <img width="849" height="592" alt="image" src="https://github.com/user-attachments/assets/b08cdee8-0859-4b3b-b0c0-e3969908b97e" />
+
 <b>versão 26.08 (agosto/2026)</b>
 - Houve alteração no layout dos csvs de sócios. A coluna cnpj_cpf_socio só tem o radical de cnpj (8 dígitos) se o sócio for empresa. A rotina dados_cnpj_para_sqlite.py foi corrigida para trocar o radical de cnpj pelo cnpj completo da empresa matriz para manter o padrão anterior.
 
