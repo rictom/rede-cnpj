@@ -1007,21 +1007,23 @@ graphics.node(function(node) {
 				menu_abrirNovaAba(node.id);
 			//} else if (node.id.startsWith('ID_') && (!gparam.inicio.bBaseLocal)) {
 			} else if (node.id.startsWith('OC___')) { 
-					//OC___ é um tipo clicável que expande um conjunto de nós, como para exibir de forma "paginada"
-					//fclicaIconeVerde(node.id, event.altKey, event.shiftKey);
-					//fclicaIconeVerde(node.id);
-					//menu_agrupa_itens(false);
-					expande_itens();
+				//OC___ é um tipo clicável que expande um conjunto de nós, como para exibir de forma "paginada"
+				//fclicaIconeVerde(node.id, event.altKey, event.shiftKey);
+				//fclicaIconeVerde(node.id);
+				//menu_agrupa_itens(false);
+				expande_itens();
 			} else if (node.data.__url) {
-					window.open(node.data.__url);
+				window.open(node.data.__url);
+			} else if (node.id.startsWith('ID_') && event.shiftkey) {
+				menu_incluirCamada(node.id, 1, 'baseLocal'); //só baseLocal ou cnpj também??
 			} else if (node.id.startsWith('ID_')) {
-					menu_incluirCamada(node.id, 1, 'baseLocal'); //só baseLocal ou cnpj também??
+				// não faz nada
 			} else if (node.id.startsWith('TX_')) {
 				//não faz nada
 			} else {
-					selecionaNoid(node.id, false);	
-					//menu_incluir1Camada(node.id); 
-					menu_incluir1Camada(''); 
+				selecionaNoid(node.id, false);	
+				//menu_incluir1Camada(node.id); 
+				menu_incluir1Camada(''); 
 			}
 		};
 		return;
@@ -1084,7 +1086,7 @@ graphics.link(function(link){
 	//gparam.idLigacoes[link.data.origem + '\n' + link.data.destino] = link.data.id;
 	graphics.getSvgRoot().childNodes[0].append(label);
 	var vpath = Viva.Graph.svg('path')
-		.attr('stroke', link.data.cor) // 'gray')
+		.attr('stroke', link.data.cor?link.data.cor:'silver') // 'gray')
 		//.attr('stroke-width', 3) 
 		.attr('marker-end', 'url(#Triangle)')
 		.attr('id', link.data.id);
@@ -2306,7 +2308,7 @@ function menu_dados(bNovaJanela, idNo, bhistorico=false) {
 
 	if (!idin) return;
 
-	function mostraResultado(idin, ht) { //xxx
+	function mostraResultado(idin, ht) { 
 		if (bNovaJanela) { 
 			var win = window.open('', idin,'resizable,scrollbars,status,menubar=no, toolbar=no, personalbar=no, location=no, titlebar=0, height=500, width=400');
 			win.document.body.innerHTML = "<!DOCTYPE html><html><head><title>" + idin + "</title></head><body  >" + ht + "</body></html>";
@@ -3416,18 +3418,14 @@ function expande_itens(){ //expande reunidos pela tecla R
 	if (!nodeId.startsWith('OC__')) {
 		return;
 	}
-	//if (!nodeId) {
-	//	return;
-	//}
+
 	var node = graph.getNode(nodeId);
 	var node_data = dcopy(node.data);
 	var jsonRestante = dcopy(node.data._json);
 	var idReferenciaRestante = node.data._idReferencia;
 	//var posicaoItem = dcopy(gparam.layout.getNodePosition(node.id));
 	var posicaoItem = dcopy(gparam.layout.getNodePosition(nodeId));
-	//selecionaNoid(idReferenciaRestante);
-	
-	//if (!node_data._idItemAgrupadoReferencia) {  xxx
+
 	if (!node_data._idReferencia) { 
 		return;
 	}
@@ -6827,7 +6825,7 @@ function textoCamposNoid(noid, bmostraid, bapenas2undercore, bremove2undercore, 
 	return ht;
 } //.function textoCamposNoid
 
-function menu_editarCampo(noid) { //xxx
+function menu_editarCampo(noid) { 
 	ativaAtalhos(false);
 	var brenderer = menu_rendererAtivarParar(false, false);
 	var tprompt = '';
@@ -7053,6 +7051,40 @@ function menu_exportaPNG() {
 function menu_exportaJPG() {
 	menu_exportaArquivo(false, 'jpg');
 } //.function menu_exportaJPG
+
+function menu_exportaMapa(bshift) { //xxx
+	if (!bshift) {
+		return menu_exportaArquivo(false, 'osm');
+	}
+	ativaAtalhos(false);
+	alertify.confirm(
+	  'Gerar Mapa', 
+	  'Para cada local, cole uma linha com<br>Endereço; Nome Local; Descrição <br>separados por ; ou TAB. Pode ser copiado de planilha. Nome Local ou Descrição são opcionais. Endereço deve conter NOME RUA, NÚMERO, MUNICÍPIO-UF<br><textarea id="alertify-textarea" rows="4" style="width:100%; resize:none;"></textarea>', 
+	  function(){ 
+	    // On OK click
+	    var userText = document.getElementById('alertify-textarea').value;
+
+	    alertify.success('Entered: ' + userText);
+	    ativaAtalhos(true);
+	    if (!userText.trim()) {
+	    	return;
+	    }
+	    var tlista = userText.split('\n');
+	    if (tlista.length>gparam.inicio.geocode_max) {
+	    	alert('Serão considerados apenas os primeiros ' + gparam.inicio.geocode_max + ' itens.');
+	    	tlista = tlista.slice(0, gparam.inicio.geocode_max);
+	    }
+	    var jsonDados = {'lista_enderecos':tlista};
+	    openWindowWithPost(jsonDados, 'mapa');
+	  }, 
+	  function(){ 
+	    // On Cancel click
+	    //alertify.error('Cancelado');
+	    ativaAtalhos(true);
+	  }
+  );
+	
+} //.function menu_exportaMapa
 
 function menu_exportaArquivo(bSoSelecionados, tipo, jsonIn) {
 	//jsonIn - se informado, ignora o parametro bSoSelecionados
@@ -8672,8 +8704,8 @@ function main() {
 			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open(base + 'pag/rede_aviso.html')"  title='Clique para informações do Projeto RedeCNPJ. &#13;&#13;Fazendo click duplo em um ícone, a rotina expande as ligações. Por exemplo, clique duplo no ícone de uma pessoa, exibirá todas as empresas que esta é sócia. Clique duplo em um ícone de CNPJ, exibirá todos os sócios da empresa.&#13;Apertando SHIFT, é possível selecionar mais de um ícone.&#13;Pressionando CTRL e arrastando na tela, adiciona a seleção os itens da área. &#13;A roda do mouse expande ou diminui o tamanho da exibição.&#13;Clicar no botão do meio do mouse (roda) faz aparecer janela para editar uma Nota, que aparece numa terceira linha abaixo do ícone.&#13;'>
 				<b>Sobre...</b>
 			</button>
-			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open(base + 'pag/aplicativo.html?src=rd')"  title='Clique para baixar a versão GRATUITA em aplicativo Windows 10 da RedeCNPJ. Neste aplicativo pode se ver os dados completos de empresas e nome completo de sócios. Siga o procedimento (demora algumas horas) nessa página para baixar a base de dados abertos e utilizar na RedeCNPJ Aplicativo.'>
-				<b>Aplicativo Gratuito</b>
+			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open(base + 'pag/aplicativo.html?src=rd')"  title='Clique para baixar a versão GRATUITA em aplicativo Windows/Mac da RedeCNPJ. Neste aplicativo pode se ver os dados completos de empresas e nome completo de sócios. Siga o procedimento (demora algumas horas) nessa página para baixar a base de dados abertos e utilizar na RedeCNPJ Aplicativo.'>
+				<b><span style="color: #ff0000"></span>Aplicativo Gratuito</b>
 			</button>
 			<!-- demo -->
 			<button class='botaosuperior' id='btn_github' type="button" onclick="window.open('https://www.redecnpj.com/r/pag/sobre.html?src=rd')"  title='Clique para informações da versão online da RedeCNPJ com a base completa de dados abertos de CNPJs. A versão Premium não necessita de instalação ou baixar bases, basta acessar e fazer as consultas. Há informações adicionais de dados abertos presentes apenas na versão Premium, como dívida na PGFN, autuações do IBAMA, aeronaves de CNPJs, entre outras informações.'>
@@ -8743,21 +8775,16 @@ function main() {
 			{% endif %}
 			><i class="fa fa-file-excel"></i></button>
 			<button class='botaosuperior' type="button" onclick="javascript:menu_botao_google(event.shiftKey, teclaCtrlF(event));" title='(Tecla G) Abre busca no Google. SHIFT+G abre Google Maps. CTRL+Click abre buscas no Google, Bing, etc (Tecla B) '><i class="fab fa-google"></i></button>
-			<button class='botaosuperior' type="button" onclick="javascript:menu_exportaArquivo(false, 'osm');" title='Abre endereços das empresas em um mapa com OpenStreetMap. Se houver muitos itens, serão exibidos os municípios das empresas.'><i class="fa fa-globe"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:menu_exportaMapa(event.shiftKey);" title='Abre endereços das empresas em um mapa com OpenStreetMap. Se houver muitos itens, serão exibidos os municípios das empresas. Pressionando SHIFT+Click abre uma janela para colar Endereços para se exibir no mapa.'><i class="fa fa-globe"></i></button>
 
 			<button class='botaosuperior' type="button" onclick="javascript:menu_botao_caminhos('');" title='Procura caminhos entre itens selecionados no gráfico'>
 				<img src="/static/imagem/code-fork.png" alt="caminhos" class='botaosuperior' width="12" height="12"/>
 			</button>
 			<button class='botaosuperior' type="button" onclick="javascript:menu_agrupa_itens();" title='(Tecla R) Reúne os items em grupo. Com clique duplo no ícone agrupado poderá se expandir os itens.'><i class="fa fa-users"></i><!--<i class="fa fa-object-group"></i>--></button>
-			
+			<button class='botaosuperior' type="button" onclick="javascript:window.open('texto_grafo.html', '_blank');" title='EXPERIMENTAL! Opção GERAR GRÁFICO A PARTIR DE TEXTO, usando uma chave de API do Gemini. A IA do Gemini irá analisar o texto fornecido e gerar um gráfico de relacionamento.'><span style="color: red">Novo! </span><i class="fab fa-google-plus"></i></button>	
 			<button id='botao_excluir_tudo' class='botaosuperior' onclick="javascript:menu_excluirTudo();"  title="Apaga TODOS os itens da tela. Para apagar apenas os itens selecionados, pressione a tecla DELETE. Para desfazer a última inserção, pressione CTRL+Z."><i class="fa fa-trash"></i></button>
 		{% endif %}
-		{% if parametros.usuario_logado %}
-		<button id='botao_logout' class='botaosuperior' onclick="javascript:menu_logar_sair(this);"  title="Clique para Sair do Sistema. &#13;Usuário(a) atual: {{parametros.usuario_logado}}. &#13;Senha válida até às 21hs (BSB) do dia {{parametros.data_expiracao}}"><b>Sair</b></button>
-		{% endif %}
-		{% if parametros.exibirbotaoRenovar %}
-			<button id='botao_adquirir' class='botaosuperior' onclick="window.open(base + 'pag/adquirir.html')"  title="A senha irá expirar em {{parametros.data_expiracao}}. Clique para Renovar e não perder acesso ao sistema." style="background:red"><b>Renovar</b></button>
-		{% endif %}
+
 	</div>
 
 <div id="principal" style="width: 100%; height: 100%; position: absolute; " charset="utf-8" ondrop="drop_handler(event);" ondragover="dragover_handler(event);"  > 
