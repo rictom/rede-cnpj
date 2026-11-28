@@ -313,10 +313,10 @@ def serve_dados_html():
             uwsgi.unlock()    
 #.def serve_dados_detalhes
 
-@app.route(base + 'texto_grafo.html', methods=['GET',]) #precisa manter com / no final para manter compatibilidade com robots
+@app.route(base + 'texto2grafo.html', methods=['GET',]) #precisa manter com / no final para manter compatibilidade com robots
 @limiter.limit(limiter_dados)
 def serve_texto_grafo():
-    return render_template('grafo_texto_imagem.html') 
+    return render_template('texto2grafo.html') 
 #.def serve_texto_grafo
 
 if config.config['API'].getboolean('api_cnpj', False):
