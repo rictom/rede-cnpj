@@ -8775,13 +8775,14 @@ function main() {
 			{% endif %}
 			><i class="fa fa-file-excel"></i></button>
 			<button class='botaosuperior' type="button" onclick="javascript:menu_botao_google(event.shiftKey, teclaCtrlF(event));" title='(Tecla G) Abre busca no Google. SHIFT+G abre Google Maps. CTRL+Click abre buscas no Google, Bing, etc (Tecla B) '><i class="fab fa-google"></i></button>
+			<button class='botaosuperior' type="button" onclick="javascript:window.open('texto2grafo.html', '_blank');" title='EXPERIMENTAL! Opção GERAR GRÁFICO A PARTIR DE TEXTO, usando uma chave de API do Gemini. A IA do Gemini irá analisar o texto fornecido e gerar um gráfico de relacionamento.'><span style="color: red">Novo! </span><i class="fab fa-google-plus"></i></button>	
 			<button class='botaosuperior' type="button" onclick="javascript:menu_exportaMapa(event.shiftKey);" title='Abre endereços das empresas em um mapa com OpenStreetMap. Se houver muitos itens, serão exibidos os municípios das empresas. Pressionando SHIFT+Click abre uma janela para colar Endereços para se exibir no mapa.'><i class="fa fa-globe"></i></button>
 
 			<button class='botaosuperior' type="button" onclick="javascript:menu_botao_caminhos('');" title='Procura caminhos entre itens selecionados no gráfico'>
 				<img src="/static/imagem/code-fork.png" alt="caminhos" class='botaosuperior' width="12" height="12"/>
 			</button>
 			<button class='botaosuperior' type="button" onclick="javascript:menu_agrupa_itens();" title='(Tecla R) Reúne os items em grupo. Com clique duplo no ícone agrupado poderá se expandir os itens.'><i class="fa fa-users"></i><!--<i class="fa fa-object-group"></i>--></button>
-			<button class='botaosuperior' type="button" onclick="javascript:window.open('texto_grafo.html', '_blank');" title='EXPERIMENTAL! Opção GERAR GRÁFICO A PARTIR DE TEXTO, usando uma chave de API do Gemini. A IA do Gemini irá analisar o texto fornecido e gerar um gráfico de relacionamento.'><span style="color: red">Novo! </span><i class="fab fa-google-plus"></i></button>	
+
 			<button id='botao_excluir_tudo' class='botaosuperior' onclick="javascript:menu_excluirTudo();"  title="Apaga TODOS os itens da tela. Para apagar apenas os itens selecionados, pressione a tecla DELETE. Para desfazer a última inserção, pressione CTRL+Z."><i class="fa fa-trash"></i></button>
 		{% endif %}
 

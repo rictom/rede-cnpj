@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grafo Interativo com Gemini</title>
+  <script src="https://cdn.jsdelivr.net/npm/vivagraphjs@0.12.0/dist/vivagraph.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 1.25rem;
+      background: #f7fafc;
+      color: #1a202c;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .painel {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.15rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.88rem;
+      margin: 0.85rem 0 0.35rem;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      font-size: 0.9rem;
+      padding: 0.6rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      background: #ffffff;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    button {
+      margin-top: 1rem;
+      background: #2b6cb0;
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #2c5282;
+    }
+    button:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+    #grafo-container {
+      width: 100%;
+      height: 560px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    #grafo-container svg {
+      width: 100%;
+      height: 100%;
+    }
+    .resultado-texto {
+      margin-top: 1rem;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem 1.15rem;
+    }
+    #resultado-titulo {
+      margin: 0 0 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1a202c;
+    }
+    #resultado-resumo {
+      margin: 0;
+      font-size: 0.96rem;
+      line-height: 1.55;
+      color: #2d3748;
+    }
+    pre {
+      background: #1a202c;
+      color: #e2e8f0;
+      padding: 0.75rem;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow: auto;
+      font-size: 0.78rem;
+      margin-top: 0.75rem;
+    }
+    .status {
+      font-size: 0.85rem;
+      color: #4a5568;
+      margin-top: 0.6rem;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Painel esquerdo: Entrada e JSON -->
+    <div class="painel">
+      <h2>Texto → Grafo (Usando Gemini API)</h2>
+
+      <label for="apiKey"><a href="https://www.google.com/search?q=como+gerar+chave+gemini+api" target="_blank" rel="noopener" title="Veja como criar a chave de API do Gemini">Gemini API Key</a></label>
+      <input type="text" id="apiKey" size="4" placeholder="Cole sua chave" value="" required style="width:10em" title="Cole sua chave API do Gemini GEMINI_API_KEY. A chave será usada apenas para enviar os dados ao Google para analisar o texto. A chave não será salva." />
+
+      <label for="model-select">Modelo Gemini</label>
+      <select id="model-select">
+        <option value="gemini-3.1-flash-lite" selected>gemini-3.1-flash-lite (Rápido / Econômico)</option>
+        <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Flash-Lite)</option>
+        <option value="gemini-3.6-flash">gemini-3.6-flash (Flash)</option>
+        <option value="gemini-3.8-flash">gemini-3.8-flash (Flash 3.8)</option>
+        <option value="gemini-3-flash-preview">gemini-3-flash-preview (Preview)</option>
+        <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Pro Preview)</option>
+      </select>
+
+      <label for="texto">Texto de entrada para gerar Gráfico</label>
+      <textarea id="texto">Era uma vez uma Tartaruga que queria conhecer o mundo. Confiou este seu desejo a dois Patos que viviam perto dela, numa lagoa. Um belo dia, a lagoa secou e os Patos prepararam-se para partir. Antes, porém, foram despedir-se da sua amiga e fizeram-lhe um convite: — Se quiseres, podes vir conhecer o mundo connosco. Cada um de nós segura a ponta de um ramo e tu agarras-te bem a ele com a boca. Assim, ficarás em segurança e poderás ver, lá do alto, cidades e reinos maravilhosos. A Tartaruga nem pensou duas vezes: aceitou o convite e, esse mesmo dia, partiram todos à aventura. Sobrevoaram aldeias, cidades e reinos de encantar. Quando passavam por cima de um campo, os camponeses admiraram-se com o que viram e gritaram:
+— Vejam! Vejam! Uma Tartaruga a voar!
+— Como sou extraordinária! — gritou a Tartaruga cheia de orgulho.
+Porém, assim abriu a boca, largou o ramo e estatelou-se no chão</textarea>
+
+      <button id="btnGerar" type="button" onclick="gerarGrafoAgora()">Extrair e Renderizar Grafo</button>
+      <div class="status" id="status">Carregando script...</div>
+
+      <label>JSON Extraído (Node → Edge → Node)</label>
+      <pre id="saidaJson">{}</pre>
+
+      
+      <button id="btnCopiar" type="button" onclick="copiarParaAreaTransferencia()" title="Clique para copiar o gráfico e depois cole (CTRL+V) em uma tela da RedeCNPJ">Copiar Gráfico</button>
+      
+      <button id="btnSalvar" type="button" onclick="salvarJsonAgora()" title="Salvar o arquivo json. Este poderá ser carregado na RedeCNPJ">Salvar JSON</button>
+    </div>
+
+    <!-- Painel direito: Canvas SVG do VivaGraphJS + Título e Resumo -->
+    <div>
+      <div id="grafo-container"></div>
+
+      <div class="resultado-texto" id="bloco-resultado">
+        <h3 id="resultado-titulo">Título do texto aparecerá aqui</h3>
+        <p id="resultado-resumo">Após inserir a chave de API do Gemini/Google, coloque um texto e clique no botão Extrair e Renderizar Grafo. O resumo de um parágrafo do texto fornecido aparecerá aqui após gerar o grafo.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var SVG_NS = "http://www.w3.org/2000/svg";
+    var cacheImagensWiki = {};
+    var graph = null;
+    var graphics = null;
+    var rendererAtual = null;
+
+    function setStatus(msg) {
+      var el = document.getElementById("status");
+      if (el) {
+        el.textContent = msg;
+      }
+    }
+
+    window.onerror = function (message, source, lineno) {
+      setStatus("Erro JS (linha " + lineno + "): " + message);
+    };
+
+    function criarSvgEl(tag, attrs) {
+      var el = document.createElementNS(SVG_NS, tag);
+      if (attrs) {
+        for (var k in attrs) {
+          if (Object.prototype.hasOwnProperty.call(attrs, k)) {
+            el.setAttribute(k, String(attrs[k]));
+          }
+        }
+      }
+      return el;
+    }
+
+    function atualizarTituloEResumo(dadosGrafo) {
+      var elTitulo = document.getElementById("resultado-titulo");
+      var elResumo = document.getElementById("resultado-resumo");
+      if (elTitulo) {
+        var t = dadosGrafo && dadosGrafo.titulo ? String(dadosGrafo.titulo).trim() : "";
+        elTitulo.textContent = t || "Sem título";
+      }
+      if (elResumo) {
+        var r = dadosGrafo && dadosGrafo.resumo ? String(dadosGrafo.resumo).trim() : "";
+        elResumo.textContent = r || "Resumo não disponível.";
+      }
+    }
+
+    var nodeSchema = {
+      type: "OBJECT",
+      properties: {
+        id: { type: "STRING", description: "ID único em snake_case" },
+        label: { type: "STRING", description: "Nome legível da entidade" },
+        tipo: { type: "STRING", description: "Categoria: pessoa física, pessoa jurídica, empresa, instituição, agente político, objeto, local, notícia, etc." },
+        contexto: { type: "STRING", description: "Contexto: explicação do objeto no texto e destaca fatos principais relacionados a esse objeto" }
+      },
+      required: ["id", "label", "tipo", "contexto"]
+    };
+
+    var edgeSchema = {
+      type: "OBJECT",
+      properties: {
+        id: { type: "STRING", description: "ID único da aresta" },
+        source: { type: "STRING", description: "ID do nó de origem" },
+        target: { type: "STRING", description: "ID do nó de destino" },
+        label: { type: "STRING", description: "Rótulo curto da relação" },
+        contexto: { type: "STRING", description: "Contexto: explicação do vínculo entre os objetos relacionados no edge" }
+      },
+      required: ["id", "source", "target", "label", "contexto"]
+    };
+
+    var grafoResponseSchema = {
+      type: "OBJECT",
+      properties: {
+        titulo: { type: "STRING", description: "Título curto e objetivo para o texto fornecido" },
+        resumo: { type: "STRING", description: "Resumo do texto em exatamente um único parágrafo" },
+        nodes: { type: "ARRAY", items: nodeSchema },
+        edges: { type: "ARRAY", items: edgeSchema }
+      },
+      required: ["titulo", "resumo", "nodes", "edges"]
+    };
+
+    function converte2Rede(graphObj) {
+      var lno = [];
+      var lligacao = [];
+      var dicId = {};
+      var nodes = (graphObj && graphObj.nodes) || [];
+      var edges = (graphObj && graphObj.edges) || [];
+
+      for (var i = 0; i < nodes.length; i++) {
+        var k = nodes[i];
+        dicId[k.id] = "ID_" + k.label;
+        lno.push({
+          id: "ID_" + k.label,
+          __contexto: k.contexto,
+          __tipo: k.tipo,
+          imagem: k.imageUrl || null
+        });
+      }
+      for (var j = 0; j < edges.length; j++) {
+        var e = edges[j];
+        lligacao.push({
+          origem: dicId[e.source],
+          destino: dicId[e.target],
+          label: e.label,
+          __contexto: e.contexto
+        });
+      }
+      return {
+        titulo: (graphObj && graphObj.titulo) || "",
+        resumo: (graphObj && graphObj.resumo) || "",
+        no: lno,
+        ligacao: lligacao
+      };
+    }
+
+    async function buscarImagemWikipedia(nomeNo) {
+      var termoLimpo = String(nomeNo || "")
+        .replace(/\b(S\.A\.|S\/A|Ltda\.?|ME|EPP|EIRELI)\b/gi, "")
+        .replace(/\(.*?\)/g, "")
+        .trim();
+
+      if (!termoLimpo) return null;
+      if (Object.prototype.hasOwnProperty.call(cacheImagensWiki, termoLimpo)) {
+        return cacheImagensWiki[termoLimpo];
+      }
+
+      var dominios = ["pt.wikipedia.org", "en.wikipedia.org"];
+      for (var i = 0; i < dominios.length; i++) {
+        var dominio = dominios[i];
+        try {
+          var url =
+            "https://" + dominio + "/w/api.php?action=query&format=json&origin=*" +
+            "&generator=search&gsrsearch=" + encodeURIComponent(termoLimpo) +
+            "&gsrlimit=1&prop=pageimages&piprop=original";
+
+          var resp = await fetch(url);
+          if (!resp.ok) continue;
+
+          var dados = await resp.json();
+          var pages = dados && dados.query && dados.query.pages;
+          if (pages) {
+            var keys = Object.keys(pages);
+            if (keys.length > 0) {
+              var primeiraPagina = pages[keys[0]];
+              var originalUrl = primeiraPagina && primeiraPagina.original && primeiraPagina.original.source
+                ? primeiraPagina.original.source
+                : null;
+              if (originalUrl) {
+                cacheImagensWiki[termoLimpo] = originalUrl;
+                return originalUrl;
+              }
+            }
+          }
+        } catch (err) {
+          // Ignora falha individual na Wikipédia
+        }
+      }
+
+      cacheImagensWiki[termoLimpo] = null;
+      return null;
+    }
+
+    async function enriquecerNosComImagens(nodes) {
+      var lista = Array.isArray(nodes) ? nodes : [];
+      var resultados = [];
+      for (var i = 0; i < lista.length; i++) {
+        var node = lista[i];
+        var imageUrl = node.imageUrl || null;
+        if (!imageUrl) {
+          imageUrl = await buscarImagemWikipedia(node.label || node.id);
+        }
+        var copia = {};
+        for (var prop in node) {
+          if (Object.prototype.hasOwnProperty.call(node, prop)) {
+            copia[prop] = node[prop];
+          }
+        }
+        copia.imageUrl = imageUrl;
+        resultados.push(copia);
+      }
+      return resultados;
+    }
+
+    async function chamarGemini(url, texto, usarSchema) {
+      var prompt =
+        "Analise o texto abaixo e extraia os relacionamentos no esquema node -> edge -> node, além de um título e um resumo.\n" +
+        "Regras:\n" +
+        "1. 'titulo': crie um título curto e claro para o texto.\n" +
+        "2. 'resumo': escreva um resumo fiel do texto em exatamente UM parágrafo (sem quebras de linha).\n" +
+        "3. Cada nó deve ter 'id' único em snake_case, 'label' curto, 'tipo' (ex.: pessoa física, pessoa jurídica, entidade, empresa, objeto) e 'contexto' (explica a importância do objeto no texto).\n" +
+        "4. Cada aresta ('edge') deve ter 'id', 'source', 'target', 'label' curto (máx. 3 palavras) e 'contexto' (explica o vínculo entre source e target).\n" +
+        "5. Garanta que todo 'source' e 'target' das arestas exista na lista 'nodes'.\n" +
+        "6. Retorne APENAS JSON válido no formato {\"titulo\": \"...\", \"resumo\": \"...\", \"nodes\": [...], \"edges\": [...]}.\n\n" +
+        "Texto:\n\"\"\"" + texto + "\"\"\"";
+
+      var generationConfig = {
+        temperature: 0.1,
+        responseMimeType: "application/json"
+      };
+      if (usarSchema) {
+        generationConfig.responseSchema = grafoResponseSchema;
+      }
+
+      var response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: generationConfig
+        })
+      });
+
+      if (!response.ok) {
+        var detalhe = await response.text();
+        var err = new Error("Erro HTTP " + response.status + ": " + detalhe);
+        err.status = response.status;
+        throw err;
+      }
+
+      var data = await response.json();
+      var parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      var jsonText = parts && parts[0] && parts[0].text ? parts[0].text : "";
+      if (!jsonText) {
+        throw new Error("Resposta vazia do modelo.");
+      }
+
+      var limpo = jsonText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+      return JSON.parse(limpo);
+    }
+
+    async function extrairGrafoComGemini(texto, apiKey, modelo) {
+      var modeloEscolhido = modelo || "gemini-3.1-flash-lite";
+      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modeloEscolhido) + ":generateContent?key=" + encodeURIComponent(apiKey);
+      try {
+        return await chamarGemini(url, texto, true);
+      } catch (err) {
+        if (err && (err.status === 400 || err.status === 404)) {
+          return await chamarGemini(url, texto, false);
+        }
+        throw err;
+      }
+    }
+
+    function corPorTipo(tipo) {
+      var t = String(tipo || "").toLowerCase();
+      if (t.indexOf("pessoa jurídica") !== -1 || t.indexOf("instituição") !== -1) return "blue";
+      if (t.indexOf("objeto") !== -1) return "green";
+      if (t.indexOf("pessoa") !== -1 || t.indexOf("agente") !== -1) return "yellow";
+      return "orange";
+    }
+
+    function renderizarComVivaGraph(dadosGrafo) {
+      var container = document.getElementById("grafo-container");
+      if (!container) {
+        throw new Error("Container #grafo-container não encontrado.");
+      }
+      if (typeof Viva === "undefined") {
+        throw new Error("A biblioteca VivaGraphJS não carregou (verifique sua conexão com a internet).");
+      }
+
+      if (rendererAtual) {
+        rendererAtual.dispose();
+        rendererAtual = null;
+      }
+      container.innerHTML = "";
+
+      graph = Viva.Graph.graph();
+      var nodes = (dadosGrafo && dadosGrafo.nodes) || [];
+      var edges = (dadosGrafo && dadosGrafo.edges) || [];
+
+      for (var n of nodes) {
+        graph.addNode(n.id, {
+          label: n.label,
+          tipo: n.tipo,
+          contexto: n.contexto,
+          imageUrl: n.imageUrl || null
+        });
+      }
+
+      for (var edge of edges) {
+        if (!graph.getNode(edge.source) || !graph.getNode(edge.target)) {
+          continue;
+        }
+
+        var labelAux = edge.label || "";
+        var labelAnt = "";
+        var l1 = graph.getLink(edge.source, edge.target);
+        var l2 = graph.getLink(edge.target, edge.source);
+
+        if (l1) {
+          labelAnt = l1.data.label || "";
+        } else if (l2) {
+          labelAnt = l2.data.label || "";
+          labelAux = labelAux ? " - " + labelAux : "";
+        }
+
+        if (labelAnt && labelAux) {
+          labelAux = labelAnt + "; " + labelAux;
+        } else if (labelAnt) {
+          labelAux = labelAnt;
+        }
+
+        if (l2) {
+          graph.removeLink(l2);
+          graph.addLink(edge.target, edge.source, {
+            id: edge.id,
+            label: labelAux,
+            contexto: edge.contexto
+          });
+        } else {
+          if (l1) {
+            graph.removeLink(l1);
+          }
+          graph.addLink(edge.source, edge.target, {
+            id: edge.id,
+            label: labelAux,
+            contexto: edge.contexto
+          });
+        }
+      }
+
+      graphics = Viva.Graph.View.svgGraphics();
+      var svgRoot = graphics.getSvgRoot();
+      var defs = criarSvgEl("defs");
+
+      var marker = criarSvgEl("marker", {
+        id: "Triangle",
+        viewBox: "0 0 10 10",
+        refX: "52",
+        refY: "5",
+        markerUnits: "strokeWidth",
+        markerWidth: "8",
+        markerHeight: "6",
+        orient: "auto"
+      });
+      marker.appendChild(criarSvgEl("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: "#718096" }));
+      defs.appendChild(marker);
+      svgRoot.appendChild(defs);
+
+      var TAMANHO_QUADRADO = 80;
+      var MEIO_QUADRADO = TAMANHO_QUADRADO / 2;
+      var BORDA_RAIO = 4;
+
+      graphics.node(function (node) {
+        var ui = criarSvgEl("g");
+        var data = node.data || {};
+        var cor = corPorTipo(data.tipo);
+        var imageUrl = data.imageUrl;
+        var labelText = data.label || node.id;
+
+        var titleEl = criarSvgEl("title");
+        titleEl.textContent = data.contexto || labelText;
+        ui.appendChild(titleEl);
+
+        var baseRect = criarSvgEl("rect", {
+          x: -MEIO_QUADRADO,
+          y: -MEIO_QUADRADO,
+          width: TAMANHO_QUADRADO,
+          height: TAMANHO_QUADRADO,
+          rx: BORDA_RAIO,
+          ry: BORDA_RAIO,
+          fill: imageUrl ? "#ffffff" : cor,
+          stroke: "#1a202c",
+          "stroke-width": 1.8
+        });
+        ui.appendChild(baseRect);
+
+        if (imageUrl) {
+          var clipId = "clip-sq80-" + String(node.id).replace(/[^a-zA-Z0-9_-]/g, "_");
+          var clipPath = criarSvgEl("clipPath", { id: clipId });
+          var clipRect = criarSvgEl("rect", {
+            x: -(MEIO_QUADRADO - 2),
+            y: -(MEIO_QUADRADO - 2),
+            width: TAMANHO_QUADRADO - 4,
+            height: TAMANHO_QUADRADO - 4,
+            rx: Math.max(0, BORDA_RAIO - 1),
+            ry: Math.max(0, BORDA_RAIO - 1)
+          });
+          clipPath.appendChild(clipRect);
+          defs.appendChild(clipPath);
+
+          var img = criarSvgEl("image", {
+            x: -(MEIO_QUADRADO - 2),
+            y: -(MEIO_QUADRADO - 2),
+            width: TAMANHO_QUADRADO - 4,
+            height: TAMANHO_QUADRADO - 4,
+            preserveAspectRatio: "xMidYMid slice",
+            "clip-path": "url(#" + clipId + ")",
+            href: imageUrl
+          });
+          ui.appendChild(img);
+
+          var frameRect = criarSvgEl("rect", {
+            x: -MEIO_QUADRADO,
+            y: -MEIO_QUADRADO,
+            width: TAMANHO_QUADRADO,
+            height: TAMANHO_QUADRADO,
+            rx: BORDA_RAIO,
+            ry: BORDA_RAIO,
+            fill: "none",
+            stroke: cor,
+            "stroke-width": 2.5
+          });
+          ui.appendChild(frameRect);
+        }
+
+        var text = criarSvgEl("text", {
+          y: -(MEIO_QUADRADO + 8),
+          "text-anchor": "middle",
+          "font-size": "12px",
+          "font-weight": "600",
+          fill: "#1a202c"
+        });
+        text.textContent = labelText;
+        ui.appendChild(text);
+
+        return ui;
+      }).placeNode(function (nodeUI, pos) {
+        nodeUI.setAttribute("transform", "translate(" + pos.x + ", " + pos.y + ")");
+      });
+
+      graphics.link(function (link) {
+        var group = criarSvgEl("g");
+        var ldata = link.data || {};
+
+        var path = criarSvgEl("path", {
+          stroke: "#718096",
+          "stroke-width": "1.6",
+          fill: "none",
+          "marker-end": "url(#Triangle)"
+        });
+
+        var label = criarSvgEl("text", {
+          "font-size": "10px",
+          fill: "#4a5568",
+          "text-anchor": "middle"
+        });
+        label.textContent = ldata.label || "";
+
+        group.appendChild(path);
+        group.appendChild(label);
+
+        var labelText = ldata.contexto || ldata.label;
+        if (labelText) {
+          var titleEl = criarSvgEl("title");
+          titleEl.textContent = labelText;
+          group.appendChild(titleEl);
+        }
+
+        return group;
+      }).placeLink(function (linkUI, fromPos, toPos) {
+        var path = linkUI.childNodes[0];
+        var label = linkUI.childNodes[1];
+
+        path.setAttribute("d", "M " + fromPos.x + "," + fromPos.y + " L " + toPos.x + "," + toPos.y);
+
+        var midX = (fromPos.x + toPos.x) / 2;
+        var midY = (fromPos.y + toPos.y) / 2 - 5;
+        label.setAttribute("x", midX);
+        label.setAttribute("y", midY);
+      });
+
+      var layout = Viva.Graph.Layout.forceDirected(graph, {
+        springLength: 220,
+        springCoeff: 0.0005,
+        dragCoeff: 0.02,
+        gravity: -2.6
+      });
+
+      rendererAtual = Viva.Graph.View.renderer(graph, {
+        container: container,
+        graphics: graphics,
+        layout: layout
+      });
+
+      rendererAtual.run();
+    }
+
+    function saveTextAsFile(textToSave, nomeArquivo, mime) {
+      var blob = new Blob([textToSave], mime);
+      var url = window.URL.createObjectURL(blob);
+      var downloadLink = document.createElement("a");
+      downloadLink.download = nomeArquivo;
+      downloadLink.href = url;
+      downloadLink.style.display = "none";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      window.URL.revokeObjectURL(url);
+    }
+
+    window.gerarGrafoAgora = async function () {
+      var btnGerar = document.getElementById("btnGerar");
+      var apiKeyInput = document.getElementById("apiKey");
+      var textoInput = document.getElementById("texto");
+      var modelSelect = document.getElementById("model-select");
+      var saidaJson = document.getElementById("saidaJson");
+
+      var apiKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+      var texto = textoInput ? textoInput.value.trim() : "";
+      var model = modelSelect ? modelSelect.value : "gemini-3.1-flash-lite";
+
+      if (!apiKey) {
+        setStatus("Informe sua GEMINI_API_KEY antes de clicar.");
+        return;
+      }
+      if (!texto) {
+        setStatus("Digite um texto para analisar.");
+        return;
+      }
+
+      if (btnGerar) btnGerar.disabled = true;
+      setStatus("Extraindo entidades, título e resumo com " + model + "...");
+
+      try {
+        var grafoObj = await extrairGrafoComGemini(texto, apiKey, model);
+        atualizarTituloEResumo(grafoObj);
+
+        setStatus("Buscando imagens originais (80x80px) na Wikipédia...");
+        var nosComImagem = await enriquecerNosComImagens(grafoObj.nodes || []);
+        var grafoEnriquecido = {
+          titulo: grafoObj.titulo || "",
+          resumo: grafoObj.resumo || "",
+          nodes: nosComImagem,
+          edges: grafoObj.edges || []
+        };
+
+        if (saidaJson) {
+          saidaJson.textContent = JSON.stringify(converte2Rede(grafoEnriquecido), null, 2);
+        }
+
+        renderizarComVivaGraph(grafoEnriquecido);
+
+        var qtdImagens = 0;
+        for (var i = 0; i < nosComImagem.length; i++) {
+          if (nosComImagem[i].imageUrl) qtdImagens++;
+        }
+        setStatus("Grafo gerado: " + nosComImagem.length + " nós (" + qtdImagens + " com imagem original 80x80px) e " + grafoEnriquecido.edges.length + " conexões.");
+      } catch (err) {
+        setStatus("Erro: " + (err && err.message ? err.message : String(err)));
+      } finally {
+        if (btnGerar) btnGerar.disabled = false;
+      }
+    };
+
+    window.salvarJsonAgora = function () {
+      var saidaJson = document.getElementById("saidaJson");
+      var textojson = saidaJson ? saidaJson.textContent : "{}";
+      saveTextAsFile(textojson, "texto_grafo.json", { type: "application/json" });
+      setStatus("Arquivo json salvo.");
+    };
+
+    function copiarParaAreaTransferencia() {
+      var textojson = document.getElementById("saidaJson")?.textContent;
+      localStorage.setItem('clipboard', textojson);
+      navigator.clipboard.writeText(textojson)
+      .then(() => {
+        setStatus("json foi salvo para a área de transferência.");
+      })      
+      .catch((error) => {
+        setStatus("O json não foi copiado.");
+        });
+    }
+
+
+    setStatus("Pronto para gerar.");
+  </script>
+</body>
+</html>
